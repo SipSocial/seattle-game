@@ -4,7 +4,7 @@
  */
 
 import { createLeonardoClient, GAME_ASSET_PROMPTS } from './leonardo'
-import { OPPONENTS, SEATTLE_DARKSIDE } from '../game/data/teams'
+import { OPPONENTS, SEATTLE_DARKSIDE, type Team } from '../game/data/teams'
 
 export interface GeneratedAsset {
   name: string
@@ -46,13 +46,13 @@ export async function generateAllGameAssets(): Promise<GeneratedAsset[]> {
   }
 
   // Generate opponent helmets
-  for (const opponent of OPPONENTS) {
+  for (const opponent of Object.values(OPPONENTS)) {
     console.log(`Generating ${opponent.name} helmet...`)
     try {
       const helmetPrompt = GAME_ASSET_PROMPTS.opponentHelmet(
         opponent.name,
         opponent.colors.primary,
-        opponent.colors.secondary
+        opponent.colors.accent
       )
       const helmetUrls = await client.generateAndWait({
         ...helmetPrompt,
@@ -138,12 +138,12 @@ export async function generateSingleAsset(
         if (options?.teamId === SEATTLE_DARKSIDE.id) {
           prompt = GAME_ASSET_PROMPTS.seattleHelmet
         } else {
-          const team = OPPONENTS.find((t) => t.id === options?.teamId)
+          const team = options?.teamId ? OPPONENTS[options.teamId] : undefined
           if (!team) throw new Error('Team not found')
           prompt = GAME_ASSET_PROMPTS.opponentHelmet(
             team.name,
             team.colors.primary,
-            team.colors.secondary
+            team.colors.accent
           )
         }
         break
