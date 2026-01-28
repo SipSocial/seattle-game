@@ -1,11 +1,7 @@
 import * as Phaser from 'phaser'
-import { GAME_WIDTH, GAME_HEIGHT } from '../config/phaserConfig'
-import { SEATTLE_DARKSIDE, hexToNumber } from '../data/teams'
-import { getGameState } from '../../store/gameStore'
-
-/**
- * MenuScene - Main menu with Play button
- */
+import { GAME_WIDTH, GAME_HEIGHT, COLORS } from '../config/phaserConfig'
+import { useGameStore } from '../../store/gameStore'
+import { AudioManager } from '../systems/AudioManager'
 
 export class MenuScene extends Phaser.Scene {
   constructor() {
@@ -13,164 +9,126 @@ export class MenuScene extends Phaser.Scene {
   }
 
   create(): void {
-    const centerX = GAME_WIDTH / 2
-    const centerY = GAME_HEIGHT / 2
+    this.cameras.main.fadeIn(300)
+    this.cameras.main.setBackgroundColor(COLORS.trim)
 
-    // Background gradient
-    const bg = this.add.graphics()
-    bg.fillGradientStyle(
-      hexToNumber(SEATTLE_DARKSIDE.colors.trim),
-      hexToNumber(SEATTLE_DARKSIDE.colors.trim),
-      0x1a472a,
-      0x1a472a,
-      1
-    )
-    bg.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT)
+    const centerX = GAME_WIDTH / 2
 
     // Title
-    const title = this.add.text(centerX, 100, 'ROAD TO THE\nSUPER BOWL', {
-      fontFamily: 'Arial Black, sans-serif',
-      fontSize: '44px',
-      color: '#ffffff',
-      align: 'center',
-      stroke: '#0b1f24',
-      strokeThickness: 5,
-      lineSpacing: 8,
+    const title = this.add.text(centerX, 120, 'DARKSIDE', {
+      fontSize: '42px',
+      color: '#' + COLORS.primary.toString(16).padStart(6, '0'),
+      fontFamily: 'Arial Black',
+      stroke: '#000000',
+      strokeThickness: 3,
     })
     title.setOrigin(0.5)
 
-    // Team name
-    const teamName = this.add.text(centerX, 210, 'SEATTLE DARKSIDE', {
-      fontFamily: 'Arial Black, sans-serif',
-      fontSize: '30px',
-      color: SEATTLE_DARKSIDE.colors.accent,
-      stroke: SEATTLE_DARKSIDE.colors.trim,
-      strokeThickness: 4,
-    })
-    teamName.setOrigin(0.5)
-
-    // Subtitle
-    const subtitle = this.add.text(centerX, 250, 'Defensive Dynasty', {
-      fontFamily: 'Arial, sans-serif',
-      fontSize: '18px',
-      color: '#aaaaaa',
-      fontStyle: 'italic',
+    const subtitle = this.add.text(centerX, 165, 'DEFENSE', {
+      fontSize: '28px',
+      color: '#' + COLORS.accent.toString(16).padStart(6, '0'),
+      fontFamily: 'Arial Black',
     })
     subtitle.setOrigin(0.5)
 
-    // Helmet preview
-    this.drawHelmet(centerX, 350)
+    // Tagline
+    const tagline = this.add.text(centerX, 210, 'Tackle Everything.', {
+      fontSize: '14px',
+      color: '#888888',
+      fontFamily: 'Arial',
+      fontStyle: 'italic',
+    })
+    tagline.setOrigin(0.5)
+
+    // High score display
+    const { highScore } = useGameStore.getState()
+    if (highScore > 0) {
+      const highScoreText = this.add.text(centerX, 260, `HIGH SCORE: ${highScore.toLocaleString()}`, {
+        fontSize: '16px',
+        color: '#' + COLORS.gold.toString(16).padStart(6, '0'),
+        fontFamily: 'Arial Black',
+      })
+      highScoreText.setOrigin(0.5)
+    }
 
     // Play button
-    this.createPlayButton(centerX, 480)
-
-    // Instructions
-    const instructions = this.add.text(centerX, 540, 'Tap rapidly to push through the defense!', {
-      fontFamily: 'Arial, sans-serif',
-      fontSize: '14px',
-      color: '#777777',
+    const playButton = this.createButton(centerX, 350, 'PLAY', COLORS.accent, () => {
+      this.cameras.main.fadeOut(200)
+      this.time.delayedCall(200, () => {
+        this.scene.start('RosterScene')
+      })
     })
-    instructions.setOrigin(0.5)
 
-    // Debug toggle hint
-    const debugHint = this.add.text(centerX, GAME_HEIGHT - 20, 'Press D for debug mode', {
-      fontFamily: 'monospace',
-      fontSize: '11px',
+    // Leaderboard button
+    const leaderboardButton = this.createButton(centerX, 430, 'LEADERBOARD', COLORS.primary, () => {
+      this.cameras.main.fadeOut(200)
+      this.time.delayedCall(200, () => {
+        this.scene.start('LeaderboardScene', { fromMenu: true })
+      })
+    })
+
+    // DrinkSip branding at bottom
+    const drinkSip = this.add.text(centerX, GAME_HEIGHT - 60, 'Powered by DrinkSip', {
+      fontSize: '12px',
+      color: '#666666',
+      fontFamily: 'Arial',
+    })
+    drinkSip.setOrigin(0.5)
+
+    const wakeUp = this.add.text(centerX, GAME_HEIGHT - 40, 'Wake Up Happy™', {
+      fontSize: '10px',
       color: '#444444',
+      fontFamily: 'Arial',
+      fontStyle: 'italic',
     })
-    debugHint.setOrigin(0.5)
+    wakeUp.setOrigin(0.5)
   }
 
-  private drawHelmet(x: number, y: number): void {
-    const g = this.add.graphics()
-    const colors = SEATTLE_DARKSIDE.colors
-
-    // Helmet base
-    g.fillStyle(hexToNumber(colors.primary), 1)
-    g.fillEllipse(x, y, 90, 75)
-
-    // Facemask
-    g.lineStyle(5, hexToNumber(colors.trim), 1)
-    g.beginPath()
-    g.moveTo(x + 35, y - 12)
-    g.lineTo(x + 50, y - 5)
-    g.lineTo(x + 50, y + 18)
-    g.lineTo(x + 35, y + 25)
-    g.strokePath()
-
-    // Stripe
-    g.lineStyle(7, hexToNumber(colors.accent), 1)
-    g.beginPath()
-    g.moveTo(x - 25, y - 38)
-    g.lineTo(x, y - 44)
-    g.lineTo(x + 25, y - 38)
-    g.strokePath()
-  }
-
-  private createPlayButton(x: number, y: number): void {
-    const buttonWidth = 200
-    const buttonHeight = 65
-
-    const container = this.add.container(x, y)
+  private createButton(
+    x: number,
+    y: number,
+    text: string,
+    color: number,
+    callback: () => void
+  ): Phaser.GameObjects.Container {
+    const width = 200
+    const height = 50
 
     const bg = this.add.graphics()
-    bg.fillStyle(hexToNumber(SEATTLE_DARKSIDE.colors.primary), 1)
-    bg.fillRoundedRect(-buttonWidth / 2, -buttonHeight / 2, buttonWidth, buttonHeight, 16)
-    bg.lineStyle(4, hexToNumber(SEATTLE_DARKSIDE.colors.accent), 1)
-    bg.strokeRoundedRect(-buttonWidth / 2, -buttonHeight / 2, buttonWidth, buttonHeight, 16)
+    bg.fillStyle(color, 1)
+    bg.fillRoundedRect(-width / 2, -height / 2, width, height, 10)
 
-    const text = this.add.text(0, 0, 'PLAY NOW', {
-      fontFamily: 'Arial Black, sans-serif',
-      fontSize: '26px',
+    const label = this.add.text(0, 0, text, {
+      fontSize: '20px',
       color: '#ffffff',
+      fontFamily: 'Arial Black',
     })
-    text.setOrigin(0.5)
+    label.setOrigin(0.5)
 
-    container.add([bg, text])
+    const container = this.add.container(x, y, [bg, label])
+    container.setSize(width, height)
+    container.setInteractive({ useHandCursor: true })
 
-    // Interactive
-    const hitArea = new Phaser.Geom.Rectangle(-buttonWidth / 2, -buttonHeight / 2, buttonWidth, buttonHeight)
-    container.setInteractive(hitArea, Phaser.Geom.Rectangle.Contains)
-
+    // Hover effects
     container.on('pointerover', () => {
-      bg.clear()
-      bg.fillStyle(hexToNumber(SEATTLE_DARKSIDE.colors.accent), 1)
-      bg.fillRoundedRect(-buttonWidth / 2, -buttonHeight / 2, buttonWidth, buttonHeight, 16)
-      text.setColor('#0B1F24')
+      container.setScale(1.05)
     })
 
     container.on('pointerout', () => {
-      bg.clear()
-      bg.fillStyle(hexToNumber(SEATTLE_DARKSIDE.colors.primary), 1)
-      bg.fillRoundedRect(-buttonWidth / 2, -buttonHeight / 2, buttonWidth, buttonHeight, 16)
-      bg.lineStyle(4, hexToNumber(SEATTLE_DARKSIDE.colors.accent), 1)
-      bg.strokeRoundedRect(-buttonWidth / 2, -buttonHeight / 2, buttonWidth, buttonHeight, 16)
-      text.setColor('#ffffff')
+      container.setScale(1)
     })
 
     container.on('pointerdown', () => {
-      this.startGame()
+      container.setScale(0.95)
     })
 
-    // Pulse animation
-    this.tweens.add({
-      targets: container,
-      scaleX: 1.03,
-      scaleY: 1.03,
-      duration: 600,
-      yoyo: true,
-      repeat: -1,
-      ease: 'Sine.easeInOut',
+    container.on('pointerup', () => {
+      AudioManager.resume()
+      AudioManager.playClick()
+      container.setScale(1)
+      callback()
     })
-  }
 
-  private startGame(): void {
-    const state = getGameState()
-    state.startGame()
-
-    this.cameras.main.fadeOut(300, 0, 0, 0)
-    this.time.delayedCall(300, () => {
-      this.scene.start('RoadScene')
-    })
+    return container
   }
 }

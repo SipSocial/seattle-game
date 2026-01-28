@@ -1,29 +1,11 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import RotateOverlay from './RotateOverlay'
 
 export default function GameCanvas() {
   const containerRef = useRef<HTMLDivElement>(null)
-  const [isPortrait, setIsPortrait] = useState(false)
   const [gameLoaded, setGameLoaded] = useState(false)
   const gameRef = useRef<any>(null)
-
-  useEffect(() => {
-    // Check orientation
-    const checkOrientation = () => {
-      setIsPortrait(window.innerHeight > window.innerWidth)
-    }
-
-    checkOrientation()
-    window.addEventListener('resize', checkOrientation)
-    window.addEventListener('orientationchange', checkOrientation)
-
-    return () => {
-      window.removeEventListener('resize', checkOrientation)
-      window.removeEventListener('orientationchange', checkOrientation)
-    }
-  }, [])
 
   useEffect(() => {
     // Initialize Phaser game only on client side
@@ -63,7 +45,7 @@ export default function GameCanvas() {
   }, [])
 
   return (
-    <div className="min-h-screen bg-[#1a472a] flex flex-col">
+    <div className="min-h-screen bg-[#0b1f24] flex flex-col">
       {/* Game Container */}
       <div
         ref={containerRef}
@@ -76,14 +58,11 @@ export default function GameCanvas() {
         }}
       />
 
-      {/* Rotate Overlay - shown when in portrait during gameplay */}
-      {isPortrait && gameLoaded && <RotateOverlay />}
-
       {/* Back to Menu Link */}
       <div className="absolute top-4 left-4 z-50">
         <a
           href="/"
-          className="text-white/50 hover:text-white text-sm flex items-center gap-2 transition-colors"
+          className="text-white/30 hover:text-white/70 text-sm flex items-center gap-2 transition-colors"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"

@@ -1,244 +1,176 @@
 import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
+import { PowerUpType } from '../game/data/powerups'
+import { DEFAULT_DEFENDER } from '../game/data/roster'
 
-/**
- * Power-up types available in the game
- */
-export type PowerUpId =
-  | 'DOUBLE_TAP_POWER'
-  | 'EXTEND_TIME'
-  | 'HEAD_START'
-  | 'MOMENTUM_BOOST'
-  | 'EXTRA_LINEMAN'
-
-/**
- * Modifiers applied during clash based on power-ups
- */
-export interface ClashModifiers {
-  tapPowerMultiplier: number    // Default 1.0, DOUBLE_TAP_POWER adds 1.0
-  extraTime: number             // Default 0, EXTEND_TIME adds 2.0
-  headStartPercent: number      // Default 0, HEAD_START adds 0.20
-  resistanceMultiplier: number  // Default 1.0, MOMENTUM_BOOST sets to 0.80
-  extraLineman: boolean         // Default false, EXTRA_LINEMAN sets to true
-  extraLinemanBoost: number     // Default 1.0, EXTRA_LINEMAN sets to 1.10
+export interface LeaderboardEntry {
+  id: string
+  playerName: string
+  jerseyNumber: number
+  score: number
+  wave: number
+  tackles: number
+  date: string
 }
 
-export function getDefaultModifiers(): ClashModifiers {
-  return {
-    tapPowerMultiplier: 1.0,
-    extraTime: 0,
-    headStartPercent: 0,
-    resistanceMultiplier: 1.0,
-    extraLineman: false,
-    extraLinemanBoost: 1.0,
-  }
+export interface ActivePowerUp {
+  type: PowerUpType
+  remainingTime: number
 }
 
-/**
- * Apply a power-up to modifiers
- */
-export function applyPowerUp(powerUpId: PowerUpId, modifiers: ClashModifiers): ClashModifiers {
-  const newModifiers = { ...modifiers }
-
-  switch (powerUpId) {
-    case 'DOUBLE_TAP_POWER':
-      newModifiers.tapPowerMultiplier += 1.0 // Doubles tap power
-      break
-    case 'EXTEND_TIME':
-      newModifiers.extraTime += 2.0
-      break
-    case 'HEAD_START':
-      newModifiers.headStartPercent = 0.20
-      break
-    case 'MOMENTUM_BOOST':
-      newModifiers.resistanceMultiplier *= 0.80 // Reduce resistance by 20%
-      break
-    case 'EXTRA_LINEMAN':
-      newModifiers.extraLineman = true
-      newModifiers.extraLinemanBoost = 1.10 // +10% tap power
-      break
-  }
-
-  return newModifiers
-}
-
-/**
- * Power-up definition for UI
- */
-export interface PowerUpDef {
-  id: PowerUpId
-  name: string
-  description: string
-  icon: string
-}
-
-export const POWERUP_POOL: PowerUpDef[] = [
-  {
-    id: 'DOUBLE_TAP_POWER',
-    name: 'Power Surge',
-    description: 'Double tap power next clash',
-    icon: 'Z',
-  },
-  {
-    id: 'EXTEND_TIME',
-    name: 'Time Extension',
-    description: '+2 seconds on timer',
-    icon: 'T',
-  },
-  {
-    id: 'HEAD_START',
-    name: 'Head Start',
-    description: 'Start meter at 20%',
-    icon: 'R',
-  },
-  {
-    id: 'MOMENTUM_BOOST',
-    name: 'Momentum Boost',
-    description: 'Reduce opponent resistance 20%',
-    icon: 'M',
-  },
-  {
-    id: 'EXTRA_LINEMAN',
-    name: 'Extra Lineman',
-    description: '6th defender + 10% power',
-    icon: 'S',
-  },
-]
-
-export function getRandomPowerUps(count: number = 3): PowerUpDef[] {
-  const shuffled = [...POWERUP_POOL].sort(() => Math.random() - 0.5)
-  return shuffled.slice(0, count)
-}
-
-/**
- * Game state store using Zustand
- */
 interface GameState {
-  // Current level (1-9)
-  currentLevel: number
+  // Player selection
+  selectedDefender: number
+  playerName: string
 
-  // Retry count for current level (for assist calculation)
-  retryCount: number
+  // Game session state (reset each game)
+  score: number
+  lives: number
+  wave: number
+  combo: number
+  maxCombo: number
+  tackles: number
+  
+  // Power-up state
+  activePowerUp: ActivePowerUp | null
 
-  // Power-ups selected for next clash
-  pendingPowerUps: PowerUpId[]
+  // Leaderboard (persisted)
+  leaderboard: LeaderboardEntry[]
 
-  // Stats
-  totalTaps: number
-  totalWins: number
-
-  // Debug mode
-  debugMode: boolean
+  // High score tracking
+  highScore: number
 
   // Actions
+  setSelectedDefender: (jersey: number) => void
+  setPlayerName: (name: string) => void
+  
+  // Game actions
   startGame: () => void
-  setLevel: (level: number) => void
-  advanceLevel: () => void
-  incrementRetry: () => void
-  resetRetryCount: () => void
-  addPowerUp: (powerUpId: PowerUpId) => void
-  clearPowerUps: () => void
-  getModifiers: () => ClashModifiers
-  consumePowerUps: () => ClashModifiers
-  recordTap: () => void
-  recordWin: () => void
-  toggleDebug: () => void
+  addScore: (points: number) => void
+  loseLife: () => void
+  addLife: () => void
+  incrementWave: () => void
+  addTackle: () => void
+  incrementCombo: () => void
+  resetCombo: () => void
+  
+  // Power-up actions
+  setActivePowerUp: (powerUp: ActivePowerUp | null) => void
+  
+  // Leaderboard actions
+  addLeaderboardEntry: (entry: Omit<LeaderboardEntry, 'id' | 'date'>) => void
+  
+  // Reset
   resetGame: () => void
 }
 
-export const useGameStore = create<GameState>((set, get) => ({
-  currentLevel: 1,
-  retryCount: 0,
-  pendingPowerUps: [],
-  totalTaps: 0,
-  totalWins: 0,
-  debugMode: false,
-
-  startGame: () => {
-    set({
-      currentLevel: 1,
-      retryCount: 0,
-      pendingPowerUps: [],
-      totalTaps: 0,
-      totalWins: 0,
-    })
-  },
-
-  setLevel: (level: number) => {
-    set({ currentLevel: level })
-  },
-
-  advanceLevel: () => {
-    set((state) => ({
-      currentLevel: Math.min(state.currentLevel + 1, 9),
-      retryCount: 0,
-    }))
-  },
-
-  incrementRetry: () => {
-    set((state) => ({
-      retryCount: state.retryCount + 1,
-    }))
-  },
-
-  resetRetryCount: () => {
-    set({ retryCount: 0 })
-  },
-
-  addPowerUp: (powerUpId: PowerUpId) => {
-    set((state) => ({
-      pendingPowerUps: [...state.pendingPowerUps, powerUpId],
-    }))
-  },
-
-  clearPowerUps: () => {
-    set({ pendingPowerUps: [] })
-  },
-
-  getModifiers: () => {
-    const { pendingPowerUps } = get()
-    let modifiers = getDefaultModifiers()
-    for (const powerUpId of pendingPowerUps) {
-      modifiers = applyPowerUp(powerUpId, modifiers)
-    }
-    return modifiers
-  },
-
-  consumePowerUps: () => {
-    const modifiers = get().getModifiers()
-    set({ pendingPowerUps: [] })
-    return modifiers
-  },
-
-  recordTap: () => {
-    set((state) => ({
-      totalTaps: state.totalTaps + 1,
-    }))
-  },
-
-  recordWin: () => {
-    set((state) => ({
-      totalWins: state.totalWins + 1,
-    }))
-  },
-
-  toggleDebug: () => {
-    set((state) => ({
-      debugMode: !state.debugMode,
-    }))
-  },
-
-  resetGame: () => {
-    set({
-      currentLevel: 1,
-      retryCount: 0,
-      pendingPowerUps: [],
-      totalTaps: 0,
-      totalWins: 0,
-    })
-  },
-}))
-
-// Non-reactive getter for use in Phaser scenes
-export function getGameState() {
-  return useGameStore.getState()
+const INITIAL_GAME_STATE = {
+  score: 0,
+  lives: 3,
+  wave: 1,
+  combo: 0,
+  maxCombo: 0,
+  tackles: 0,
+  activePowerUp: null,
 }
+
+export const useGameStore = create<GameState>()(
+  persist(
+    (set, get) => ({
+      // Initial state
+      selectedDefender: DEFAULT_DEFENDER,
+      playerName: '',
+      ...INITIAL_GAME_STATE,
+      leaderboard: [],
+      highScore: 0,
+
+      // Player selection
+      setSelectedDefender: (jersey) => set({ selectedDefender: jersey }),
+      setPlayerName: (name) => set({ playerName: name.toUpperCase().slice(0, 3) }),
+
+      // Game actions
+      startGame: () => set({ ...INITIAL_GAME_STATE }),
+      
+      addScore: (points) => {
+        const { score, combo, highScore } = get()
+        const multiplier = 1 + (combo * 0.5) // 1x, 1.5x, 2x, 2.5x, 3x
+        const cappedMultiplier = Math.min(multiplier, 3)
+        const newScore = score + Math.floor(points * cappedMultiplier)
+        set({ 
+          score: newScore,
+          highScore: Math.max(highScore, newScore),
+        })
+      },
+      
+      loseLife: () => {
+        const { lives } = get()
+        set({ lives: Math.max(0, lives - 1) })
+      },
+      
+      addLife: () => {
+        const { lives } = get()
+        set({ lives: Math.min(5, lives + 1) }) // Max 5 lives
+      },
+      
+      incrementWave: () => {
+        const { wave } = get()
+        set({ wave: wave + 1 })
+      },
+      
+      addTackle: () => {
+        const { tackles } = get()
+        set({ tackles: tackles + 1 })
+      },
+      
+      incrementCombo: () => {
+        const { combo, maxCombo } = get()
+        const newCombo = Math.min(combo + 1, 4) // Max 4 for 3x multiplier
+        set({ 
+          combo: newCombo,
+          maxCombo: Math.max(maxCombo, newCombo),
+        })
+      },
+      
+      resetCombo: () => set({ combo: 0 }),
+
+      // Power-up actions
+      setActivePowerUp: (powerUp) => set({ activePowerUp: powerUp }),
+
+      // Leaderboard
+      addLeaderboardEntry: (entry) => {
+        const { leaderboard } = get()
+        const newEntry: LeaderboardEntry = {
+          ...entry,
+          id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          date: new Date().toISOString(),
+        }
+        
+        // Add and sort by score, keep top 10
+        const updated = [...leaderboard, newEntry]
+          .sort((a, b) => b.score - a.score)
+          .slice(0, 10)
+        
+        set({ leaderboard: updated })
+      },
+
+      // Reset
+      resetGame: () => set({ ...INITIAL_GAME_STATE }),
+    }),
+    {
+      name: 'darkside-defense-storage',
+      partialize: (state) => ({
+        selectedDefender: state.selectedDefender,
+        playerName: state.playerName,
+        leaderboard: state.leaderboard,
+        highScore: state.highScore,
+      }),
+    }
+  )
+)
+
+// Selector hooks for common state
+export const useScore = () => useGameStore((state) => state.score)
+export const useLives = () => useGameStore((state) => state.lives)
+export const useWave = () => useGameStore((state) => state.wave)
+export const useCombo = () => useGameStore((state) => state.combo)
+export const useLeaderboard = () => useGameStore((state) => state.leaderboard)

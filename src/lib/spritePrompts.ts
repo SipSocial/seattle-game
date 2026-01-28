@@ -1,6 +1,7 @@
 /**
- * Sprite Generation Prompts for Seattle Darkside
- * Designed for consistent 2D pixel art character sprites
+ * Sprite Generation Prompts for Darkside Defense
+ * Top-down view sprites for horde defense gameplay
+ * Stylized/cartoon art style
  */
 
 export interface SpritePrompt {
@@ -13,194 +14,139 @@ export interface SpritePrompt {
   description: string
 }
 
-// Seattle Darkside colors
-const SEATTLE_COLORS = {
-  jersey: '#0F6E6A',
-  accent: '#7ED957',
-  trim: '#0B1F24',
+// Darkside colors
+const DARKSIDE_COLORS = {
+  primary: '#0F6E6A', // Teal
+  accent: '#7ED957', // Green
+  trim: '#0B1F24', // Navy
 }
 
+// Opponent team colors (for offensive runners)
+const OPPONENT_COLORS = [
+  { name: 'Crimson', primary: '#8B1E2D', accent: '#F2C14E' },
+  { name: 'Gold', primary: '#C9A227', accent: '#2D2D2D' },
+  { name: 'Storm', primary: '#5B6C77', accent: '#D7E0E7' },
+  { name: 'Violet', primary: '#4B2E83', accent: '#CBB7FF' },
+  { name: 'Orange', primary: '#C4511E', accent: '#FFD29D' },
+]
+
 /**
- * Defensive Lineman Sprite Prompts
- * All sprites are side-view facing right, transparent background
+ * Player Defender Sprites - Top-down view
  */
 export const DEFENDER_SPRITES: SpritePrompt[] = [
   {
-    name: 'Idle Pose',
-    key: 'defender-idle',
-    prompt: `2D pixel football defensive lineman idle pose, side-view facing right, athletic stance, knees bent, arms relaxed but ready, helmet on, shoulder pads visible, jersey color ${SEATTLE_COLORS.jersey} with accent ${SEATTLE_COLORS.accent}, helmet trim ${SEATTLE_COLORS.trim}, no logos, no text, transparent background, designed for 48x48 or 64x64 sprite grid, clean readable silhouette`,
+    name: 'Player Defender',
+    key: 'defender-player',
+    prompt: `Top-down view 2D stylized football defender, circular design, teal jersey ${DARKSIDE_COLORS.primary} with green trim ${DARKSIDE_COLORS.accent}, white helmet, athletic build, cartoon style, bold outlines, transparent background, game sprite, 64x64 pixels`,
     width: 64,
     height: 64,
-    frameCount: 1,
-    description: 'Default standing pose for menu and idle states',
+    description: 'Main player-controlled defender sprite',
   },
   {
-    name: 'Walking Frame',
-    key: 'defender-walk',
-    prompt: `2D pixel football defensive lineman walking animation frame, side-view facing right, forward stride, slight arm swing, confident posture, same uniform colors (${SEATTLE_COLORS.jersey} jersey, ${SEATTLE_COLORS.accent} accents, ${SEATTLE_COLORS.trim} trim), designed as one frame in a looping walk cycle, transparent background, consistent scale with idle frame`,
+    name: 'AI Teammate Defender',
+    key: 'defender-teammate',
+    prompt: `Top-down view 2D stylized football defender, circular design, slightly darker teal jersey, star symbol on helmet, cartoon style, supportive teammate look, transparent background, game sprite, 64x64 pixels`,
     width: 64,
     height: 64,
-    frameCount: 4,
-    description: 'Walking animation for Road scene march',
-  },
-  {
-    name: 'Running Frame',
-    key: 'defender-run',
-    prompt: `2D pixel football defensive lineman running animation frame, side-view facing right, aggressive forward lean, arms pumping, legs mid-stride, same Seattle Darkside colors, designed as one frame in a 5-6 frame run loop, no motion blur, transparent background, consistent proportions`,
-    width: 64,
-    height: 64,
-    frameCount: 6,
-    description: 'Running animation for fast movement',
-  },
-  {
-    name: 'Pushing Frame',
-    key: 'defender-push',
-    prompt: `2D pixel football defensive lineman pushing animation frame, side-view facing right, low powerful stance, both arms extended forward as if pushing an opponent, intense posture, helmet lowered, same uniform colors, designed as one frame of a clash animation loop, transparent background`,
-    width: 64,
-    height: 64,
-    frameCount: 3,
-    description: 'Clash scene pushing animation',
-  },
-  {
-    name: 'Breakthrough Frame',
-    key: 'defender-breakthrough',
-    prompt: `2D pixel football defensive lineman breakthrough animation frame, side-view facing right, explosive forward movement, arms driving through, chest up, victorious energy, same uniform colors, designed as a single impact frame, transparent background`,
-    width: 64,
-    height: 64,
-    frameCount: 1,
-    description: 'Victory breakthrough moment in clash',
-  },
-  {
-    name: 'Sack Celebration',
-    key: 'defender-sack',
-    prompt: `2D pixel football defensive lineman sack celebration frame, side-view facing right, holding football securely, slightly crouched or triumphant stance, confident body language, same Seattle Darkside colors, no violence depiction, transparent background`,
-    width: 64,
-    height: 64,
-    frameCount: 1,
-    description: 'Post-sack celebration with ball',
-  },
-  {
-    name: 'Victory Celebration',
-    key: 'defender-celebrate',
-    prompt: `2D pixel football defensive lineman celebration animation frame, side-view facing right, arms raised or flexed, proud victorious posture, helmet on, same uniform colors, designed as loopable celebration frame, transparent background`,
-    width: 64,
-    height: 64,
-    frameCount: 2,
-    description: 'Victory scene celebration loop',
+    description: 'AI-controlled teammate defender sprite',
   },
 ]
 
 /**
- * Generate opponent version of a sprite prompt
+ * Offensive Runner Sprites - Top-down view, different types
  */
-export function getOpponentSpritePrompt(
-  basePrompt: SpritePrompt,
-  teamColors: { primary: string; secondary: string; trim: string }
-): SpritePrompt {
-  // Replace Seattle colors with opponent colors
-  let modifiedPrompt = basePrompt.prompt
-    .replace(new RegExp(SEATTLE_COLORS.jersey, 'gi'), teamColors.primary)
-    .replace(new RegExp(SEATTLE_COLORS.accent, 'gi'), teamColors.secondary)
-    .replace(new RegExp(SEATTLE_COLORS.trim, 'gi'), teamColors.trim)
-    .replace(/Seattle Darkside/gi, 'opponent team')
-
-  return {
-    ...basePrompt,
-    key: basePrompt.key.replace('defender', 'opponent'),
-    prompt: modifiedPrompt,
-  }
-}
-
-/**
- * Additional game asset prompts
- */
-export const GAME_OBJECT_SPRITES: SpritePrompt[] = [
+export const RUNNER_SPRITES: SpritePrompt[] = [
   {
-    name: 'Football',
-    key: 'football',
-    prompt:
-      '2D pixel art American football, brown leather with white laces, side view, designed for 32x32 sprite, clean edges, transparent background, game asset style',
-    width: 32,
-    height: 32,
-    description: 'Football for sack and turnover scenes',
+    name: 'Normal Runner',
+    key: 'runner-normal',
+    prompt: `Top-down view 2D stylized football running back, circular design, gray jersey, holding football, cartoon style, bold outlines, facing downward, transparent background, game sprite, 48x48 pixels`,
+    width: 48,
+    height: 48,
+    description: 'Standard offensive runner',
   },
   {
-    name: 'QB Placeholder',
-    key: 'qb-down',
-    prompt:
-      '2D pixel art football quarterback fallen down, side view, red jersey, lying on ground after sack, defeated pose, transparent background, 64x64 sprite',
+    name: 'Fast Runner',
+    key: 'runner-fast',
+    prompt: `Top-down view 2D stylized football speedster, small circular design, yellow jersey with lightning bolt, motion lines, very fast looking, cartoon style, transparent background, game sprite, 40x40 pixels`,
+    width: 40,
+    height: 40,
+    description: 'Fast but fragile runner',
+  },
+  {
+    name: 'Tank Runner',
+    key: 'runner-tank',
+    prompt: `Top-down view 2D stylized football fullback, large circular design, red jersey, bulky muscular build, shield icon, intimidating, cartoon style, transparent background, game sprite, 64x64 pixels`,
     width: 64,
     height: 64,
-    description: 'QB down after sack animation',
+    description: 'Slow but tough runner (2 hits)',
   },
   {
-    name: 'Trophy',
-    key: 'trophy',
-    prompt:
-      '2D pixel art golden championship trophy, football theme, shiny metallic gold, front view, 64x64 sprite, game asset, transparent background',
-    width: 64,
-    height: 64,
-    description: 'Super Bowl trophy for victory scene',
-  },
-  {
-    name: 'Confetti',
-    key: 'confetti',
-    prompt:
-      '2D pixel art confetti pieces, various colors including gold green and teal, scattered celebration particles, designed for particle effect, transparent background',
-    width: 32,
-    height: 32,
-    description: 'Victory celebration particles',
+    name: 'Zigzag Runner',
+    key: 'runner-zigzag',
+    prompt: `Top-down view 2D stylized football receiver, circular design, green jersey, spiral/swirl pattern, agile looking, cartoon style, transparent background, game sprite, 48x48 pixels`,
+    width: 48,
+    height: 48,
+    description: 'Runner that weaves side to side',
   },
 ]
 
 /**
- * Power-up icon sprites
+ * DrinkSip Power-Up Sprites
  */
 export const POWERUP_SPRITES: SpritePrompt[] = [
   {
-    name: 'Power Surge',
-    key: 'powerup-lightning',
-    prompt:
-      '2D pixel art lightning bolt icon, electric blue and yellow glow, power symbol, 32x32 game UI icon, clean edges, transparent background',
-    width: 32,
-    height: 32,
-    description: 'Double tap power icon',
+    name: 'Hazy IPA Can',
+    key: 'powerup-hazy-ipa',
+    prompt: `2D stylized beer can icon, amber/brown color, "HAZY" text, foam top, glowing aura, cartoon style, transparent background, game power-up sprite, 48x48 pixels`,
+    width: 48,
+    height: 48,
+    description: 'Hazy IPA power-up - slows enemies',
   },
   {
-    name: 'Time Extension',
-    key: 'powerup-clock',
-    prompt:
-      '2D pixel art clock icon, golden with teal accents, +2 time symbol feel, 32x32 game UI icon, clean edges, transparent background',
-    width: 32,
-    height: 32,
-    description: 'Extra time icon',
+    name: 'Watermelon Refresher Can',
+    key: 'powerup-watermelon',
+    prompt: `2D stylized beverage can icon, pink/green watermelon colors, refreshing look, water droplets, heart symbol, cartoon style, transparent background, game power-up sprite, 48x48 pixels`,
+    width: 48,
+    height: 48,
+    description: 'Watermelon Refresher - extra lives',
   },
   {
-    name: 'Head Start',
-    key: 'powerup-rocket',
-    prompt:
-      '2D pixel art rocket icon, teal and green colors, upward trajectory, speed lines, 32x32 game UI icon, clean edges, transparent background',
-    width: 32,
-    height: 32,
-    description: 'Starting meter boost icon',
+    name: 'Lemon Lime Refresher Can',
+    key: 'powerup-lemon-lime',
+    prompt: `2D stylized beverage can icon, bright yellow/green lime colors, citrus slices, speed lines, lightning bolt, cartoon style, transparent background, game power-up sprite, 48x48 pixels`,
+    width: 48,
+    height: 48,
+    description: 'Lemon Lime Refresher - speed boost',
   },
   {
-    name: 'Momentum Boost',
-    key: 'powerup-momentum',
-    prompt:
-      '2D pixel art forward arrow icon, green glowing, motion trails, momentum symbol, 32x32 game UI icon, clean edges, transparent background',
-    width: 32,
-    height: 32,
-    description: 'Slower decay icon',
+    name: 'Blood Orange Refresher Can',
+    key: 'powerup-blood-orange',
+    prompt: `2D stylized beverage can icon, orange/red blood orange colors, explosion effect, power symbol, cartoon style, transparent background, game power-up sprite, 48x48 pixels`,
+    width: 48,
+    height: 48,
+    description: 'Blood Orange Refresher - bigger tackle radius',
+  },
+]
+
+/**
+ * Field and UI Sprites
+ */
+export const FIELD_SPRITES: SpritePrompt[] = [
+  {
+    name: 'Football Field Turf',
+    key: 'field-turf',
+    prompt: `Top-down view football field grass texture, rich green color, subtle yard line markings, tileable seamless pattern, game texture, 128x128 pixels`,
+    width: 128,
+    height: 128,
+    description: 'Repeating field turf background',
   },
   {
-    name: 'Extra Lineman',
-    key: 'powerup-shield',
-    prompt:
-      '2D pixel art shield icon with plus symbol, teal and silver, protective emblem, 32x32 game UI icon, clean edges, transparent background',
-    width: 32,
-    height: 32,
-    description: 'Extra lineman passive boost icon',
+    name: 'End Zone',
+    key: 'field-endzone',
+    prompt: `Top-down view football end zone, teal color ${DARKSIDE_COLORS.primary}, diagonal stripes, "DARKSIDE" text faded, game texture, 400x60 pixels`,
+    width: 400,
+    height: 60,
+    description: 'End zone at bottom of field',
   },
 ]
 
@@ -208,7 +154,12 @@ export const POWERUP_SPRITES: SpritePrompt[] = [
  * Get all sprite prompts
  */
 export function getAllSpritePrompts(): SpritePrompt[] {
-  return [...DEFENDER_SPRITES, ...GAME_OBJECT_SPRITES, ...POWERUP_SPRITES]
+  return [
+    ...DEFENDER_SPRITES,
+    ...RUNNER_SPRITES,
+    ...POWERUP_SPRITES,
+    ...FIELD_SPRITES,
+  ]
 }
 
 /**
@@ -216,4 +167,21 @@ export function getAllSpritePrompts(): SpritePrompt[] {
  */
 export function getSpritePromptByKey(key: string): SpritePrompt | undefined {
   return getAllSpritePrompts().find((s) => s.key === key)
+}
+
+/**
+ * Generate opponent runner prompt with specific team colors
+ */
+export function getOpponentRunnerPrompt(
+  baseType: 'normal' | 'fast' | 'tank' | 'zigzag',
+  teamIndex: number
+): SpritePrompt {
+  const team = OPPONENT_COLORS[teamIndex % OPPONENT_COLORS.length]
+  const base = RUNNER_SPRITES.find((s) => s.key === `runner-${baseType}`)!
+  
+  return {
+    ...base,
+    key: `runner-${baseType}-${team.name.toLowerCase()}`,
+    prompt: base.prompt.replace(/gray|yellow|red|green/gi, team.primary) + ` with ${team.accent} accents`,
+  }
 }

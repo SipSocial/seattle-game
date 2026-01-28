@@ -2,76 +2,94 @@ import Link from 'next/link'
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-gradient-to-b from-[#0B1F24] to-[#1a472a] flex flex-col items-center justify-center p-6 text-white">
+    <main className="min-h-screen bg-gradient-to-b from-[#0B1F24] to-[#0F6E6A] flex flex-col items-center justify-center p-6 text-white">
       {/* Hero Section */}
-      <div className="max-w-2xl text-center space-y-8">
+      <div className="max-w-md text-center space-y-6">
         {/* Title */}
-        <h1 className="text-5xl md:text-7xl font-black tracking-tight">
-          <span className="text-white">ROAD TO THE</span>
+        <h1 className="text-5xl md:text-6xl font-black tracking-tight">
+          <span className="text-[#0F6E6A]" style={{ WebkitTextStroke: '2px #7ED957' }}>DARKSIDE</span>
           <br />
-          <span className="text-[#FFD700]">SUPER BOWL</span>
+          <span className="text-[#7ED957]">DEFENSE</span>
         </h1>
 
+        {/* Tagline */}
+        <p className="text-xl text-gray-300 italic">
+          Tackle Everything. Wake Up Happy.
+        </p>
+
         {/* Team Badge */}
-        <div className="flex flex-col items-center gap-2">
-          <div className="w-20 h-20 rounded-full bg-[#0F6E6A] flex items-center justify-center border-4 border-[#7ED957]">
-            <span className="text-3xl font-black text-[#7ED957]">SD</span>
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-24 h-24 rounded-full bg-[#0F6E6A] flex items-center justify-center border-4 border-[#7ED957] shadow-lg shadow-[#7ED957]/30">
+            <span className="text-4xl font-black text-white">21</span>
           </div>
-          <h2 className="text-2xl md:text-3xl font-bold text-[#7ED957]">
-            SEATTLE DARKSIDE
-          </h2>
-          <p className="text-gray-400 italic">Defensive Dynasty</p>
+          <p className="text-gray-400 text-sm">Pick your defender. Protect the end zone.</p>
         </div>
 
-        {/* Description */}
-        <div className="space-y-4 text-gray-300">
-          <p className="text-lg md:text-xl">
-            Command your elite defensive unit on an epic journey to claim the championship trophy.
+        {/* Game Description */}
+        <div className="space-y-3 text-gray-300 text-base">
+          <p>
+            Endless waves of offensive players are charging your end zone. 
+            <span className="text-[#7ED957] font-semibold"> Drag to tackle.</span> Don&apos;t let them score.
           </p>
-          <p className="text-base md:text-lg">
-            Face <span className="text-[#7ED957] font-semibold">9 challenging opponents</span> in rapid button-mashing clashes. 
-            Earn power-ups, break through offensive lines, and march your way to glory!
+          <p>
+            Level up between waves. Build your squad. 
+            <span className="text-[#7ED957] font-semibold"> How long can you survive?</span>
           </p>
         </div>
 
         {/* Features */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-          <div className="bg-[#0F6E6A]/30 rounded-lg p-3 border border-[#0F6E6A]">
-            <div className="text-[#7ED957] font-bold text-2xl">9</div>
-            <div className="text-gray-400">Stages</div>
+        <div className="grid grid-cols-2 gap-3 text-sm">
+          <div className="bg-[#0F6E6A]/40 rounded-xl p-4 border border-[#7ED957]/30">
+            <div className="text-[#7ED957] font-bold text-2xl">24</div>
+            <div className="text-gray-400">Defenders</div>
           </div>
-          <div className="bg-[#0F6E6A]/30 rounded-lg p-3 border border-[#0F6E6A]">
-            <div className="text-[#7ED957] font-bold text-2xl">5</div>
-            <div className="text-gray-400">Power-Ups</div>
+          <div className="bg-[#0F6E6A]/40 rounded-xl p-4 border border-[#7ED957]/30">
+            <div className="text-[#7ED957] font-bold text-2xl">8</div>
+            <div className="text-gray-400">Upgrades</div>
           </div>
-          <div className="bg-[#0F6E6A]/30 rounded-lg p-3 border border-[#0F6E6A]">
-            <div className="text-[#7ED957] font-bold text-2xl">TAP</div>
-            <div className="text-gray-400">To Win</div>
+          <div className="bg-[#0F6E6A]/40 rounded-xl p-4 border border-[#7ED957]/30">
+            <div className="text-[#7ED957] font-bold text-2xl">4</div>
+            <div className="text-gray-400">Enemy Types</div>
           </div>
-          <div className="bg-[#0F6E6A]/30 rounded-lg p-3 border border-[#0F6E6A]">
-            <div className="text-[#7ED957] font-bold text-2xl">1</div>
-            <div className="text-gray-400">Trophy</div>
+          <div className="bg-[#0F6E6A]/40 rounded-xl p-4 border border-[#7ED957]/30">
+            <div className="text-[#7ED957] font-bold text-2xl">∞</div>
+            <div className="text-gray-400">Waves</div>
+          </div>
+        </div>
+
+        {/* DrinkSip Power-ups */}
+        <div className="bg-[#0B1F24]/60 rounded-xl p-4 border border-[#7ED957]/20">
+          <p className="text-xs text-gray-500 mb-2">POWERED BY</p>
+          <p className="text-lg font-bold text-white">DrinkSip</p>
+          <div className="flex justify-center gap-2 mt-2 text-xs text-gray-400">
+            <span>🍺 Hazy IPA</span>
+            <span>•</span>
+            <span>🍉 Watermelon</span>
+            <span>•</span>
+            <span>🍋 Lemon Lime</span>
+            <span>•</span>
+            <span>🍊 Blood Orange</span>
           </div>
         </div>
 
         {/* Play Button */}
         <Link
           href="/play"
-          className="inline-block bg-[#0F6E6A] hover:bg-[#7ED957] text-white hover:text-[#0B1F24] font-bold text-xl md:text-2xl px-12 py-5 rounded-2xl transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-[#7ED957]/50"
+          className="inline-block w-full bg-[#7ED957] hover:bg-[#9AE87A] text-[#0B1F24] font-black text-2xl px-12 py-5 rounded-2xl transition-all duration-300 transform hover:scale-105 shadow-lg shadow-[#7ED957]/40"
         >
           PLAY NOW
         </Link>
 
         {/* Instructions */}
-        <div className="text-gray-500 text-sm space-y-1">
-          <p>Tap rapidly to fill your Force meter before time runs out!</p>
-          <p>Best played in landscape mode on mobile devices.</p>
+        <div className="text-gray-500 text-xs space-y-1">
+          <p>Drag your defender to tackle incoming runners.</p>
+          <p>Works best on mobile. Portrait mode.</p>
         </div>
       </div>
 
       {/* Footer */}
       <footer className="absolute bottom-4 text-center text-gray-600 text-xs">
-        <p>A Drink Sip Refresher Experience</p>
+        <p>Wake Up Happy™</p>
         <p className="mt-1">All teams and characters are fictional.</p>
       </footer>
     </main>
