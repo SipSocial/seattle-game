@@ -45,29 +45,37 @@ export default function GameCanvas() {
   }, [])
 
   return (
-    <div className="min-h-screen bg-[#0b1f24] flex flex-col">
-      {/* Game Container */}
+    <div 
+      className="fixed inset-0 bg-[#0b1f24] flex flex-col overflow-hidden"
+      style={{
+        height: '100dvh',
+        width: '100vw',
+      }}
+    >
+      {/* Game Container - takes full space */}
       <div
         ref={containerRef}
         id="game-container"
-        className="flex-1 flex items-center justify-center"
+        className="flex-1 flex items-center justify-center w-full"
         style={{
           touchAction: 'none',
           userSelect: 'none',
           WebkitUserSelect: 'none',
+          WebkitTouchCallout: 'none',
+          minHeight: 0, // Important for flex shrinking
         }}
       />
 
       {/* Back to Menu Link */}
-      <div className="absolute top-4 left-4 z-50">
+      <div className="absolute top-2 left-2 z-50 safe-area-inset">
         <a
           href="/"
-          className="text-white/30 hover:text-white/70 text-sm flex items-center gap-2 transition-colors"
+          className="text-white/30 hover:text-white/70 text-xs flex items-center gap-1 transition-colors p-2"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            width="16"
-            height="16"
+            width="14"
+            height="14"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"

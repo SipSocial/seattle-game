@@ -2,9 +2,14 @@ import type { Metadata, Viewport } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'Road to the Super Bowl - Seattle Darkside',
-  description: 'A fast, arcade-style, mobile-first 2D side-scrolling football fantasy game. Control the Seattle Darkside defensive unit on your journey to the Super Bowl!',
-  keywords: ['game', 'football', 'arcade', 'mobile', 'Seattle Darkside', 'Super Bowl'],
+  title: 'Darkside Defense - DrinkSip',
+  description: 'Endless football defense game. Tackle the horde. Level up. Survive. Powered by DrinkSip.',
+  keywords: ['game', 'football', 'arcade', 'mobile', 'Darkside', 'DrinkSip', 'endless'],
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'Darkside Defense',
+  },
 }
 
 export const viewport: Viewport = {
@@ -12,6 +17,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
+  viewportFit: 'cover',
 }
 
 export default function RootLayout({
@@ -21,7 +27,22 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="antialiased overflow-x-hidden">{children}</body>
+      <head>
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="theme-color" content="#0B1F24" />
+      </head>
+      <body 
+        className="antialiased overflow-hidden"
+        style={{
+          overscrollBehavior: 'none',
+          position: 'fixed',
+          width: '100%',
+          height: '100%',
+        }}
+      >
+        {children}
+      </body>
     </html>
   )
 }
