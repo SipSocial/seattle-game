@@ -1,9 +1,17 @@
 /**
  * Leonardo.ai API Client
- * Used for generating and fetching game assets
+ * Premium Asset Generation for Seattle Seahawks Defense Game
  */
 
 const LEONARDO_API_URL = 'https://cloud.leonardo.ai/api/rest/v1'
+
+// Leonardo AI Model IDs
+export const MODELS = {
+  CREATIVE: '6bef9f1b-29cb-40c7-b9df-32b51c1f67d3', // Leonardo Creative
+  LIGHTNING: '1e60896f-3c26-4296-8ecc-53e2afecc132', // Leonardo Lightning
+  DIFFUSION: '2af7b21a-c6f7-43cb-b8cd-b8c1ebc30f92', // Leonardo Diffusion XL
+  KINO: '8e95dd21-63e7-4d74-8a87-a8a4b9e8e64c', // Leonardo Kino
+} as const
 
 interface GenerationResponse {
   sdGenerationJob: {
@@ -19,8 +27,20 @@ interface GenerationResult {
       likeCount: number
       nsfw: boolean
     }>
-    status: string
+    status: 'PENDING' | 'COMPLETE' | 'FAILED'
   }
+}
+
+export interface GenerateParams {
+  prompt: string
+  negativePrompt?: string
+  modelId?: string
+  width?: number
+  height?: number
+  numImages?: number
+  guidance?: number
+  styleUUID?: string
+  seed?: number
 }
 
 export class LeonardoClient {
@@ -53,23 +73,18 @@ export class LeonardoClient {
 
   /**
    * Generate images using Leonardo.ai
+   * Returns a generation ID for polling
    */
-  async generateImages(params: {
-    prompt: string
-    negativePrompt?: string
-    modelId?: string
-    width?: number
-    height?: number
-    numImages?: number
-    styleUUID?: string
-  }): Promise<string> {
+  async generateImages(params: GenerateParams): Promise<string> {
     const {
       prompt,
-      negativePrompt = 'blurry, low quality, distorted',
-      modelId = '6bef9f1b-29cb-40c7-b9df-32b51c1f67d3', // Leonardo Creative
+      negativePrompt = 'blurry, low quality, distorted, text, watermark, realistic photo',
+      modelId = MODELS.CREATIVE,
       width = 512,
       height = 512,
       numImages = 1,
+      guidance = 7,
+      seed,
     } = params
 
     const response = await this.request<GenerationResponse>('/generations', {
@@ -78,11 +93,13 @@ export class LeonardoClient {
         prompt,
         negative_prompt: negativePrompt,
         modelId,
-        width,
-        height,
-        num_images: numImages,
+        width: Math.min(1024, Math.max(64, width)), // Clamp to valid range
+        height: Math.min(1024, Math.max(64, height)),
+        num_images: Math.min(4, Math.max(1, numImages)),
+        guidance_scale: guidance,
         promptMagic: true,
         public: false,
+        ...(seed !== undefined && { seed }),
       }),
     })
 
@@ -90,28 +107,38 @@ export class LeonardoClient {
   }
 
   /**
-   * Get generation results by ID
+   * Get generation status and results
    */
   async getGeneration(generationId: string): Promise<GenerationResult> {
     return this.request<GenerationResult>(`/generations/${generationId}`)
   }
 
   /**
-   * Wait for generation to complete and return image URLs
+   * Wait for generation to complete with progress callback
    */
   async waitForGeneration(
     generationId: string,
-    maxAttempts = 30,
-    intervalMs = 2000
+    options: {
+      maxAttempts?: number
+      intervalMs?: number
+      onProgress?: (attempt: number, status: string) => void
+    } = {}
   ): Promise<string[]> {
+    const { maxAttempts = 30, intervalMs = 2000, onProgress } = options
+
     for (let i = 0; i < maxAttempts; i++) {
       const result = await this.getGeneration(generationId)
+      const status = result.generations_by_pk.status
 
-      if (result.generations_by_pk.status === 'COMPLETE') {
+      if (onProgress) {
+        onProgress(i + 1, status)
+      }
+
+      if (status === 'COMPLETE') {
         return result.generations_by_pk.generated_images.map((img) => img.url)
       }
 
-      if (result.generations_by_pk.status === 'FAILED') {
+      if (status === 'FAILED') {
         throw new Error('Image generation failed')
       }
 
@@ -124,21 +151,51 @@ export class LeonardoClient {
   /**
    * Generate and wait for completion
    */
-  async generateAndWait(params: {
-    prompt: string
-    negativePrompt?: string
-    width?: number
-    height?: number
-    numImages?: number
-  }): Promise<string[]> {
+  async generateAndWait(params: GenerateParams): Promise<string[]> {
     const generationId = await this.generateImages(params)
     return this.waitForGeneration(generationId)
   }
 
   /**
-   * Get user info and credits
+   * Generate sprite with optimized settings
    */
-  async getUserInfo(): Promise<{ user: { id: string; username: string } }> {
+  async generateSprite(params: {
+    prompt: string
+    negativePrompt?: string
+    width: number
+    height: number
+    scale?: number
+  }): Promise<string> {
+    const { prompt, negativePrompt, width, height, scale = 4 } = params
+
+    // Generate at higher resolution for quality
+    const scaledWidth = Math.min(1024, width * scale)
+    const scaledHeight = Math.min(1024, height * scale)
+
+    const generationId = await this.generateImages({
+      prompt,
+      negativePrompt,
+      width: scaledWidth,
+      height: scaledHeight,
+      numImages: 1,
+      guidance: 8, // Higher guidance for more prompt adherence
+    })
+
+    const urls = await this.waitForGeneration(generationId)
+    return urls[0]
+  }
+
+  /**
+   * Get user info and remaining credits
+   */
+  async getUserInfo(): Promise<{ 
+    user: { 
+      id: string
+      username: string
+      subscriptionTokens: number
+      subscriptionGptTokens: number
+    } 
+  }> {
     return this.request('/me')
   }
 }
@@ -158,7 +215,14 @@ export function createLeonardoClient(): LeonardoClient | null {
 }
 
 /**
- * Game-specific asset generation prompts
+ * Check if Leonardo API is available
+ */
+export function isLeonardoAvailable(): boolean {
+  return !!process.env.LEONARDO_API_KEY
+}
+
+/**
+ * Game-specific asset generation prompts (legacy compatibility)
  */
 export const GAME_ASSET_PROMPTS = {
   // Seattle Darkside helmet

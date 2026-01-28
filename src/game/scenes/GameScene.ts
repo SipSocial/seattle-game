@@ -1,36 +1,34 @@
 import * as Phaser from 'phaser'
-import { GAME_WIDTH, GAME_HEIGHT, COLORS, FIELD_TOP, END_ZONE_Y } from '../config/phaserConfig'
+import { GAME_WIDTH, GAME_HEIGHT, COLORS, FONTS, hexToCSS, getPositionGroupColor } from '../config/phaserConfig'
 import { useGameStore } from '../../store/gameStore'
 import { AudioManager } from '../systems/AudioManager'
+import { FULL_ROSTER } from '../data/roster'
 
 // ============================================
-// VAMPIRE SURVIVORS STYLE - HORDE DEFENSE
+// SEAHAWKS DEFENSE - PREMIUM GAME EXPERIENCE
 // ============================================
 
-// Game constants - SLOW AND FORGIVING
+// Game constants
 const DEFENDER_RADIUS = 28
 const RUNNER_RADIUS = 14
 const POWER_UP_RADIUS = 20
 
-// Speeds - HARD MODE
-const BASE_RUNNER_SPEED = 70 // Fast from the start
-const SPEED_PER_WAVE = 10 // Aggressive scaling
-const MAX_RUNNER_SPEED = 220 // High cap
-const DEFENDER_SPEED = 350 // Player needs to be fast
-const AI_DEFENDER_SPEED = 90 // AI is slow
+// Speeds
+const BASE_RUNNER_SPEED = 70
+const SPEED_PER_WAVE = 10
+const MAX_RUNNER_SPEED = 220
+const DEFENDER_SPEED = 350
+const AI_DEFENDER_SPEED = 90
 
-// Wave settings - INTENSE
-const BASE_SPAWN_INTERVAL = 900 // Fast spawns from start
-const MIN_SPAWN_INTERVAL = 200 // Crazy fast at high waves
-const SPAWN_REDUCTION_PER_WAVE = 50 // Gets harder quick
+// Wave settings
+const BASE_SPAWN_INTERVAL = 900
+const MIN_SPAWN_INTERVAL = 200
+const SPAWN_REDUCTION_PER_WAVE = 50
+const BASE_WAVE_DURATION = 12000
+const WAVE_DURATION_INCREASE = 1500
+const MAX_WAVE_DURATION = 30000
+const STARTING_LIVES = 4
 
-const BASE_WAVE_DURATION = 12000 // 12 seconds
-const WAVE_DURATION_INCREASE = 1500 // +1.5s per wave
-const MAX_WAVE_DURATION = 30000 // Cap at 30 seconds
-
-const STARTING_LIVES = 4 // Fewer lives
-
-// Calculate wave duration based on current wave
 function getWaveDuration(wave: number): number {
   return Math.min(MAX_WAVE_DURATION, BASE_WAVE_DURATION + (wave - 1) * WAVE_DURATION_INCREASE)
 }
@@ -55,11 +53,11 @@ interface Upgrade {
 }
 
 const UPGRADES: Record<UpgradeType, Upgrade> = {
-  ADD_DEFENDER: { type: 'ADD_DEFENDER', name: 'Teammate', description: '+1 AI Defender', color: 0x4ecdc4, icon: '🏈' },
-  SPEED_BOOST: { type: 'SPEED_BOOST', name: 'Speed', description: '+20% Movement', color: 0xadff2f, icon: '⚡' },
-  TACKLE_RADIUS: { type: 'TACKLE_RADIUS', name: 'Reach', description: '+15% Tackle Range', color: 0xff6b6b, icon: '💪' },
+  ADD_DEFENDER: { type: 'ADD_DEFENDER', name: 'Teammate', description: '+1 AI Defender', color: 0x00897B, icon: '🏈' },
+  SPEED_BOOST: { type: 'SPEED_BOOST', name: 'Speed', description: '+20% Movement', color: 0x69BE28, icon: '⚡' },
+  TACKLE_RADIUS: { type: 'TACKLE_RADIUS', name: 'Reach', description: '+15% Tackle Range', color: 0xE53935, icon: '💪' },
   EXTRA_LIFE: { type: 'EXTRA_LIFE', name: 'Life', description: '+1 Extra Life', color: 0xff69b4, icon: '❤️' },
-  HAZY_IPA: { type: 'HAZY_IPA', name: 'Hazy IPA', description: 'Slow all enemies 20%', color: 0xf4a460, icon: '🍺' },
+  HAZY_IPA: { type: 'HAZY_IPA', name: 'Hazy IPA', description: 'Slow enemies 20%', color: 0xf4a460, icon: '🍺' },
   WATERMELON: { type: 'WATERMELON', name: 'Watermelon', description: '+2 Lives', color: 0xff6b8a, icon: '🍉' },
   LEMON_LIME: { type: 'LEMON_LIME', name: 'Lemon Lime', description: '+30% Speed', color: 0xadff2f, icon: '🍋' },
   BLOOD_ORANGE: { type: 'BLOOD_ORANGE', name: 'Blood Orange', description: '+25% Tackle Range', color: 0xff4500, icon: '🍊' },
@@ -72,7 +70,6 @@ interface Defender {
   targetY: number
 }
 
-// Runner types for variety
 type RunnerType = 'NORMAL' | 'FAST' | 'TANK' | 'ZIGZAG'
 
 interface RunnerDef {
@@ -86,9 +83,9 @@ interface RunnerDef {
 
 const RUNNER_TYPES: Record<RunnerType, RunnerDef> = {
   NORMAL: { type: 'NORMAL', speedMult: 1, size: 1, points: 10, color: 0x888888, icon: '🏈' },
-  FAST: { type: 'FAST', speedMult: 1.8, size: 0.8, points: 15, color: 0xffff00, icon: '⚡' },
-  TANK: { type: 'TANK', speedMult: 0.6, size: 1.4, points: 25, color: 0xff4444, icon: '🛡️' },
-  ZIGZAG: { type: 'ZIGZAG', speedMult: 1.2, size: 1, points: 20, color: 0x44ff44, icon: '🌀' },
+  FAST: { type: 'FAST', speedMult: 1.8, size: 0.8, points: 15, color: 0xFFB300, icon: '⚡' },
+  TANK: { type: 'TANK', speedMult: 0.6, size: 1.4, points: 25, color: 0xE53935, icon: '🛡️' },
+  ZIGZAG: { type: 'ZIGZAG', speedMult: 1.2, size: 1, points: 20, color: 0x69BE28, icon: '🌀' },
 }
 
 interface Runner {
@@ -100,18 +97,18 @@ interface Runner {
 }
 
 export class GameScene extends Phaser.Scene {
-  // Defenders (player + AI teammates)
   private defenders: Defender[] = []
   private runners: Runner[] = []
   
-  // UI
+  // UI Elements
   private scoreText!: Phaser.GameObjects.Text
   private waveText!: Phaser.GameObjects.Text
-  private livesText!: Phaser.GameObjects.Text
+  private livesContainer!: Phaser.GameObjects.Container
   private killsText!: Phaser.GameObjects.Text
   private statsText!: Phaser.GameObjects.Text
   private timerBar!: Phaser.GameObjects.Graphics
   private timerBg!: Phaser.GameObjects.Graphics
+  private comboText!: Phaser.GameObjects.Text
   
   // Game state
   private isGameOver = false
@@ -120,8 +117,10 @@ export class GameScene extends Phaser.Scene {
   private spawnTimer = 0
   private runnersThisWave = 0
   private waveKills = 0
+  private comboCount = 0
+  private lastTackleTime = 0
   
-  // Player stats (upgradeable)
+  // Player stats
   private stats = {
     speedMultiplier: 1,
     tackleRadiusMultiplier: 1,
@@ -132,21 +131,24 @@ export class GameScene extends Phaser.Scene {
   
   // Input
   private pointer = { x: GAME_WIDTH / 2, y: GAME_HEIGHT / 2 }
+  
+  // Background elements
+  private fieldParticles: Phaser.GameObjects.Graphics[] = []
 
   constructor() {
     super({ key: 'GameScene' })
   }
 
   create(): void {
-    this.cameras.main.fadeIn(300)
+    this.cameras.main.fadeIn(400)
     this.resetState()
     
-    this.drawField()
+    this.drawPremiumField()
+    this.createAtmosphereEffects()
     this.createDefenders()
-    this.createUI()
+    this.createPremiumUI()
     this.setupInput()
     
-    // Start first wave
     this.startWave()
   }
 
@@ -158,6 +160,8 @@ export class GameScene extends Phaser.Scene {
     this.waveTimer = 0
     this.spawnTimer = 0
     this.runnersThisWave = 0
+    this.comboCount = 0
+    this.lastTackleTime = 0
     
     this.stats = {
       speedMultiplier: 1,
@@ -170,36 +174,126 @@ export class GameScene extends Phaser.Scene {
     useGameStore.getState().startGame()
   }
 
-  private drawField(): void {
+  private drawPremiumField(): void {
     const graphics = this.add.graphics()
     
-    // Full field background
-    graphics.fillStyle(COLORS.field, 1)
-    graphics.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT)
-    
-    // Yard lines
-    graphics.lineStyle(2, 0xffffff, 0.2)
-    for (let y = 80; y < GAME_HEIGHT; y += 60) {
-      graphics.moveTo(20, y)
-      graphics.lineTo(GAME_WIDTH - 20, y)
-      graphics.strokePath()
+    // Rich turf gradient
+    for (let y = 0; y < GAME_HEIGHT; y++) {
+      const progress = y / GAME_HEIGHT
+      const baseGreen = { r: 45, g: 90, b: 39 }
+      const lightGreen = { r: 58, g: 114, b: 51 }
+      
+      const r = Math.floor(baseGreen.r + (lightGreen.r - baseGreen.r) * progress * 0.5)
+      const g = Math.floor(baseGreen.g + (lightGreen.g - baseGreen.g) * progress * 0.3)
+      const b = Math.floor(baseGreen.b + (lightGreen.b - baseGreen.b) * progress * 0.5)
+      
+      graphics.fillStyle(Phaser.Display.Color.GetColor(r, g, b), 1)
+      graphics.fillRect(0, y, GAME_WIDTH, 1)
     }
     
-    // Top spawn zone indicator
-    graphics.fillStyle(0xff0000, 0.1)
-    graphics.fillRect(0, 0, GAME_WIDTH, 60)
+    // Turf texture pattern
+    const texture = this.add.graphics()
+    texture.lineStyle(1, 0xffffff, 0.02)
+    for (let x = 0; x < GAME_WIDTH; x += 8) {
+      texture.moveTo(x, 0)
+      texture.lineTo(x + 4, GAME_HEIGHT)
+      texture.strokePath()
+    }
     
-    // Field border
-    graphics.lineStyle(3, COLORS.accent, 0.5)
-    graphics.strokeRect(5, 5, GAME_WIDTH - 10, GAME_HEIGHT - 10)
+    // Yard lines with glow
+    const yardLines = this.add.graphics()
+    for (let y = 80; y < GAME_HEIGHT - 20; y += 80) {
+      // Glow
+      yardLines.lineStyle(6, 0xffffff, 0.05)
+      yardLines.moveTo(30, y)
+      yardLines.lineTo(GAME_WIDTH - 30, y)
+      yardLines.strokePath()
+      
+      // Main line
+      yardLines.lineStyle(2, 0xffffff, 0.25)
+      yardLines.moveTo(30, y)
+      yardLines.lineTo(GAME_WIDTH - 30, y)
+      yardLines.strokePath()
+      
+      // Hash marks
+      yardLines.lineStyle(1, 0xffffff, 0.15)
+      for (let x = 30; x < GAME_WIDTH - 30; x += 20) {
+        yardLines.fillStyle(0xffffff, 0.15)
+        yardLines.fillRect(x, y - 3, 2, 6)
+      }
+    }
+    
+    // Endzone at bottom (Seahawks Navy)
+    const endzone = this.add.graphics()
+    endzone.fillStyle(COLORS.navy, 0.4)
+    endzone.fillRect(0, GAME_HEIGHT - 60, GAME_WIDTH, 60)
+    
+    // Endzone text
+    const endzoneText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT - 30, 'SEAHAWKS', {
+      fontSize: '24px',
+      color: hexToCSS(COLORS.green),
+      fontFamily: FONTS.display,
+    })
+    endzoneText.setOrigin(0.5)
+    endzoneText.setAlpha(0.15)
+    
+    // Spawn zone indicator (top)
+    const spawnZone = this.add.graphics()
+    spawnZone.fillStyle(0xff0000, 0.05)
+    spawnZone.fillRect(0, 0, GAME_WIDTH, 65)
+    
+    // Field border with glow
+    const border = this.add.graphics()
+    border.lineStyle(4, COLORS.green, 0.3)
+    border.strokeRect(8, 8, GAME_WIDTH - 16, GAME_HEIGHT - 16)
+    border.lineStyle(2, COLORS.green, 0.6)
+    border.strokeRect(10, 10, GAME_WIDTH - 20, GAME_HEIGHT - 20)
+  }
+
+  private createAtmosphereEffects(): void {
+    // Floating particles for stadium atmosphere
+    for (let i = 0; i < 10; i++) {
+      const particle = this.add.graphics()
+      particle.fillStyle(COLORS.green, 0.2 + Math.random() * 0.2)
+      particle.fillCircle(0, 0, 1 + Math.random())
+      
+      particle.setPosition(Math.random() * GAME_WIDTH, Math.random() * GAME_HEIGHT)
+      
+      this.tweens.add({
+        targets: particle,
+        y: particle.y - 80,
+        alpha: 0,
+        duration: 3000 + Math.random() * 2000,
+        repeat: -1,
+        delay: Math.random() * 2000,
+        onRepeat: () => {
+          particle.setPosition(Math.random() * GAME_WIDTH, GAME_HEIGHT)
+          particle.setAlpha(0.2 + Math.random() * 0.2)
+        }
+      })
+      
+      this.fieldParticles.push(particle)
+    }
+    
+    // Stadium lights glow at top
+    const lightsGlow = this.add.graphics()
+    lightsGlow.fillStyle(0xffffff, 0.02)
+    lightsGlow.fillEllipse(GAME_WIDTH / 2, -50, GAME_WIDTH, 200)
+    
+    this.tweens.add({
+      targets: lightsGlow,
+      alpha: 0.8,
+      duration: 2000,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut'
+    })
   }
 
   private createDefenders(): void {
-    // Create player-controlled defender
     const playerDefender = this.createDefenderSprite(GAME_WIDTH / 2, GAME_HEIGHT - 150, true)
     this.defenders.push(playerDefender)
     
-    // Add AI defenders based on stats
     for (let i = 1; i < this.stats.defenderCount; i++) {
       this.addAIDefender()
     }
@@ -207,39 +301,59 @@ export class GameScene extends Phaser.Scene {
 
   private createDefenderSprite(x: number, y: number, isPlayer: boolean): Defender {
     const { selectedDefender } = useGameStore.getState()
+    const defender = FULL_ROSTER.find(d => d.jersey === selectedDefender)
+    const posColor = defender ? getPositionGroupColor(defender.positionGroup) : COLORS.green
     
-    // Glow
-    const glow = this.add.graphics()
-    glow.lineStyle(3, isPlayer ? COLORS.accent : 0x4ecdc4, 0.4)
-    glow.strokeCircle(0, 0, DEFENDER_RADIUS + 6)
+    // Outer pulse ring
+    const pulseRing = this.add.graphics()
+    pulseRing.lineStyle(2, isPlayer ? COLORS.green : 0x00897B, 0.3)
+    pulseRing.strokeCircle(0, 0, DEFENDER_RADIUS + 12)
     
-    // Body
+    // Tackle radius indicator
+    const tackleRadius = this.add.graphics()
+    tackleRadius.lineStyle(1, COLORS.green, 0.15)
+    tackleRadius.strokeCircle(0, 0, DEFENDER_RADIUS * this.stats.tackleRadiusMultiplier + RUNNER_RADIUS)
+    tackleRadius.setName('tackleRadius')
+    
+    // Main body with gradient effect
     const body = this.add.graphics()
-    body.fillStyle(isPlayer ? COLORS.primary : 0x2a7a7a, 1)
-    body.fillCircle(0, 0, DEFENDER_RADIUS)
-    body.lineStyle(3, isPlayer ? COLORS.accent : 0x4ecdc4)
-    body.strokeCircle(0, 0, DEFENDER_RADIUS)
+    if (isPlayer) {
+      body.fillStyle(COLORS.navy, 1)
+      body.fillCircle(0, 0, DEFENDER_RADIUS)
+      body.lineStyle(4, posColor, 1)
+      body.strokeCircle(0, 0, DEFENDER_RADIUS)
+    } else {
+      body.fillStyle(COLORS.navyLight, 1)
+      body.fillCircle(0, 0, DEFENDER_RADIUS - 2)
+      body.lineStyle(3, 0x00897B, 0.8)
+      body.strokeCircle(0, 0, DEFENDER_RADIUS - 2)
+    }
+    
+    // Inner highlight
+    const highlight = this.add.graphics()
+    highlight.fillStyle(0xffffff, 0.1)
+    highlight.fillCircle(-5, -8, 12)
     
     // Jersey number
     const jersey = this.add.text(0, 0, isPlayer ? `${selectedDefender}` : '★', {
-      fontSize: isPlayer ? '20px' : '24px',
+      fontSize: isPlayer ? '22px' : '20px',
       color: '#ffffff',
-      fontFamily: 'Arial Black',
+      fontFamily: FONTS.display,
     })
     jersey.setOrigin(0.5)
     
-    const sprite = this.add.container(x, y, [glow, body, jersey])
+    const sprite = this.add.container(x, y, [pulseRing, tackleRadius, body, highlight, jersey])
     sprite.setSize(DEFENDER_RADIUS * 2, DEFENDER_RADIUS * 2)
     
-    // Pulse effect
+    // Pulse animation
     this.tweens.add({
-      targets: glow,
-      alpha: 0.8,
-      scaleX: 1.15,
-      scaleY: 1.15,
-      duration: 600,
-      yoyo: true,
+      targets: pulseRing,
+      scaleX: 1.2,
+      scaleY: 1.2,
+      alpha: 0,
+      duration: 1000,
       repeat: -1,
+      ease: 'Sine.easeOut'
     })
     
     return {
@@ -264,79 +378,109 @@ export class GameScene extends Phaser.Scene {
     this.tweens.add({
       targets: defender.sprite,
       scale: 1,
-      duration: 300,
-      ease: 'Back.out',
+      duration: 400,
+      ease: 'Back.easeOut',
     })
   }
 
-  private createUI(): void {
-    // Score (top left)
-    this.scoreText = this.add.text(15, 12, 'SCORE: 0', {
-      fontSize: '16px',
-      color: '#ffffff',
-      fontFamily: 'Arial Black',
+  private createPremiumUI(): void {
+    // Top bar background
+    const topBar = this.add.graphics()
+    topBar.fillStyle(COLORS.navy, 0.7)
+    topBar.fillRect(0, 0, GAME_WIDTH, 70)
+    topBar.lineStyle(1, COLORS.green, 0.3)
+    topBar.lineBetween(0, 70, GAME_WIDTH, 70)
+    
+    // Score
+    this.scoreText = this.add.text(15, 12, 'SCORE', {
+      fontSize: '10px',
+      color: hexToCSS(COLORS.grey),
+      fontFamily: FONTS.body,
+      letterSpacing: 1,
     })
     
-    // Wave (top right)
-    this.waveText = this.add.text(GAME_WIDTH - 15, 12, 'WAVE 1', {
-      fontSize: '16px',
-      color: '#' + COLORS.accent.toString(16).padStart(6, '0'),
-      fontFamily: 'Arial Black',
+    const scoreValue = this.add.text(15, 24, '0', {
+      fontSize: '20px',
+      color: hexToCSS(COLORS.white),
+      fontFamily: FONTS.display,
+    })
+    scoreValue.setName('scoreValue')
+    
+    // Wave indicator
+    this.waveText = this.add.text(GAME_WIDTH - 15, 12, 'WAVE', {
+      fontSize: '10px',
+      color: hexToCSS(COLORS.grey),
+      fontFamily: FONTS.body,
+      letterSpacing: 1,
     })
     this.waveText.setOrigin(1, 0)
     
-    // Lives (center top)
-    this.livesText = this.add.text(GAME_WIDTH / 2, 12, '', {
-      fontSize: '14px',
+    const waveValue = this.add.text(GAME_WIDTH - 15, 24, '1', {
+      fontSize: '20px',
+      color: hexToCSS(COLORS.green),
+      fontFamily: FONTS.display,
     })
-    this.livesText.setOrigin(0.5, 0)
+    waveValue.setOrigin(1, 0)
+    waveValue.setName('waveValue')
+    
+    // Lives (center)
+    this.livesContainer = this.add.container(GAME_WIDTH / 2, 22)
     this.updateLivesDisplay()
     
-    // Wave timer bar
+    // Timer bar background
     this.timerBg = this.add.graphics()
-    this.timerBg.fillStyle(0x333333, 0.8)
-    this.timerBg.fillRect(15, 38, GAME_WIDTH - 30, 10)
+    this.timerBg.fillStyle(COLORS.navyLight, 0.8)
+    this.timerBg.fillRoundedRect(15, 50, GAME_WIDTH - 30, 12, 6)
     
+    // Timer bar
     this.timerBar = this.add.graphics()
     
-    // Wave kills counter
-    this.killsText = this.add.text(15, 55, 'Tackles: 0', {
-      fontSize: '12px',
-      color: '#aaaaaa',
-      fontFamily: 'Arial',
+    // Tackles counter
+    this.killsText = this.add.text(15, GAME_HEIGHT - 25, 'TACKLES: 0', {
+      fontSize: '11px',
+      color: hexToCSS(COLORS.grey),
+      fontFamily: FONTS.body,
     })
     
-    // Stats panel (bottom left) - shows current upgrades
-    this.statsText = this.add.text(10, GAME_HEIGHT - 60, '', {
-      fontSize: '10px',
-      color: '#888888',
-      fontFamily: 'Arial',
-      lineSpacing: 4,
+    // Combo indicator (hidden initially)
+    this.comboText = this.add.text(GAME_WIDTH / 2, 120, '', {
+      fontSize: '24px',
+      color: hexToCSS(COLORS.gold),
+      fontFamily: FONTS.display,
     })
+    this.comboText.setOrigin(0.5)
+    this.comboText.setAlpha(0)
+    
+    // Stats panel
+    this.statsText = this.add.text(GAME_WIDTH - 10, GAME_HEIGHT - 60, '', {
+      fontSize: '10px',
+      color: hexToCSS(COLORS.grey),
+      fontFamily: FONTS.body,
+      lineSpacing: 4,
+      align: 'right',
+    })
+    this.statsText.setOrigin(1, 0)
     this.updateStatsDisplay()
   }
   
   private updateStatsDisplay(): void {
     const lines = []
     if (this.stats.defenderCount > 1) lines.push(`🏈 ${this.stats.defenderCount} Defenders`)
-    if (this.stats.speedMultiplier > 1) lines.push(`⚡ ${Math.round((this.stats.speedMultiplier - 1) * 100)}% Speed`)
-    if (this.stats.tackleRadiusMultiplier > 1) lines.push(`💪 ${Math.round((this.stats.tackleRadiusMultiplier - 1) * 100)}% Reach`)
-    if (this.stats.enemySpeedMultiplier < 1) lines.push(`🍺 ${Math.round((1 - this.stats.enemySpeedMultiplier) * 100)}% Slow`)
+    if (this.stats.speedMultiplier > 1) lines.push(`⚡ +${Math.round((this.stats.speedMultiplier - 1) * 100)}% Speed`)
+    if (this.stats.tackleRadiusMultiplier > 1) lines.push(`💪 +${Math.round((this.stats.tackleRadiusMultiplier - 1) * 100)}% Reach`)
+    if (this.stats.enemySpeedMultiplier < 1) lines.push(`🍺 -${Math.round((1 - this.stats.enemySpeedMultiplier) * 100)}% Enemy`)
     
     this.statsText.setText(lines.join('\n'))
   }
 
   private setupInput(): void {
-    // Track pointer for player movement
     this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
       this.pointer.x = pointer.x
       this.pointer.y = pointer.y
     })
     
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-      // Resume audio context on first interaction (browser autoplay policy)
       AudioManager.resume()
-      
       this.pointer.x = pointer.x
       this.pointer.y = pointer.y
     })
@@ -349,35 +493,48 @@ export class GameScene extends Phaser.Scene {
     this.waveKills = 0
     this.isPaused = false
     
-    // Reset kills display
-    this.killsText.setText('Tackles: 0')
+    this.killsText.setText('TACKLES: 0')
     
     const { wave } = useGameStore.getState()
     
-    // Show wave start
-    const waveText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, `WAVE ${wave}`, {
-      fontSize: '42px',
-      color: '#ffffff',
-      fontFamily: 'Arial Black',
-      stroke: '#000000',
-      strokeThickness: 4,
+    // Epic wave announcement
+    const waveContainer = this.add.container(GAME_WIDTH / 2, GAME_HEIGHT / 2)
+    
+    const waveBg = this.add.graphics()
+    waveBg.fillStyle(COLORS.navy, 0.8)
+    waveBg.fillRoundedRect(-100, -50, 200, 100, 20)
+    
+    const waveLabel = this.add.text(0, -15, 'WAVE', {
+      fontSize: '16px',
+      color: hexToCSS(COLORS.grey),
+      fontFamily: FONTS.body,
+      letterSpacing: 3,
     })
-    waveText.setOrigin(0.5)
-    waveText.setScale(0)
+    waveLabel.setOrigin(0.5)
+    
+    const waveNumber = this.add.text(0, 20, `${wave}`, {
+      fontSize: '48px',
+      color: hexToCSS(COLORS.green),
+      fontFamily: FONTS.display,
+    })
+    waveNumber.setOrigin(0.5)
+    
+    waveContainer.add([waveBg, waveLabel, waveNumber])
+    waveContainer.setScale(0)
     
     this.tweens.add({
-      targets: waveText,
+      targets: waveContainer,
       scale: 1,
-      duration: 300,
-      ease: 'Back.out',
+      duration: 400,
+      ease: 'Back.easeOut',
       onComplete: () => {
         this.tweens.add({
-          targets: waveText,
+          targets: waveContainer,
           alpha: 0,
-          y: waveText.y - 50,
-          duration: 500,
-          delay: 500,
-          onComplete: () => waveText.destroy(),
+          y: waveContainer.y - 50,
+          duration: 400,
+          delay: 600,
+          onComplete: () => waveContainer.destroy(),
         })
       },
     })
@@ -386,59 +543,58 @@ export class GameScene extends Phaser.Scene {
   private spawnRunner(): void {
     const { wave } = useGameStore.getState()
     
-    // Determine runner type based on wave - LOTS OF SPECIALS
     let runnerType: RunnerType = 'NORMAL'
     const roll = Math.random()
-    
-    // Special enemy chance increases with wave - starts higher, scales faster
-    const specialChance = Math.min(0.75, 0.2 + (wave * 0.05)) // 20% wave 1, up to 75% by wave 11
+    const specialChance = Math.min(0.75, 0.2 + (wave * 0.05))
     
     if (roll < specialChance) {
       const specialRoll = Math.random()
-      
-      // All specials available from wave 1, just different rates
       if (specialRoll < 0.35) {
-        runnerType = 'FAST' // 35% of specials are Fast
+        runnerType = 'FAST'
       } else if (specialRoll < 0.6) {
-        runnerType = 'ZIGZAG' // 25% of specials are Zigzag
+        runnerType = 'ZIGZAG'
       } else {
-        runnerType = 'TANK' // 40% of specials are Tank
+        runnerType = 'TANK'
       }
     }
     
-    // Guaranteed special spawns - more frequent
-    if (wave >= 5 && this.runnersThisWave % 3 === 0) {
-      runnerType = 'TANK' // Every 3rd is Tank after wave 5
-    }
-    if (wave >= 7 && this.runnersThisWave % 2 === 0) {
-      runnerType = 'FAST' // Every 2nd is Fast after wave 7
-    }
+    if (wave >= 5 && this.runnersThisWave % 3 === 0) runnerType = 'TANK'
+    if (wave >= 7 && this.runnersThisWave % 2 === 0) runnerType = 'FAST'
     
     const typeDef = RUNNER_TYPES[runnerType]
     
-    // Random spawn position at top
     const x = Phaser.Math.Between(40, GAME_WIDTH - 40)
     const y = -RUNNER_RADIUS
     
-    // Speed scales with wave - gets noticeably faster each wave
     const waveSpeed = Math.min(MAX_RUNNER_SPEED, BASE_RUNNER_SPEED + (wave * SPEED_PER_WAVE))
     const speed = waveSpeed * typeDef.speedMult * this.stats.enemySpeedMultiplier
     
-    // Runner size based on type
     const radius = RUNNER_RADIUS * typeDef.size
     
-    // Runner sprite with type-specific color
+    // Runner body with type-specific styling
     const body = this.add.graphics()
     body.fillStyle(typeDef.color, 1)
     body.fillCircle(0, 0, radius)
-    body.lineStyle(2, 0xffffff, 0.5)
+    
+    // Border glow
+    body.lineStyle(2, 0xffffff, 0.4)
     body.strokeCircle(0, 0, radius)
     
+    // Type icon
     const icon = this.add.text(0, 0, typeDef.icon, { fontSize: `${10 + typeDef.size * 4}px` })
     icon.setOrigin(0.5)
     
     const sprite = this.add.container(x, y, [body, icon])
     sprite.setData('radius', radius)
+    
+    // Spawn animation
+    sprite.setScale(0)
+    this.tweens.add({
+      targets: sprite,
+      scale: 1,
+      duration: 200,
+      ease: 'Back.easeOut'
+    })
     
     this.runners.push({ 
       sprite, 
@@ -456,45 +612,45 @@ export class GameScene extends Phaser.Scene {
     const store = useGameStore.getState()
     const currentWaveDuration = getWaveDuration(store.wave)
     
-    // Update wave timer
     this.waveTimer += delta
     this.updateTimerBar(store.wave)
     
-    // Spawn runners - spawn rate increases each wave
     const spawnInterval = Math.max(MIN_SPAWN_INTERVAL, BASE_SPAWN_INTERVAL - (store.wave * SPAWN_REDUCTION_PER_WAVE))
     this.spawnTimer += delta
     
     if (this.spawnTimer >= spawnInterval && this.waveTimer < currentWaveDuration) {
-      // Spawn burst - more enemies at once at higher waves
-      // Wave 1-3: 1, Wave 4-6: 2, Wave 7-9: 3, Wave 10+: 4
       const burstCount = Math.min(4, 1 + Math.floor(store.wave / 3))
-      
       for (let i = 0; i < burstCount; i++) {
         this.spawnRunner()
       }
       this.spawnTimer = 0
     }
     
-    // Update player defender (follows pointer)
     this.updatePlayerDefender(delta)
-    
-    // Update AI defenders (chase nearest runner)
     this.updateAIDefenders(delta)
-    
-    // Update runners
     this.updateRunners(delta)
-    
-    // Check collisions
     this.checkCollisions()
     
-    // Check wave complete - wave ends when timer done AND all runners cleared
     if (this.waveTimer >= currentWaveDuration && this.runners.length === 0) {
       this.completeWave()
     }
     
     // Update UI
-    this.scoreText.setText(`SCORE: ${store.score.toLocaleString()}`)
-    this.waveText.setText(`WAVE ${store.wave}`)
+    const scoreValue = this.children.getByName('scoreValue') as Phaser.GameObjects.Text
+    if (scoreValue) scoreValue.setText(store.score.toLocaleString())
+    
+    const waveValue = this.children.getByName('waveValue') as Phaser.GameObjects.Text
+    if (waveValue) waveValue.setText(`${store.wave}`)
+    
+    // Update combo decay
+    if (time - this.lastTackleTime > 2000 && this.comboCount > 0) {
+      this.comboCount = 0
+      this.tweens.add({
+        targets: this.comboText,
+        alpha: 0,
+        duration: 200
+      })
+    }
   }
 
   private updateTimerBar(wave: number): void {
@@ -503,15 +659,21 @@ export class GameScene extends Phaser.Scene {
     const width = (GAME_WIDTH - 40) * progress
     
     this.timerBar.clear()
-    this.timerBar.fillStyle(COLORS.accent, 1)
-    this.timerBar.fillRect(20, 50, width, 12)
+    
+    // Gradient effect
+    const color = progress < 0.7 ? COLORS.green : (progress < 0.9 ? COLORS.gold : COLORS.dlRed)
+    this.timerBar.fillStyle(color, 1)
+    this.timerBar.fillRoundedRect(20, 52, width, 8, 4)
+    
+    // Shine
+    this.timerBar.fillStyle(0xffffff, 0.2)
+    this.timerBar.fillRoundedRect(20, 52, width, 3, { tl: 4, tr: 4, bl: 0, br: 0 })
   }
 
   private updatePlayerDefender(delta: number): void {
     const player = this.defenders.find(d => d.isPlayer)
     if (!player) return
     
-    // Move toward pointer
     const speed = DEFENDER_SPEED * this.stats.speedMultiplier * (delta / 1000)
     const dx = this.pointer.x - player.sprite.x
     const dy = this.pointer.y - player.sprite.y
@@ -524,9 +686,16 @@ export class GameScene extends Phaser.Scene {
       player.sprite.x += moveX
       player.sprite.y += moveY
       
-      // Clamp to field
       player.sprite.x = Phaser.Math.Clamp(player.sprite.x, DEFENDER_RADIUS, GAME_WIDTH - DEFENDER_RADIUS)
       player.sprite.y = Phaser.Math.Clamp(player.sprite.y, 70, GAME_HEIGHT - DEFENDER_RADIUS)
+    }
+    
+    // Update tackle radius indicator
+    const tackleRadiusIndicator = player.sprite.getByName('tackleRadius') as Phaser.GameObjects.Graphics
+    if (tackleRadiusIndicator) {
+      tackleRadiusIndicator.clear()
+      tackleRadiusIndicator.lineStyle(1, COLORS.green, 0.15)
+      tackleRadiusIndicator.strokeCircle(0, 0, DEFENDER_RADIUS * this.stats.tackleRadiusMultiplier + RUNNER_RADIUS)
     }
   }
 
@@ -534,45 +703,36 @@ export class GameScene extends Phaser.Scene {
     const aiDefenders = this.defenders.filter(d => !d.isPlayer)
     
     aiDefenders.forEach((defender, index) => {
-      // AI defenders are slow and imperfect
-      // Add reaction delay - only update every few frames based on index
-      if (Math.random() > 0.7) return // 30% chance to skip update (reaction time)
+      if (Math.random() > 0.7) return
       
-      // Find a runner to chase (not always the nearest - makes them less perfect)
       let targetRunner: Runner | undefined = undefined
       
       if (this.runners.length > 0) {
-        // Each AI picks a different runner to avoid all chasing the same one
         const runnerIndex = index % this.runners.length
         targetRunner = this.runners[runnerIndex]
         
-        // But only chase if runner is in the lower 2/3 of the screen (closer to danger)
         if (targetRunner && targetRunner.sprite.y < GAME_HEIGHT * 0.3) {
-          targetRunner = undefined // Too far away, don't chase
+          targetRunner = undefined
         }
       }
       
       if (targetRunner !== undefined) {
-        // Move toward target runner - SLOW
         const speed = AI_DEFENDER_SPEED * this.stats.speedMultiplier * (delta / 1000)
         const dx = targetRunner.sprite.x - defender.sprite.x
         const dy = targetRunner.sprite.y - defender.sprite.y
         const dist = Math.sqrt(dx * dx + dy * dy)
         
-        if (dist > 20) { // Stay further back, don't crowd
-          // Add some wobble to movement (imperfect pathing)
+        if (dist > 20) {
           const wobbleX = (Math.random() - 0.5) * 0.3
           const wobbleY = (Math.random() - 0.5) * 0.3
           
           defender.sprite.x += ((dx / dist) + wobbleX) * speed
           defender.sprite.y += ((dy / dist) + wobbleY) * speed
           
-          // Clamp to field
           defender.sprite.x = Phaser.Math.Clamp(defender.sprite.x, DEFENDER_RADIUS, GAME_WIDTH - DEFENDER_RADIUS)
           defender.sprite.y = Phaser.Math.Clamp(defender.sprite.y, 100, GAME_HEIGHT - DEFENDER_RADIUS)
         }
       } else {
-        // No target - patrol near bottom of field
         const patrolY = GAME_HEIGHT - 120
         const patrolX = GAME_WIDTH / 2 + Math.sin(Date.now() * 0.001 + index) * 100
         
@@ -596,24 +756,19 @@ export class GameScene extends Phaser.Scene {
       const runner = this.runners[i]
       const radius = runner.sprite.getData('radius') || RUNNER_RADIUS
       
-      // Move down
       runner.sprite.y += runner.speed * (delta / 1000)
       
-      // PROGRESSIVE AI - gets smarter each wave
       let horizontalMove = 0
       
-      // Base movement pattern by type
       if (runner.type === 'ZIGZAG') {
         runner.zigzagPhase += delta * 0.006
         horizontalMove = Math.sin(runner.zigzagPhase) * 4
       } else if (runner.type === 'FAST') {
-        // Fast enemies weave slightly
         horizontalMove = Math.sin(runner.sprite.y * 0.03) * 2
       } else {
         horizontalMove = Math.sin(runner.sprite.y * 0.02) * 0.5
       }
       
-      // WAVE 3+: Start reacting to defenders
       if (wave >= 3) {
         const nearestDefender = this.findNearestDefender(runner.sprite.x, runner.sprite.y)
         
@@ -622,26 +777,20 @@ export class GameScene extends Phaser.Scene {
           const dy = runner.sprite.y - nearestDefender.sprite.y
           const dist = Math.sqrt(dx * dx + dy * dy)
           
-          // Dodge range increases with wave
-          const dodgeRange = 80 + (wave * 5) // 80 at wave 3, 130 at wave 10
+          const dodgeRange = 80 + (wave * 5)
           
           if (dist < dodgeRange && dist > 0) {
-            // Dodge intensity increases with wave
-            const dodgeStrength = Math.min(3, 0.5 + (wave * 0.15)) // 0.5 at wave 3, up to 3
-            
-            // Move away from defender horizontally
+            const dodgeStrength = Math.min(3, 0.5 + (wave * 0.15))
             const dodgeDir = dx > 0 ? 1 : -1
             horizontalMove += dodgeDir * dodgeStrength * (1 - dist / dodgeRange)
             
-            // WAVE 6+: Speed boost when dodging
             if (wave >= 6 && dist < dodgeRange * 0.5) {
-              runner.sprite.y += runner.speed * 0.3 * (delta / 1000) // Extra forward speed
+              runner.sprite.y += runner.speed * 0.3 * (delta / 1000)
             }
           }
         }
       }
       
-      // WAVE 8+: Spread out from other runners
       if (wave >= 8) {
         for (const other of this.runners) {
           if (other === runner) continue
@@ -650,19 +799,14 @@ export class GameScene extends Phaser.Scene {
           const oDist = Math.sqrt(ox * ox + oy * oy)
           
           if (oDist < 40 && oDist > 0) {
-            // Push away from other runners
             horizontalMove += (ox / oDist) * 0.5
           }
         }
       }
       
-      // Apply horizontal movement
       runner.sprite.x += horizontalMove
-      
-      // Clamp to field
       runner.sprite.x = Phaser.Math.Clamp(runner.sprite.x, radius + 10, GAME_WIDTH - radius - 10)
       
-      // Check if scored (reached bottom)
       if (runner.sprite.y > GAME_HEIGHT + radius) {
         this.runnerScored(runner)
       }
@@ -712,11 +856,8 @@ export class GameScene extends Phaser.Scene {
     if (runner.health <= 0) {
       this.tackleRunner(runner, defender)
     } else {
-      // Tank hit but not killed - show damage effect
       this.cameras.main.shake(20, 0.002)
       
-      // Flash the runner
-      const body = runner.sprite.getAt(0) as Phaser.GameObjects.Graphics
       this.tweens.add({
         targets: runner.sprite,
         alpha: 0.5,
@@ -724,10 +865,7 @@ export class GameScene extends Phaser.Scene {
         yoyo: true,
       })
       
-      // Show damage number
-      this.showFloatingPoints(runner.sprite.x, runner.sprite.y - 20, 5, 0xffff00)
-      
-      // Add score for hit
+      this.showFloatingPoints(runner.sprite.x, runner.sprite.y - 20, 5, COLORS.gold)
       useGameStore.getState().addScore(5)
     }
   }
@@ -735,6 +873,7 @@ export class GameScene extends Phaser.Scene {
   private tackleRunner(runner: Runner, defender: Defender): void {
     const store = useGameStore.getState()
     const typeDef = RUNNER_TYPES[runner.type]
+    const now = Date.now()
     
     // Remove runner
     const index = this.runners.indexOf(runner)
@@ -742,145 +881,212 @@ export class GameScene extends Phaser.Scene {
       this.runners.splice(index, 1)
     }
     
-    // Effects - bigger shake for tanks
+    // Combo system
+    if (now - this.lastTackleTime < 2000) {
+      this.comboCount++
+      if (this.comboCount >= 2) {
+        this.showCombo(this.comboCount)
+      }
+    } else {
+      this.comboCount = 1
+    }
+    this.lastTackleTime = now
+    
+    // Effects
     const shakeIntensity = runner.type === 'TANK' ? 0.006 : 0.003
     this.cameras.main.shake(30, shakeIntensity)
-    this.createTackleEffect(runner.sprite.x, runner.sprite.y, typeDef.color)
+    this.createPremiumTackleEffect(runner.sprite.x, runner.sprite.y, typeDef.color)
     
-    // Sound - different for tanks
+    // Sound
     if (runner.type === 'TANK') {
       AudioManager.playBigTackle()
     } else {
       AudioManager.playTackle()
     }
     
-    // Show floating points
-    this.showFloatingPoints(runner.sprite.x, runner.sprite.y, typeDef.points, COLORS.accent)
+    // Score with combo multiplier
+    const comboMultiplier = Math.min(3, 1 + (this.comboCount - 1) * 0.5)
+    const points = Math.floor(typeDef.points * comboMultiplier)
+    
+    this.showFloatingPoints(runner.sprite.x, runner.sprite.y, points, COLORS.green)
     
     runner.sprite.destroy()
     
-    // Score based on runner type
     store.addTackle()
-    store.addScore(typeDef.points)
+    store.addScore(points)
     
-    // Update wave kills
     this.waveKills++
-    this.killsText.setText(`Tackles: ${this.waveKills}`)
+    this.killsText.setText(`TACKLES: ${this.waveKills}`)
+  }
+  
+  private showCombo(count: number): void {
+    this.comboText.setText(`${count}x COMBO!`)
+    this.comboText.setAlpha(1)
+    this.comboText.setScale(0.5)
+    
+    this.tweens.add({
+      targets: this.comboText,
+      scale: 1.2,
+      duration: 150,
+      yoyo: true,
+      ease: 'Back.easeOut'
+    })
   }
   
   private showFloatingPoints(x: number, y: number, points: number, color: number): void {
     const text = this.add.text(x, y, `+${points}`, {
-      fontSize: '18px',
-      color: '#' + color.toString(16).padStart(6, '0'),
-      fontFamily: 'Arial Black',
-      stroke: '#000000',
-      strokeThickness: 2,
+      fontSize: '20px',
+      color: hexToCSS(color),
+      fontFamily: FONTS.display,
+      stroke: hexToCSS(COLORS.navy),
+      strokeThickness: 3,
     })
     text.setOrigin(0.5)
     
     this.tweens.add({
       targets: text,
-      y: y - 40,
+      y: y - 50,
       alpha: 0,
-      duration: 600,
+      scale: 1.3,
+      duration: 700,
       ease: 'Power2',
       onComplete: () => text.destroy(),
     })
   }
 
-  private createTackleEffect(x: number, y: number, color: number = COLORS.accent): void {
-    // Burst particles with runner color
-    for (let i = 0; i < 8; i++) {
+  private createPremiumTackleEffect(x: number, y: number, color: number): void {
+    // Burst particles
+    for (let i = 0; i < 12; i++) {
       const particle = this.add.graphics()
-      particle.fillStyle(i % 2 === 0 ? color : COLORS.accent, 1)
-      particle.fillCircle(0, 0, 4)
+      const particleColor = i % 3 === 0 ? COLORS.green : (i % 3 === 1 ? color : COLORS.white)
+      particle.fillStyle(particleColor, 1)
+      particle.fillCircle(0, 0, 2 + Math.random() * 3)
       particle.setPosition(x, y)
       
-      const angle = (i / 8) * Math.PI * 2
+      const angle = (i / 12) * Math.PI * 2
+      const distance = 40 + Math.random() * 20
       
       this.tweens.add({
         targets: particle,
-        x: x + Math.cos(angle) * 35,
-        y: y + Math.sin(angle) * 35,
+        x: x + Math.cos(angle) * distance,
+        y: y + Math.sin(angle) * distance,
         alpha: 0,
-        scale: 0.5,
-        duration: 300,
+        scale: 0.3,
+        duration: 400,
+        ease: 'Power2',
         onComplete: () => particle.destroy(),
       })
     }
     
     // Impact ring
     const ring = this.add.graphics()
-    ring.lineStyle(3, color)
-    ring.strokeCircle(x, y, 10)
+    ring.lineStyle(4, COLORS.green, 1)
+    ring.strokeCircle(x, y, 15)
     
     this.tweens.add({
       targets: ring,
-      scaleX: 2.5,
-      scaleY: 2.5,
+      scaleX: 3,
+      scaleY: 3,
       alpha: 0,
-      duration: 300,
+      duration: 400,
+      ease: 'Power2',
       onComplete: () => ring.destroy(),
+    })
+    
+    // Flash
+    const flash = this.add.graphics()
+    flash.fillStyle(0xffffff, 0.3)
+    flash.fillCircle(x, y, 30)
+    
+    this.tweens.add({
+      targets: flash,
+      alpha: 0,
+      scale: 2,
+      duration: 200,
+      onComplete: () => flash.destroy(),
     })
   }
 
   private runnerScored(runner: Runner): void {
-    // Remove runner
     const index = this.runners.indexOf(runner)
     if (index !== -1) {
       this.runners.splice(index, 1)
     }
     runner.sprite.destroy()
     
-    // Lose life
     this.stats.lives--
     this.updateLivesDisplay()
     
-    // Sound
     AudioManager.playTouchdown()
+    this.cameras.main.flash(200, 255, 0, 0)
     
-    // Flash
-    this.cameras.main.flash(150, 255, 0, 0)
-    
-    // Check game over
     if (this.stats.lives <= 0) {
       this.gameOver()
     }
   }
 
   private updateLivesDisplay(): void {
-    const hearts = '❤️'.repeat(Math.max(0, this.stats.lives))
-    this.livesText.setText(hearts)
+    this.livesContainer.removeAll(true)
+    
+    const totalWidth = this.stats.lives * 22
+    const startX = -totalWidth / 2 + 11
+    
+    for (let i = 0; i < this.stats.lives; i++) {
+      const heart = this.add.text(startX + i * 22, 0, '❤️', { fontSize: '16px' })
+      heart.setOrigin(0.5)
+      this.livesContainer.add(heart)
+    }
   }
 
   private completeWave(): void {
     this.isPaused = true
     const store = useGameStore.getState()
     
-    // Sound
     AudioManager.playWaveComplete()
-    
-    // Wave complete bonus
     store.addScore(100)
     store.incrementWave()
     
-    // Show upgrade selection
     this.showUpgradeSelection()
   }
 
   private showUpgradeSelection(): void {
-    // Dim background
+    // Overlay
     const overlay = this.add.graphics()
-    overlay.fillStyle(0x000000, 0.7)
+    overlay.fillStyle(0x000000, 0.85)
     overlay.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT)
+    overlay.setAlpha(0)
+    
+    this.tweens.add({
+      targets: overlay,
+      alpha: 1,
+      duration: 300
+    })
     
     // Title
-    const title = this.add.text(GAME_WIDTH / 2, 80, 'CHOOSE UPGRADE', {
-      fontSize: '24px',
-      color: '#ffffff',
-      fontFamily: 'Arial Black',
+    const title = this.add.text(GAME_WIDTH / 2, 70, 'CHOOSE UPGRADE', {
+      fontSize: '26px',
+      color: hexToCSS(COLORS.white),
+      fontFamily: FONTS.display,
+      letterSpacing: 2,
     })
     title.setOrigin(0.5)
+    title.setAlpha(0)
+    
+    const subtitle = this.add.text(GAME_WIDTH / 2, 100, 'Power up your defense', {
+      fontSize: '12px',
+      color: hexToCSS(COLORS.grey),
+      fontFamily: FONTS.body,
+    })
+    subtitle.setOrigin(0.5)
+    subtitle.setAlpha(0)
+    
+    this.tweens.add({
+      targets: [title, subtitle],
+      alpha: 1,
+      y: '-=10',
+      duration: 400,
+      delay: 200
+    })
     
     // Get 3 random upgrades
     const upgradeTypes = Object.keys(UPGRADES) as UpgradeType[]
@@ -891,18 +1097,18 @@ export class GameScene extends Phaser.Scene {
     
     choices.forEach((type, index) => {
       const upgrade = UPGRADES[type]
-      const y = 180 + index * 150
+      const y = 180 + index * 160
       
-      const card = this.createUpgradeCard(GAME_WIDTH / 2, y, upgrade, () => {
+      const card = this.createPremiumUpgradeCard(GAME_WIDTH / 2, y, upgrade, index, () => {
         AudioManager.playUpgrade()
         this.applyUpgrade(upgrade.type)
         
         // Clean up
         overlay.destroy()
         title.destroy()
+        subtitle.destroy()
         cards.forEach(c => c.destroy())
         
-        // Continue
         this.startWave()
       })
       
@@ -910,56 +1116,113 @@ export class GameScene extends Phaser.Scene {
     })
   }
 
-  private createUpgradeCard(x: number, y: number, upgrade: Upgrade, callback: () => void): Phaser.GameObjects.Container {
-    const width = 320
-    const height = 110
+  private createPremiumUpgradeCard(x: number, y: number, upgrade: Upgrade, index: number, callback: () => void): Phaser.GameObjects.Container {
+    const width = 340
+    const height = 120
     
+    // Card background with gradient
     const bg = this.add.graphics()
-    bg.fillStyle(0x222222, 1)
-    bg.fillRoundedRect(-width / 2, -height / 2, width, height, 15)
-    bg.lineStyle(3, upgrade.color)
-    bg.strokeRoundedRect(-width / 2, -height / 2, width, height, 15)
+    bg.fillStyle(COLORS.navyLight, 0.9)
+    bg.fillRoundedRect(-width / 2, -height / 2, width, height, 16)
+    bg.lineStyle(2, upgrade.color, 0.8)
+    bg.strokeRoundedRect(-width / 2, -height / 2, width, height, 16)
     
-    const icon = this.add.text(-width / 2 + 40, 0, upgrade.icon, {
-      fontSize: '36px',
-    })
+    // Left accent bar
+    const accent = this.add.graphics()
+    accent.fillStyle(upgrade.color, 1)
+    accent.fillRoundedRect(-width / 2, -height / 2, 8, height, { tl: 16, bl: 16, tr: 0, br: 0 })
+    
+    // Icon container
+    const iconBg = this.add.graphics()
+    iconBg.fillStyle(upgrade.color, 0.2)
+    iconBg.fillCircle(-width / 2 + 55, 0, 35)
+    
+    const icon = this.add.text(-width / 2 + 55, 0, upgrade.icon, { fontSize: '36px' })
     icon.setOrigin(0.5)
     
-    const name = this.add.text(-width / 2 + 90, -15, upgrade.name, {
+    // Text
+    const name = this.add.text(-width / 2 + 110, -15, upgrade.name.toUpperCase(), {
       fontSize: '20px',
-      color: '#ffffff',
-      fontFamily: 'Arial Black',
+      color: hexToCSS(COLORS.white),
+      fontFamily: FONTS.display,
     })
     
-    const desc = this.add.text(-width / 2 + 90, 15, upgrade.description, {
+    const desc = this.add.text(-width / 2 + 110, 15, upgrade.description, {
       fontSize: '14px',
-      color: '#aaaaaa',
-      fontFamily: 'Arial',
+      color: hexToCSS(COLORS.grey),
+      fontFamily: FONTS.body,
     })
     
-    const container = this.add.container(x, y, [bg, icon, name, desc])
+    // Select indicator
+    const selectArrow = this.add.text(width / 2 - 30, 0, '→', {
+      fontSize: '24px',
+      color: hexToCSS(upgrade.color),
+      fontFamily: FONTS.display,
+    })
+    selectArrow.setOrigin(0.5)
+    selectArrow.setAlpha(0.5)
+    
+    const container = this.add.container(x, y, [bg, accent, iconBg, icon, name, desc, selectArrow])
     container.setSize(width, height)
     container.setInteractive({ useHandCursor: true })
     
+    // Entrance animation
+    container.setAlpha(0)
+    container.setX(x + 50)
+    
+    this.tweens.add({
+      targets: container,
+      alpha: 1,
+      x: x,
+      duration: 400,
+      delay: 300 + index * 100,
+      ease: 'Power2'
+    })
+    
+    // Hover effects
     container.on('pointerover', () => {
-      container.setScale(1.05)
+      this.tweens.add({
+        targets: container,
+        scaleX: 1.03,
+        scaleY: 1.03,
+        duration: 150
+      })
+      
       bg.clear()
-      bg.fillStyle(0x333333, 1)
-      bg.fillRoundedRect(-width / 2, -height / 2, width, height, 15)
-      bg.lineStyle(4, upgrade.color)
-      bg.strokeRoundedRect(-width / 2, -height / 2, width, height, 15)
+      bg.fillStyle(COLORS.navyLight, 1)
+      bg.fillRoundedRect(-width / 2, -height / 2, width, height, 16)
+      bg.lineStyle(3, upgrade.color, 1)
+      bg.strokeRoundedRect(-width / 2, -height / 2, width, height, 16)
+      
+      selectArrow.setAlpha(1)
+      
+      this.tweens.add({
+        targets: selectArrow,
+        x: width / 2 - 25,
+        duration: 150
+      })
     })
     
     container.on('pointerout', () => {
-      container.setScale(1)
+      this.tweens.add({
+        targets: container,
+        scaleX: 1,
+        scaleY: 1,
+        duration: 150
+      })
+      
       bg.clear()
-      bg.fillStyle(0x222222, 1)
-      bg.fillRoundedRect(-width / 2, -height / 2, width, height, 15)
-      bg.lineStyle(3, upgrade.color)
-      bg.strokeRoundedRect(-width / 2, -height / 2, width, height, 15)
+      bg.fillStyle(COLORS.navyLight, 0.9)
+      bg.fillRoundedRect(-width / 2, -height / 2, width, height, 16)
+      bg.lineStyle(2, upgrade.color, 0.8)
+      bg.strokeRoundedRect(-width / 2, -height / 2, width, height, 16)
+      
+      selectArrow.setAlpha(0.5)
+      selectArrow.x = width / 2 - 30
     })
     
-    container.on('pointerdown', callback)
+    container.on('pointerdown', () => container.setScale(0.98))
+    container.on('pointerup', callback)
     
     return container
   }
@@ -981,7 +1244,7 @@ export class GameScene extends Phaser.Scene {
         this.updateLivesDisplay()
         break
       case 'HAZY_IPA':
-        this.stats.enemySpeedMultiplier *= 0.8 // Enemies 20% slower
+        this.stats.enemySpeedMultiplier *= 0.8
         break
       case 'WATERMELON':
         this.stats.lives += 2
@@ -995,38 +1258,45 @@ export class GameScene extends Phaser.Scene {
         break
     }
     
-    // Update stats display
     this.updateStatsDisplay()
     
-    // Show upgrade applied text
+    // Upgrade applied text
     const text = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, 'UPGRADED!', {
-      fontSize: '28px',
-      color: '#' + COLORS.accent.toString(16).padStart(6, '0'),
-      fontFamily: 'Arial Black',
+      fontSize: '32px',
+      color: hexToCSS(COLORS.green),
+      fontFamily: FONTS.display,
     })
     text.setOrigin(0.5)
+    text.setScale(0)
     
     this.tweens.add({
       targets: text,
-      y: text.y - 50,
-      alpha: 0,
-      duration: 800,
-      onComplete: () => text.destroy(),
+      scale: 1.2,
+      duration: 300,
+      ease: 'Back.easeOut',
+      onComplete: () => {
+        this.tweens.add({
+          targets: text,
+          alpha: 0,
+          y: text.y - 40,
+          duration: 400,
+          delay: 200,
+          onComplete: () => text.destroy()
+        })
+      }
     })
   }
 
   private gameOver(): void {
     this.isGameOver = true
     
-    // Sound
     AudioManager.playGameOver()
     
-    // Clean up
     this.runners.forEach(r => r.sprite.destroy())
     this.runners = []
     
-    this.cameras.main.fadeOut(500)
-    this.time.delayedCall(500, () => {
+    this.cameras.main.fadeOut(600)
+    this.time.delayedCall(600, () => {
       this.scene.start('GameOverScene')
     })
   }

@@ -1,5 +1,66 @@
 @import "tailwindcss";
 
+/* ============================================
+   SEATTLE SEAHAWKS DESIGN SYSTEM
+   Premium Sports Typography & Colors
+   ============================================ */
+
+/* CSS Custom Properties - Seahawks Brand */
+:root {
+  /* Primary Seahawks Colors */
+  --seahawks-navy: #002244;
+  --seahawks-green: #69BE28;
+  --seahawks-grey: #A5ACAF;
+  --seahawks-white: #FFFFFF;
+  
+  /* Extended Palette */
+  --seahawks-navy-light: #003366;
+  --seahawks-navy-dark: #001a33;
+  --seahawks-green-light: #8BD44A;
+  --seahawks-green-dark: #4A9A1C;
+  --seahawks-grey-light: #C4CACC;
+  --seahawks-grey-dark: #7A8285;
+  
+  /* Accent Colors */
+  --accent-gold: #FFD700;
+  --accent-silver: #C0C0C0;
+  --accent-bronze: #CD7F32;
+  
+  /* Field Colors */
+  --field-green: #2D5A27;
+  --field-green-light: #3A7233;
+  --endzone-blue: #002244;
+  
+  /* UI Colors */
+  --glass-white: rgba(255, 255, 255, 0.08);
+  --glass-white-hover: rgba(255, 255, 255, 0.12);
+  --glass-border: rgba(255, 255, 255, 0.15);
+  --shadow-glow: rgba(105, 190, 40, 0.4);
+  
+  /* Typography Scale */
+  --text-hero: clamp(3rem, 10vw, 6rem);
+  --text-title: clamp(2rem, 6vw, 3.5rem);
+  --text-subtitle: clamp(1.25rem, 4vw, 2rem);
+  --text-body: clamp(0.875rem, 2.5vw, 1rem);
+  --text-caption: clamp(0.75rem, 2vw, 0.875rem);
+  
+  /* Spacing */
+  --space-xs: 0.25rem;
+  --space-sm: 0.5rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+  --space-xl: 2rem;
+  --space-2xl: 3rem;
+  --space-3xl: 4rem;
+  
+  /* Transitions */
+  --transition-fast: 150ms ease;
+  --transition-normal: 250ms ease;
+  --transition-slow: 400ms ease;
+  --transition-spring: 500ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Base Reset */
 * {
   box-sizing: border-box;
   padding: 0;
@@ -14,11 +75,481 @@ body {
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
-    Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--seahawks-navy);
+  color: var(--seahawks-white);
 }
 
-/* Prevent text selection during gameplay */
+/* ============================================
+   TYPOGRAPHY UTILITIES
+   ============================================ */
+
+.font-display {
+  font-family: var(--font-bebas), var(--font-oswald), sans-serif;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.font-heading {
+  font-family: var(--font-oswald), sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.font-body {
+  font-family: var(--font-inter), sans-serif;
+}
+
+.text-hero {
+  font-size: var(--text-hero);
+  line-height: 0.9;
+}
+
+.text-title {
+  font-size: var(--text-title);
+  line-height: 1;
+}
+
+.text-subtitle {
+  font-size: var(--text-subtitle);
+  line-height: 1.2;
+}
+
+/* Text Gradient - Seahawks */
+.text-gradient-seahawks {
+  background: linear-gradient(135deg, var(--seahawks-green) 0%, var(--seahawks-green-light) 50%, var(--seahawks-white) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Text Glow Effect */
+.text-glow {
+  text-shadow: 
+    0 0 10px var(--shadow-glow),
+    0 0 20px var(--shadow-glow),
+    0 0 40px var(--shadow-glow);
+}
+
+.text-glow-subtle {
+  text-shadow: 0 0 20px var(--shadow-glow);
+}
+
+/* ============================================
+   SEAHAWKS COLOR UTILITIES
+   ============================================ */
+
+.bg-seahawks-navy { background-color: var(--seahawks-navy); }
+.bg-seahawks-green { background-color: var(--seahawks-green); }
+.bg-seahawks-grey { background-color: var(--seahawks-grey); }
+
+.text-seahawks-navy { color: var(--seahawks-navy); }
+.text-seahawks-green { color: var(--seahawks-green); }
+.text-seahawks-grey { color: var(--seahawks-grey); }
+
+.border-seahawks-green { border-color: var(--seahawks-green); }
+.border-seahawks-grey { border-color: var(--seahawks-grey); }
+
+/* Gradient Backgrounds */
+.bg-gradient-stadium {
+  background: linear-gradient(
+    180deg,
+    var(--seahawks-navy-dark) 0%,
+    var(--seahawks-navy) 30%,
+    var(--seahawks-navy-light) 70%,
+    var(--field-green) 100%
+  );
+}
+
+.bg-gradient-hero {
+  background: 
+    radial-gradient(ellipse at 50% 0%, rgba(105, 190, 40, 0.15) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 100%, rgba(45, 90, 39, 0.3) 0%, transparent 50%),
+    linear-gradient(180deg, var(--seahawks-navy-dark) 0%, var(--seahawks-navy) 100%);
+}
+
+.bg-gradient-card {
+  background: linear-gradient(
+    145deg,
+    rgba(0, 34, 68, 0.9) 0%,
+    rgba(0, 51, 102, 0.7) 100%
+  );
+}
+
+/* ============================================
+   GLASS MORPHISM EFFECTS
+   ============================================ */
+
+.glass {
+  background: var(--glass-white);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+}
+
+.glass-card {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.1) 0%,
+    rgba(255, 255, 255, 0.05) 100%
+  );
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.glass-button {
+  background: linear-gradient(
+    135deg,
+    rgba(105, 190, 40, 0.9) 0%,
+    rgba(105, 190, 40, 0.7) 100%
+  );
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 
+    0 4px 20px rgba(105, 190, 40, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  transition: all var(--transition-normal);
+}
+
+.glass-button:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 
+    0 8px 30px rgba(105, 190, 40, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+.glass-button:active {
+  transform: translateY(0) scale(0.98);
+}
+
+/* ============================================
+   BUTTON STYLES
+   ============================================ */
+
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-md) var(--space-xl);
+  background: linear-gradient(135deg, var(--seahawks-green) 0%, var(--seahawks-green-dark) 100%);
+  color: var(--seahawks-navy);
+  font-family: var(--font-oswald), sans-serif;
+  font-weight: 700;
+  font-size: 1.25rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all var(--transition-spring);
+  box-shadow: 
+    0 4px 20px rgba(105, 190, 40, 0.4),
+    0 0 0 0 rgba(105, 190, 40, 0.4);
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-primary::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, transparent 0%, rgba(255, 255, 255, 0.2) 50%, transparent 100%);
+  transform: translateX(-100%);
+  transition: transform 0.6s ease;
+}
+
+.btn-primary:hover {
+  transform: translateY(-3px) scale(1.03);
+  box-shadow: 
+    0 8px 30px rgba(105, 190, 40, 0.5),
+    0 0 40px rgba(105, 190, 40, 0.3);
+}
+
+.btn-primary:hover::before {
+  transform: translateX(100%);
+}
+
+.btn-primary:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-md) var(--space-xl);
+  background: transparent;
+  color: var(--seahawks-white);
+  font-family: var(--font-oswald), sans-serif;
+  font-weight: 600;
+  font-size: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  border: 2px solid var(--seahawks-grey);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all var(--transition-normal);
+}
+
+.btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--seahawks-green);
+  color: var(--seahawks-green);
+  transform: translateY(-2px);
+}
+
+/* ============================================
+   CARD STYLES
+   ============================================ */
+
+.player-card {
+  position: relative;
+  background: linear-gradient(
+    145deg,
+    rgba(0, 51, 102, 0.8) 0%,
+    rgba(0, 34, 68, 0.9) 100%
+  );
+  border: 2px solid rgba(165, 172, 175, 0.3);
+  border-radius: 16px;
+  overflow: hidden;
+  transition: all var(--transition-spring);
+}
+
+.player-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    135deg,
+    transparent 0%,
+    rgba(105, 190, 40, 0.1) 50%,
+    transparent 100%
+  );
+  opacity: 0;
+  transition: opacity var(--transition-normal);
+}
+
+.player-card:hover {
+  transform: translateY(-8px) scale(1.02);
+  border-color: var(--seahawks-green);
+  box-shadow: 
+    0 20px 40px rgba(0, 0, 0, 0.4),
+    0 0 30px rgba(105, 190, 40, 0.2);
+}
+
+.player-card:hover::before {
+  opacity: 1;
+}
+
+.player-card.selected {
+  border-color: var(--seahawks-green);
+  box-shadow: 
+    0 0 0 4px rgba(105, 190, 40, 0.3),
+    0 10px 30px rgba(0, 0, 0, 0.3),
+    0 0 40px rgba(105, 190, 40, 0.2);
+}
+
+/* Position Badge Colors */
+.badge-dl { background: linear-gradient(135deg, #E53935 0%, #B71C1C 100%); }
+.badge-lb { background: linear-gradient(135deg, #00897B 0%, #004D40 100%); }
+.badge-db { background: linear-gradient(135deg, #FFB300 0%, #FF8F00 100%); }
+
+/* ============================================
+   ANIMATIONS
+   ============================================ */
+
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(105, 190, 40, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 40px rgba(105, 190, 40, 0.6);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes stadium-lights {
+  0%, 100% {
+    opacity: 0.8;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes hero-text {
+  from {
+    opacity: 0;
+    transform: translateY(40px) scale(0.95);
+    filter: blur(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes particle-float {
+  0% {
+    transform: translateY(100vh) rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-100vh) rotate(720deg);
+    opacity: 0;
+  }
+}
+
+/* Animation Classes */
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.animate-shimmer {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.2) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite;
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.animate-slide-up {
+  animation: slide-up 0.6s ease-out forwards;
+}
+
+.animate-scale-in {
+  animation: scale-in 0.4s ease-out forwards;
+}
+
+.animate-hero-text {
+  animation: hero-text 1s ease-out forwards;
+}
+
+/* Stagger delays for lists */
+.stagger-1 { animation-delay: 0.1s; }
+.stagger-2 { animation-delay: 0.2s; }
+.stagger-3 { animation-delay: 0.3s; }
+.stagger-4 { animation-delay: 0.4s; }
+.stagger-5 { animation-delay: 0.5s; }
+.stagger-6 { animation-delay: 0.6s; }
+
+/* ============================================
+   STADIUM EFFECTS
+   ============================================ */
+
+.stadium-overlay {
+  position: absolute;
+  inset: 0;
+  background: 
+    radial-gradient(ellipse 80% 50% at 50% 0%, rgba(255, 255, 255, 0.03) 0%, transparent 50%),
+    radial-gradient(circle at 20% 80%, rgba(105, 190, 40, 0.05) 0%, transparent 30%),
+    radial-gradient(circle at 80% 80%, rgba(105, 190, 40, 0.05) 0%, transparent 30%);
+  pointer-events: none;
+}
+
+.stadium-lights {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 300%;
+  height: 100%;
+  background: radial-gradient(
+    ellipse 50% 30% at 50% -10%,
+    rgba(255, 255, 255, 0.1) 0%,
+    transparent 70%
+  );
+  animation: stadium-lights 4s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* Field Lines Pattern */
+.field-lines {
+  position: absolute;
+  inset: 0;
+  background-image: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 60px,
+    rgba(255, 255, 255, 0.05) 60px,
+    rgba(255, 255, 255, 0.05) 62px
+  );
+  pointer-events: none;
+}
+
+/* ============================================
+   GAME CONTAINER STYLES
+   ============================================ */
+
 #game-container {
   -webkit-touch-callout: none;
   -webkit-user-select: none;
@@ -28,41 +559,57 @@ body {
   user-select: none;
 }
 
-/* Phaser canvas styling */
 #game-container canvas {
   display: block;
   max-width: 100%;
   max-height: 100vh;
+  border-radius: 8px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
 }
 
-/* Custom scrollbar */
+/* ============================================
+   SCROLLBAR STYLING
+   ============================================ */
+
 ::-webkit-scrollbar {
   width: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #0B1F24;
+  background: var(--seahawks-navy-dark);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #0F6E6A;
+  background: var(--seahawks-grey-dark);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #7ED957;
+  background: var(--seahawks-green);
 }
 
-/* Animation utilities */
-@keyframes pulse-glow {
-  0%, 100% {
-    box-shadow: 0 0 20px rgba(126, 217, 87, 0.3);
+/* ============================================
+   RESPONSIVE UTILITIES
+   ============================================ */
+
+@media (max-width: 640px) {
+  .btn-primary {
+    padding: var(--space-sm) var(--space-lg);
+    font-size: 1rem;
   }
-  50% {
-    box-shadow: 0 0 40px rgba(126, 217, 87, 0.6);
+  
+  .player-card:hover {
+    transform: none;
   }
 }
 
-.animate-pulse-glow {
-  animation: pulse-glow 2s ease-in-out infinite;
+/* Reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
