@@ -2,6 +2,7 @@ import * as Phaser from 'phaser'
 import { GAME_WIDTH, GAME_HEIGHT, COLORS } from '../config/phaserConfig'
 import { FULL_ROSTER, getPositionColor, Defender } from '../data/roster'
 import { useGameStore } from '../../store/gameStore'
+import { AudioManager } from '../systems/AudioManager'
 
 export class RosterScene extends Phaser.Scene {
   private selectedJersey: number = 21
@@ -132,6 +133,9 @@ export class RosterScene extends Phaser.Scene {
   }
 
   private selectDefender(jersey: number): void {
+    AudioManager.unlock()
+    AudioManager.playClick()
+    
     this.selectedJersey = jersey
     this.updateSelection()
 
@@ -185,6 +189,9 @@ export class RosterScene extends Phaser.Scene {
     container.on('pointerdown', () => container.setScale(0.95))
 
     container.on('pointerup', () => {
+      AudioManager.unlock()
+      AudioManager.playClick()
+      
       // Save selection to store
       useGameStore.getState().setSelectedDefender(this.selectedJersey)
       useGameStore.getState().startGame()
