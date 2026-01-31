@@ -210,7 +210,7 @@ export function FlightPath({
         ))}
       </svg>
 
-      {/* Airplane */}
+      {/* Airplane with animations */}
       {showAirplane && pathData && (
         <motion.div
           className="absolute pointer-events-none"
@@ -223,28 +223,77 @@ export function FlightPath({
           }}
           initial={{ opacity: 0, scale: 0 }}
           animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.3 }}
+          transition={{ delay: 0.3, type: 'spring', stiffness: 200 }}
         >
-          {airplaneImageUrl ? (
-            <img
-              src={airplaneImageUrl}
-              alt="Seahawks Plane"
-              className="w-16 h-8 object-contain"
+          {/* Engine trail / vapor effect */}
+          <motion.div
+            className="absolute -left-8 top-1/2 -translate-y-1/2 pointer-events-none"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: [0.3, 0.6, 0.3] }}
+            transition={{ duration: 0.8, repeat: Infinity, ease: 'easeInOut' }}
+          >
+            <div
+              className="w-16 h-4 rounded-full"
               style={{
-                filter: 'drop-shadow(0 0 10px rgba(105, 190, 40, 0.6))',
+                background: 'linear-gradient(to left, rgba(105, 190, 40, 0.8), rgba(105, 190, 40, 0.3), transparent)',
+                filter: 'blur(4px)',
+              }}
+            />
+          </motion.div>
+
+          {/* Secondary engine glow */}
+          <motion.div
+            className="absolute -left-4 top-1/2 -translate-y-1/2 pointer-events-none"
+            animate={{ 
+              opacity: [0.5, 1, 0.5],
+              scale: [0.8, 1.2, 0.8],
+            }}
+            transition={{ duration: 0.4, repeat: Infinity, ease: 'easeInOut' }}
+          >
+            <div
+              className="w-6 h-6 rounded-full"
+              style={{
+                background: 'radial-gradient(circle, rgba(105, 190, 40, 1) 0%, rgba(105, 190, 40, 0) 70%)',
+              }}
+            />
+          </motion.div>
+
+          {airplaneImageUrl ? (
+            <motion.img
+              src={airplaneImageUrl}
+              alt="Seahawks Team Plane"
+              className="w-40 h-20 object-contain"
+              style={{
+                filter: 'drop-shadow(0 4px 20px rgba(105, 190, 40, 0.8)) drop-shadow(0 0 30px rgba(0, 34, 68, 0.6))',
+              }}
+              animate={{
+                y: [-2, 2, -2],
+              }}
+              transition={{
+                duration: 2,
+                repeat: Infinity,
+                ease: 'easeInOut',
               }}
             />
           ) : (
-            // Default airplane icon
-            <div
+            // Default airplane icon (bigger)
+            <motion.div
               className="relative"
               style={{
-                filter: 'drop-shadow(0 0 10px rgba(105, 190, 40, 0.6))',
+                filter: 'drop-shadow(0 4px 20px rgba(105, 190, 40, 0.8))',
+              }}
+              animate={{
+                y: [-2, 2, -2],
+              }}
+              transition={{
+                duration: 2,
+                repeat: Infinity,
+                ease: 'easeInOut',
               }}
             >
               <svg
-                width="48"
-                height="24"
+                width="80"
+                height="40"
                 viewBox="0 0 48 24"
                 fill="none"
                 xmlns="http://www.w3.org/2000/svg"
@@ -285,9 +334,15 @@ export function FlightPath({
                     dur="0.5s"
                     repeatCount="indefinite"
                   />
+                  <animate
+                    attributeName="r"
+                    values="2;4;2"
+                    dur="0.5s"
+                    repeatCount="indefinite"
+                  />
                 </circle>
               </svg>
-            </div>
+            </motion.div>
           )}
         </motion.div>
       )}
