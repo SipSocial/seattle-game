@@ -23,9 +23,9 @@ const DEFENDER_SPEED = 900      // Increased significantly for snappy response
 const AI_DEFENDER_SPEED = 180   // 90 * 2
 
 // Movement smoothing settings for buttery controls
-const PLAYER_LERP_SPEED = 0.25      // Interpolation factor (0.1 = smooth, 0.5 = snappy)
-const PLAYER_VELOCITY_SMOOTHING = 0.15  // Velocity interpolation for extra smoothness
-const INPUT_DEADZONE = 3            // Ignore tiny movements for precision
+const PLAYER_LERP_SPEED = 0.5       // Increased for snappier response (was 0.25)
+const PLAYER_VELOCITY_SMOOTHING = 0.4  // Increased for faster velocity changes (was 0.15)
+const INPUT_DEADZONE = 2            // Smaller deadzone for precision
 
 // Wave settings
 const BASE_SPAWN_INTERVAL = 900
@@ -2243,8 +2243,8 @@ export class GameScene extends Phaser.Scene {
     
     // Dynamic lerp: faster when far away, smoother when close
     // This creates a "magnetic" feel - quick to respond, precise to stop
-    const distanceFactor = Math.min(dist / 200, 1)
-    const dynamicLerp = baseLerp * (0.6 + distanceFactor * 0.4)
+    const distanceFactor = Math.min(dist / 150, 1)  // Reduced divisor for faster response
+    const dynamicLerp = baseLerp * (0.8 + distanceFactor * 0.2)  // Higher base = snappier
     
     // Calculate desired velocity toward target
     const maxSpeed = DEFENDER_SPEED * this.stats.speedMultiplier * (delta / 1000)
