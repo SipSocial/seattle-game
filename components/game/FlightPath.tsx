@@ -321,40 +321,52 @@ export function FlightPath({
 
       {/* Interactive Airplane with 3D touch/drag */}
       {showAirplane && pathData && (
-        <motion.div
-          className="absolute pointer-events-auto cursor-grab active:cursor-grabbing select-none"
-          style={{
-            left: constrainedPlanePos.x,
-            top: constrainedPlanePos.y,
-            x: '-50%',
-            y: '-50%',
-            rotate: constrainedPlanePos.angle,
-            perspective: '1000px',
-            zIndex: 35,
-            // Add padding for easier touch target (20px is smaller to not block markers)
-            padding: '20px',
-            margin: '-20px',
-            touchAction: 'none', // Prevent browser gestures
-          }}
-          initial={{ opacity: 0, scale: 0 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.3, type: 'spring', stiffness: 200 }}
-          onClick={onPlaneClick}
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
-          onTouchCancel={handleTouchEnd}
-          onMouseMove={handleMouseMove}
-          onMouseLeave={handleMouseLeave}
-        >
-          {/* 3D Container for visual transforms */}
+        <>
+          {/* Touch detection layer - lower z-index, receives touch events */}
           <div
-            ref={planeContainerRef}
-            className="relative select-none"
+            className="absolute pointer-events-auto cursor-grab active:cursor-grabbing"
             style={{
-              transformStyle: 'preserve-3d',
+              left: constrainedPlanePos.x,
+              top: constrainedPlanePos.y,
+              transform: 'translate(-50%, -50%)',
+              width: '120px',
+              height: '80px',
+              zIndex: 35, // Below markers (40-50)
+              touchAction: 'none',
             }}
+            onClick={onPlaneClick}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+            onTouchCancel={handleTouchEnd}
+            onMouseMove={handleMouseMove}
+            onMouseLeave={handleMouseLeave}
+          />
+          
+          {/* Visual plane layer - higher z-index, no pointer events (appears in front) */}
+          <motion.div
+            className="absolute pointer-events-none select-none"
+            style={{
+              left: constrainedPlanePos.x,
+              top: constrainedPlanePos.y,
+              x: '-50%',
+              y: '-50%',
+              rotate: constrainedPlanePos.angle,
+              perspective: '1000px',
+              zIndex: 60, // Above markers - plane appears in front
+            }}
+            initial={{ opacity: 0, scale: 0 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.3, type: 'spring', stiffness: 200 }}
           >
+            {/* 3D Container for visual transforms */}
+            <div
+              ref={planeContainerRef}
+              className="relative select-none"
+              style={{
+                transformStyle: 'preserve-3d',
+              }}
+            >
               {/* Glow effect that intensifies when dragging */}
             <motion.div
               className="absolute inset-0 rounded-full pointer-events-none"
@@ -517,6 +529,7 @@ export function FlightPath({
             </motion.div>
           </div>
         </motion.div>
+        </>
       )}
     </div>
   )
