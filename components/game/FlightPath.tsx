@@ -284,12 +284,25 @@ export function FlightPath({
     }))
   }, [dimensions, completedStageIds, currentStageId])
 
+  // Keep plane within viewport bounds
+  const constrainedPlanePos = useMemo(() => {
+    const padding = 60 // Keep plane 60px from edges
+    const planeWidth = 96 // Half of plane size
+    const planeHeight = 48
+    
+    // Clamp position to viewport bounds
+    const x = Math.max(padding + planeWidth, Math.min(dimensions.width - padding - planeWidth, airplanePos.x))
+    const y = Math.max(padding + planeHeight, Math.min(dimensions.height - padding - planeHeight, airplanePos.y))
+    
+    return { x, y, angle: airplanePos.angle }
+  }, [airplanePos, dimensions])
+
   return (
-    <div ref={containerRef} className="absolute inset-0 pointer-events-none">
+    <div ref={containerRef} className="absolute inset-0">
       <svg
         width={dimensions.width}
         height={dimensions.height}
-        className="absolute inset-0"
+        className="absolute inset-0 pointer-events-none"
         style={{ overflow: 'visible' }}
       >
         <defs>
@@ -350,13 +363,13 @@ export function FlightPath({
       {/* Interactive Airplane with 3D touch/drag */}
       {showAirplane && pathData && (
         <motion.div
-          className="absolute"
+          className="absolute pointer-events-auto"
           style={{
-            left: airplanePos.x,
-            top: airplanePos.y,
+            left: constrainedPlanePos.x,
+            top: constrainedPlanePos.y,
             x: '-50%',
             y: '-50%',
-            rotate: airplanePos.angle,
+            rotate: constrainedPlanePos.angle,
             perspective: '1000px',
             zIndex: 30,
           }}
@@ -367,13 +380,26 @@ export function FlightPath({
           {/* 3D Container for touch interaction */}
           <div
             ref={planeContainerRef}
-            className="relative cursor-grab active:cursor-grabbing"
+            className="relative cursor-grab active:cursor-grabbing select-none"
             style={{
               transformStyle: 'preserve-3d',
               touchAction: 'none',
+              WebkitTouchCallout: 'none',
+              WebkitUserSelect: 'none',
             }}
             onClick={onPlaneClick}
           >
+            {/* Large touch target area - invisible but increases hit area */}
+            <div 
+              className="absolute inset-0 -m-8 pointer-events-auto"
+              style={{ 
+                width: 'calc(100% + 64px)', 
+                height: 'calc(100% + 64px)',
+                marginLeft: '-32px',
+                marginTop: '-32px',
+              }}
+            />
+            
             {/* Glow effect that intensifies when dragging */}
             <motion.div
               className="absolute inset-0 rounded-full pointer-events-none"
