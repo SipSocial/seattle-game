@@ -320,7 +320,7 @@ export function CampaignMapV2({
           showAirplane={true}
         />
 
-        {/* Unique Location Markers (no overlaps) */}
+        {/* Unique Location Markers (no overlaps) - z-index above plane (35) */}
         {locationPositions.map(({ location, x, y }) => (
           <motion.button
             key={location.key}
@@ -329,7 +329,7 @@ export function CampaignMapV2({
               left: x,
               top: y,
               transform: 'translate(-50%, -50%)',
-              zIndex: location.hasCurrentGame ? 20 : 10,
+              zIndex: location.hasCurrentGame ? 50 : location.hasUnlockedGames ? 45 : 40,
             }}
             onClick={() => handleMarkerClick(location)}
             whileHover={{ scale: 1.1 }}

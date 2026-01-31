@@ -331,9 +331,9 @@ export function FlightPath({
             rotate: constrainedPlanePos.angle,
             perspective: '1000px',
             zIndex: 35,
-            // Add padding for easier touch target
-            padding: '40px',
-            margin: '-40px',
+            // Add padding for easier touch target (20px is smaller to not block markers)
+            padding: '20px',
+            margin: '-20px',
             touchAction: 'none', // Prevent browser gestures
           }}
           initial={{ opacity: 0, scale: 0 }}
