@@ -1020,101 +1020,29 @@ export class GameScene extends Phaser.Scene {
     
     const uiDepth = 50 // All UI elements above gameplay
     
-    // === TOP BAR - Glass effect ===
-    const topBar = this.add.graphics()
-    topBar.setDepth(uiDepth)
-    // Gradient from solid to transparent
-    for (let y = 0; y < 80; y++) {
-      const alpha = 0.85 - (y / 80) * 0.5
-      topBar.fillStyle(0x000000, alpha)
-      topBar.fillRect(0, y, GAME_WIDTH, 1)
-    }
-    // Green accent line at bottom
-    topBar.lineStyle(2, COLORS.green, 0.5)
-    topBar.lineBetween(0, 75, GAME_WIDTH, 75)
+    // NOTE: Top HUD (score, wave, lives) is now rendered by React GameHUD component
+    // These Phaser HUD elements have been removed to prevent duplicate displays
+    // The game state is synced via zustand store which React reads from
     
-    // === SCORE (Left side) ===
-    const scoreContainer = this.add.container(20, 15)
-    scoreContainer.setDepth(uiDepth + 1)
+    // Create invisible text objects for internal updates (required by other code)
+    this.scoreText = this.add.text(-1000, -1000, '', { fontSize: '1px' })
+    this.waveText = this.add.text(-1000, -1000, '', { fontSize: '1px' })
+    this.livesContainer = this.add.container(-1000, -1000)
     
-    // Score label with glow
-    this.scoreText = this.add.text(0, 0, 'SCORE', {
-      fontSize: '9px',
-      color: hexToCSS(COLORS.green),
-      fontFamily: FONTS.body,
-      letterSpacing: 3,
-    })
-    this.scoreText.setAlpha(0.7)
-    scoreContainer.add(this.scoreText)
-    
-    // Score value - BIG and prominent
-    const scoreValue = this.add.text(0, 12, '0', {
-      fontSize: '28px',
-      color: '#FFFFFF',
-      fontFamily: FONTS.display,
-    })
-    scoreValue.setName('scoreValue')
-    scoreValue.setShadow(0, 0, hexToCSS(COLORS.green), 10, true, true)
-    scoreContainer.add(scoreValue)
-    
-    // === WAVE (Right side) ===
-    const waveContainer = this.add.container(GAME_WIDTH - 20, 15)
-    waveContainer.setDepth(uiDepth + 1)
-    
-    this.waveText = this.add.text(0, 0, 'WAVE', {
-      fontSize: '9px',
-      color: hexToCSS(COLORS.green),
-      fontFamily: FONTS.body,
-      letterSpacing: 3,
-    })
-    this.waveText.setOrigin(1, 0)
-    this.waveText.setAlpha(0.7)
-    waveContainer.add(this.waveText)
-    
-    const waveDisplay = this.isCampaignMode ? `1/${this.maxWaves}` : '1'
-    const waveValue = this.add.text(0, 12, waveDisplay, {
-      fontSize: '28px',
-      color: hexToCSS(COLORS.green),
-      fontFamily: FONTS.display,
-    })
-    waveValue.setOrigin(1, 0)
-    waveValue.setName('waveValue')
-    waveValue.setShadow(0, 0, hexToCSS(COLORS.green), 10, true, true)
-    waveContainer.add(waveValue)
-    
-    // === LIVES (Center) - Premium hearts ===
-    this.livesContainer = this.add.container(GAME_WIDTH / 2, 28)
-    this.livesContainer.setDepth(uiDepth + 1)
-    this.updateLivesDisplay()
-    
-    // === TIMER BAR - Sleek design ===
+    // === TIMER BAR - Positioned below React HUD ===
     this.timerBg = this.add.graphics()
     this.timerBg.setDepth(uiDepth)
     this.timerBg.fillStyle(0x000000, 0.5)
-    this.timerBg.fillRoundedRect(20, 55, GAME_WIDTH - 40, 10, 5)
+    this.timerBg.fillRoundedRect(20, 85, GAME_WIDTH - 40, 8, 4) // Moved down to y=85
     this.timerBg.lineStyle(1, COLORS.green, 0.3)
-    this.timerBg.strokeRoundedRect(20, 55, GAME_WIDTH - 40, 10, 5)
+    this.timerBg.strokeRoundedRect(20, 85, GAME_WIDTH - 40, 8, 4)
     
     this.timerBar = this.add.graphics()
     this.timerBar.setDepth(uiDepth + 1)
     
-    // === BOTTOM HUD - Glass effect ===
-    const bottomBar = this.add.graphics()
-    bottomBar.setDepth(uiDepth)
-    for (let y = 0; y < 60; y++) {
-      const alpha = (y / 60) * 0.7
-      bottomBar.fillStyle(0x000000, alpha)
-      bottomBar.fillRect(0, GAME_HEIGHT - 60 + y, GAME_WIDTH, 1)
-    }
-    
-    // Tackles counter with icon
-    this.killsText = this.add.text(20, GAME_HEIGHT - 30, '🏈 TACKLES: 0', {
-      fontSize: '12px',
-      color: hexToCSS(COLORS.green),
-      fontFamily: FONTS.body,
-    })
-    this.killsText.setDepth(uiDepth + 1)
-    this.killsText.setAlpha(0.8)
+    // Bottom HUD removed - React handles all HUD now
+    // Tackles text hidden (moved off-screen)
+    this.killsText = this.add.text(-1000, -1000, '', { fontSize: '1px' })
     
     // === COMBO TEXT - More dramatic ===
     this.comboText = this.add.text(GAME_WIDTH / 2, 130, '', {
@@ -2231,18 +2159,18 @@ export class GameScene extends Phaser.Scene {
       // Dynamic color based on progress
       const color = progress < 0.7 ? COLORS.green : (progress < 0.9 ? COLORS.gold : COLORS.dlRed)
       
-      // Main fill with glow
+      // Main fill with glow (y=87 to match timerBg at y=85)
       this.timerBar.fillStyle(color, 0.9)
-      this.timerBar.fillRoundedRect(22, 56, fillWidth - 4, 6, 3)
+      this.timerBar.fillRoundedRect(22, 87, fillWidth - 4, 4, 2)
       
       // Top shine
       this.timerBar.fillStyle(0xffffff, 0.3)
-      this.timerBar.fillRoundedRect(22, 56, fillWidth - 4, 2, { tl: 3, tr: 3, bl: 0, br: 0 })
+      this.timerBar.fillRoundedRect(22, 87, fillWidth - 4, 1, { tl: 2, tr: 2, bl: 0, br: 0 })
       
       // Glow at the end of the bar
       if (fillWidth > 10) {
         this.timerBar.fillStyle(color, 0.4)
-        this.timerBar.fillCircle(20 + fillWidth - 2, 59, 8)
+        this.timerBar.fillCircle(20 + fillWidth - 2, 89, 6)
       }
     }
   }
