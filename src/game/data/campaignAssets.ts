@@ -73,8 +73,10 @@ export const CITY_PROMPTS: Record<string, string> = {
 // Generated Leonardo AI Assets (January 2026)
 export const GENERATED_ASSETS = {
   mapImageUrl: 'https://cdn.leonardo.ai/users/eb9a23b8-36c0-4667-b97f-64fdee85d14b/generations/2561ee31-7e9b-4de3-9cf2-536e5facde5a/segments/2:4:1/Phoenix_Stylized_3D_US_map_at_night_dark_tactical_military_the_0.jpg',
-  // Boeing 737 team plane with transparent background
-  airplaneUrl: 'https://cdn.leonardo.ai/users/eb9a23b8-36c0-4667-b97f-64fdee85d14b/generations/cf6036e2-3af0-4980-98f7-156e9f4bfcda/variations/Default_Seattle_Seahawks_NFL_team_Boeing_737_airplane_sleek_mo_0_cf6036e2-3af0-4980-98f7-156e9f4bfcda_0.png',
+  // Dark Side Boeing 737 team plane with transparent background
+  airplaneUrl: 'https://cdn.leonardo.ai/users/eb9a23b8-36c0-4667-b97f-64fdee85d14b/generations/25a25712-b04b-48f6-b9ae-e8bd3122b674/variations/Default_Seattle_Seahawks_NFL_team_Boeing_737_airplane_sleek_mo_0_25a25712-b04b-48f6-b9ae-e8bd3122b674_0.png',
+  // Dark Side plane animated video for level entry
+  airplaneVideoUrl: 'https://cdn.leonardo.ai/users/eb9a23b8-36c0-4667-b97f-64fdee85d14b/generations/9f2a04f7-2211-4b9e-98ea-b49ef7fe51d1/9f2a04f7-2211-4b9e-98ea-b49ef7fe51d1.mp4',
   cities: {
     'Seattle': 'https://cdn.leonardo.ai/users/eb9a23b8-36c0-4667-b97f-64fdee85d14b/generations/1f736005-c2ed-4755-b762-4fc99e7062a1/segments/4:4:1/Phoenix_Seattle_Washington_skyline_at_dusk_Space_Needle_promin_0.jpg',
     'Pittsburgh': 'https://cdn.leonardo.ai/users/eb9a23b8-36c0-4667-b97f-64fdee85d14b/generations/cce31f27-1fb1-4762-9655-53e8949d1640/segments/3:4:1/Phoenix_Pittsburgh_Pennsylvania_skyline_three_rivers_confluenc_0.jpg',
