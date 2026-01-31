@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { CampaignMapV2 } from '@/components/game/CampaignMapV2'
 import { useGameStore } from '@/src/store/gameStore'
+import { GENERATED_ASSETS } from '@/src/game/data/campaignAssets'
 
 export default function CampaignPage() {
   const router = useRouter()
@@ -42,10 +43,8 @@ export default function CampaignPage() {
       <CampaignMapV2 
         onSelectStage={handleSelectStage}
         onBack={handleBack}
-        // Pass custom Leonardo assets here when generated:
-        // mapVideoUrl={...}
-        // mapImageUrl={...}
-        // airplaneUrl={...}
+        mapImageUrl={GENERATED_ASSETS.mapImageUrl}
+        airplaneUrl={GENERATED_ASSETS.airplaneUrl}
       />
     </motion.div>
   )
