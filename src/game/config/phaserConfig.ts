@@ -1,9 +1,13 @@
 import * as Phaser from 'phaser'
 import { BootScene } from '../scenes/BootScene'
 import { MenuScene } from '../scenes/MenuScene'
+import { MapScene } from '../scenes/MapScene'
+import { StageTransitionScene } from '../scenes/StageTransitionScene'
 import { RosterScene } from '../scenes/RosterScene'
 import { GameScene } from '../scenes/GameScene'
 import { GameOverScene } from '../scenes/GameOverScene'
+import { SuperBowlScene } from '../scenes/SuperBowlScene'
+import { EngageScene } from '../scenes/EngageScene'
 import { LeaderboardScene } from '../scenes/LeaderboardScene'
 
 // Portrait orientation for mobile-first
@@ -80,7 +84,7 @@ export const phaserConfig: Phaser.Types.Core.GameConfig = {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
   },
-  scene: [BootScene, MenuScene, RosterScene, GameScene, GameOverScene, LeaderboardScene],
+  scene: [BootScene, MenuScene, MapScene, StageTransitionScene, RosterScene, GameScene, GameOverScene, SuperBowlScene, EngageScene, LeaderboardScene],
   physics: {
     default: 'arcade',
     arcade: {

@@ -2,6 +2,18 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { PowerUpType } from '../game/data/powerups'
 import { DEFAULT_DEFENDER } from '../game/data/roster'
+import { 
+  GAMES_PER_STAGE, 
+  TOTAL_GAMES, 
+  TOTAL_STAGES,
+  getStageByGame, 
+  getGameInStage,
+  isStageComplete,
+  isCampaignComplete,
+  getDifficultyModifier,
+  getCampaignProgress,
+  CampaignStage 
+} from '../game/data/campaign'
 
 export interface LeaderboardEntry {
   id: string
@@ -11,11 +23,24 @@ export interface LeaderboardEntry {
   wave: number
   tackles: number
   date: string
+  hasEngaged?: boolean // True if user completed follow/enter/share
 }
 
 export interface ActivePowerUp {
   type: PowerUpType
   remainingTime: number
+}
+
+// Campaign progress tracking
+export interface CampaignProgress {
+  currentGame: number // 1-51
+  currentStageId: number // 1-17
+  gamesWon: number // Total games won
+  totalScore: number // Cumulative score across campaign
+  stagesUnlocked: number[] // Array of unlocked stage IDs
+  stageHighScores: Record<number, number> // Best score per stage
+  isCampaignComplete: boolean
+  superBowlWon: boolean
 }
 
 interface GameState {
@@ -31,15 +56,28 @@ interface GameState {
   maxCombo: number
   tackles: number
   
+  // 12th Man (Fan Meter) - builds up with consecutive tackles
+  fanMeter: number // 0-100
+  fanMeterActive: boolean // True when 12th Man is triggered
+  
   // Power-up state
   activePowerUp: ActivePowerUp | null
+
+  // Campaign state (persisted)
+  campaign: CampaignProgress
+  gameMode: 'campaign' | 'endless' // Toggle between campaign and classic endless mode
 
   // Leaderboard (persisted)
   leaderboard: LeaderboardEntry[]
 
   // High score tracking
   highScore: number
-
+  
+  // Social engagement tracking (persisted)
+  hasFollowed: boolean
+  hasEntered: boolean
+  hasShared: boolean
+  
   // Actions
   setSelectedDefender: (jersey: number) => void
   setPlayerName: (name: string) => void
@@ -54,8 +92,27 @@ interface GameState {
   incrementCombo: () => void
   resetCombo: () => void
   
+  // 12th Man actions
+  addFanMeter: (amount: number) => void
+  triggerFanMeter: () => void
+  resetFanMeter: () => void
+  
   // Power-up actions
   setActivePowerUp: (powerUp: ActivePowerUp | null) => void
+  
+  // Campaign actions
+  setGameMode: (mode: 'campaign' | 'endless') => void
+  startCampaignGame: () => void
+  winCampaignGame: () => void
+  loseCampaignGame: () => void
+  resetCampaign: () => void
+  getCurrentStage: () => CampaignStage
+  getCampaignDifficulty: () => number
+  
+  // Social engagement actions
+  setFollowed: () => void
+  setEntered: () => void
+  setShared: () => void
   
   // Leaderboard actions
   addLeaderboardEntry: (entry: Omit<LeaderboardEntry, 'id' | 'date'>) => void
@@ -71,7 +128,20 @@ const INITIAL_GAME_STATE = {
   combo: 0,
   maxCombo: 0,
   tackles: 0,
+  fanMeter: 0,
+  fanMeterActive: false,
   activePowerUp: null,
+}
+
+const INITIAL_CAMPAIGN_STATE: CampaignProgress = {
+  currentGame: 1,
+  currentStageId: 1,
+  gamesWon: 0,
+  totalScore: 0,
+  stagesUnlocked: [1], // Stage 1 always unlocked
+  stageHighScores: {},
+  isCampaignComplete: false,
+  superBowlWon: false,
 }
 
 export const useGameStore = create<GameState>()(
@@ -81,8 +151,13 @@ export const useGameStore = create<GameState>()(
       selectedDefender: DEFAULT_DEFENDER,
       playerName: '',
       ...INITIAL_GAME_STATE,
+      campaign: INITIAL_CAMPAIGN_STATE,
+      gameMode: 'campaign' as const,
       leaderboard: [],
       highScore: 0,
+      hasFollowed: false,
+      hasEntered: false,
+      hasShared: false,
 
       // Player selection
       setSelectedDefender: (jersey) => set({ selectedDefender: jersey }),
@@ -132,17 +207,123 @@ export const useGameStore = create<GameState>()(
       },
       
       resetCombo: () => set({ combo: 0 }),
+      
+      // 12th Man (Fan Meter) actions
+      addFanMeter: (amount) => {
+        const { fanMeter, wave } = get()
+        // Only start building fan meter after wave 3
+        if (wave < 3) return
+        const newMeter = Math.min(100, fanMeter + amount)
+        set({ fanMeter: newMeter })
+      },
+      
+      triggerFanMeter: () => {
+        set({ fanMeterActive: true, fanMeter: 0 })
+      },
+      
+      resetFanMeter: () => {
+        set({ fanMeterActive: false })
+      },
 
       // Power-up actions
       setActivePowerUp: (powerUp) => set({ activePowerUp: powerUp }),
+      
+      // Campaign actions
+      setGameMode: (mode) => set({ gameMode: mode }),
+      
+      startCampaignGame: () => {
+        const { campaign } = get()
+        // Start a new game in campaign mode
+        set({ 
+          ...INITIAL_GAME_STATE,
+          // Apply campaign difficulty modifier to starting lives
+          lives: campaign.currentStageId >= 16 ? 3 : 4, // Fewer lives in playoffs
+        })
+      },
+      
+      winCampaignGame: () => {
+        const { campaign, score } = get()
+        const newGamesWon = campaign.gamesWon + 1
+        const newTotalScore = campaign.totalScore + score
+        const newCurrentGame = campaign.currentGame + 1
+        const newStageId = getStageByGame(newCurrentGame).id
+        
+        // Check if we're unlocking a new stage
+        const stagesUnlocked = [...campaign.stagesUnlocked]
+        if (!stagesUnlocked.includes(newStageId)) {
+          stagesUnlocked.push(newStageId)
+        }
+        
+        // Update stage high score
+        const stageHighScores = { ...campaign.stageHighScores }
+        const currentStageId = campaign.currentStageId
+        if (!stageHighScores[currentStageId] || score > stageHighScores[currentStageId]) {
+          stageHighScores[currentStageId] = score
+        }
+        
+        // Check if campaign is complete
+        const campaignComplete = isCampaignComplete(newGamesWon)
+        const superBowlWon = campaignComplete && campaign.currentStageId === TOTAL_STAGES
+        
+        set({
+          campaign: {
+            ...campaign,
+            currentGame: campaignComplete ? campaign.currentGame : newCurrentGame,
+            currentStageId: campaignComplete ? campaign.currentStageId : newStageId,
+            gamesWon: newGamesWon,
+            totalScore: newTotalScore,
+            stagesUnlocked,
+            stageHighScores,
+            isCampaignComplete: campaignComplete,
+            superBowlWon,
+          }
+        })
+      },
+      
+      loseCampaignGame: () => {
+        // In campaign mode, losing a game doesn't reset progress
+        // Player can retry the same game
+        const { campaign, score } = get()
+        
+        // Still track score for stats
+        set({
+          campaign: {
+            ...campaign,
+            totalScore: campaign.totalScore + score,
+          }
+        })
+      },
+      
+      resetCampaign: () => {
+        set({
+          campaign: INITIAL_CAMPAIGN_STATE,
+        })
+      },
+      
+      getCurrentStage: () => {
+        const { campaign } = get()
+        return getStageByGame(campaign.currentGame)
+      },
+      
+      getCampaignDifficulty: () => {
+        const { campaign } = get()
+        return getDifficultyModifier(campaign.currentGame)
+      },
+      
+      // Social engagement actions
+      setFollowed: () => set({ hasFollowed: true }),
+      setEntered: () => set({ hasEntered: true }),
+      setShared: () => set({ hasShared: true }),
 
       // Leaderboard
       addLeaderboardEntry: (entry) => {
-        const { leaderboard } = get()
+        const { leaderboard, hasFollowed, hasEntered, hasShared } = get()
+        const hasEngaged = hasFollowed && hasEntered && hasShared
         const newEntry: LeaderboardEntry = {
           ...entry,
           id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
           date: new Date().toISOString(),
+          hasEngaged,
         }
         
         // Add and sort by score, keep top 10
@@ -161,8 +342,13 @@ export const useGameStore = create<GameState>()(
       partialize: (state) => ({
         selectedDefender: state.selectedDefender,
         playerName: state.playerName,
+        campaign: state.campaign,
+        gameMode: state.gameMode,
         leaderboard: state.leaderboard,
         highScore: state.highScore,
+        hasFollowed: state.hasFollowed,
+        hasEntered: state.hasEntered,
+        hasShared: state.hasShared,
       }),
     }
   )
@@ -174,3 +360,24 @@ export const useLives = () => useGameStore((state) => state.lives)
 export const useWave = () => useGameStore((state) => state.wave)
 export const useCombo = () => useGameStore((state) => state.combo)
 export const useLeaderboard = () => useGameStore((state) => state.leaderboard)
+export const useFanMeter = () => useGameStore((state) => state.fanMeter)
+export const useSocialEngagement = () => useGameStore((state) => ({
+  hasFollowed: state.hasFollowed,
+  hasEntered: state.hasEntered,
+  hasShared: state.hasShared,
+  isFullyEngaged: state.hasFollowed && state.hasEntered && state.hasShared,
+}))
+
+// Campaign selector hooks
+export const useCampaign = () => useGameStore((state) => state.campaign)
+export const useGameMode = () => useGameStore((state) => state.gameMode)
+export const useCampaignProgress = () => useGameStore((state) => ({
+  currentGame: state.campaign.currentGame,
+  currentStageId: state.campaign.currentStageId,
+  gamesWon: state.campaign.gamesWon,
+  totalGames: TOTAL_GAMES,
+  totalStages: TOTAL_STAGES,
+  progress: getCampaignProgress(state.campaign.gamesWon),
+  isComplete: state.campaign.isCampaignComplete,
+  superBowlWon: state.campaign.superBowlWon,
+}))

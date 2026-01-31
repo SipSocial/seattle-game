@@ -39,7 +39,6 @@ npm run start        # Start production server on port 30094
 - **Input**: Touch, mouse, keyboard (Spacebar)
 
 ## Important Rules
-1. **Port 30094 is mandatory** - Never change this
 2. **No NFL team names/logos** - All teams must be fictional
 3. **Seattle Darkside colors**: #0F6E6A (teal), #7ED957 (green), #0B1F24 (navy)
 4. Always update `.cursor/rules/project-context.md` when making significant changes

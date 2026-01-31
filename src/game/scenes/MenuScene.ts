@@ -2,6 +2,7 @@ import * as Phaser from 'phaser'
 import { GAME_WIDTH, GAME_HEIGHT, COLORS, FONTS, hexToCSS } from '../config/phaserConfig'
 import { useGameStore } from '../../store/gameStore'
 import { AudioManager } from '../systems/AudioManager'
+import { getStageByGame, getCampaignProgress, TOTAL_GAMES } from '../data/campaign'
 
 export class MenuScene extends Phaser.Scene {
   private particles: Phaser.GameObjects.Graphics[] = []
@@ -246,31 +247,127 @@ export class MenuScene extends Phaser.Scene {
 
   private createButtons(): void {
     const centerX = GAME_WIDTH / 2
-    const { highScore } = useGameStore.getState()
-    const buttonStartY = highScore > 0 ? 380 : 340
+    const { highScore, campaign } = useGameStore.getState()
+    const hasCampaignProgress = campaign.gamesWon > 0
+    const currentStage = getStageByGame(campaign.currentGame)
+    const progress = getCampaignProgress(campaign.gamesWon)
+    
+    let buttonStartY = highScore > 0 ? 360 : 320
 
-    // Play button - primary action
-    const playButton = this.createPrimaryButton(centerX, buttonStartY, 'PLAY', () => {
+    // Campaign button - primary action
+    const campaignLabel = hasCampaignProgress 
+      ? `CONTINUE (${progress}%)`
+      : 'ROAD TO SUPER BOWL'
+    
+    const campaignButton = this.createPrimaryButton(centerX, buttonStartY, campaignLabel, () => {
+      useGameStore.getState().setGameMode('campaign')
+      this.cameras.main.fadeOut(300)
+      this.time.delayedCall(300, () => {
+        this.scene.start('MapScene')
+      })
+    })
+    
+    // Show context text below primary button
+    if (hasCampaignProgress && !campaign.isCampaignComplete) {
+      const stageInfo = this.add.text(centerX, buttonStartY + 35, 
+        `Stage ${campaign.currentStageId}: ${currentStage.location.city}`, {
+        fontSize: '11px',
+        color: hexToCSS(COLORS.grey),
+        fontFamily: FONTS.body,
+      })
+      stageInfo.setOrigin(0.5)
+      stageInfo.setAlpha(0)
+      
+      this.tweens.add({
+        targets: stageInfo,
+        alpha: 0.7,
+        duration: 400,
+        delay: 900
+      })
+    }
+    
+    // Endless Mode button - secondary (classic infinite waves)
+    const endlessButton = this.createSecondaryButton(centerX, buttonStartY + 70, 'ENDLESS MODE', () => {
+      useGameStore.getState().setGameMode('endless')
       this.cameras.main.fadeOut(300)
       this.time.delayedCall(300, () => {
         this.scene.start('RosterScene')
       })
     })
     
-    // Leaderboard button - secondary
-    const leaderboardButton = this.createSecondaryButton(centerX, buttonStartY + 70, 'LEADERBOARD', () => {
+    // Leaderboard button - tertiary
+    const leaderboardButton = this.createSecondaryButton(centerX, buttonStartY + 125, 'LEADERBOARD', () => {
       this.cameras.main.fadeOut(300)
       this.time.delayedCall(300, () => {
         this.scene.start('LeaderboardScene', { fromMenu: true })
       })
     })
     
+    // Reset Campaign button (smaller, bottom) - only show if campaign in progress
+    if (hasCampaignProgress && !campaign.isCampaignComplete) {
+      const resetBtn = this.add.text(centerX, buttonStartY + 175, 'Reset Campaign', {
+        fontSize: '11px',
+        color: hexToCSS(COLORS.grey),
+        fontFamily: FONTS.body,
+      })
+      resetBtn.setOrigin(0.5)
+      resetBtn.setInteractive({ useHandCursor: true })
+      resetBtn.setAlpha(0)
+      
+      resetBtn.on('pointerover', () => resetBtn.setColor(hexToCSS(COLORS.dlRed)))
+      resetBtn.on('pointerout', () => resetBtn.setColor(hexToCSS(COLORS.grey)))
+      resetBtn.on('pointerdown', () => {
+        AudioManager.playClick()
+        useGameStore.getState().resetCampaign()
+        this.scene.restart()
+      })
+      
+      this.tweens.add({
+        targets: resetBtn,
+        alpha: 0.5,
+        duration: 400,
+        delay: 1100
+      })
+    }
+    
+    // Super Bowl champion badge if completed
+    if (campaign.superBowlWon) {
+      const championBadge = this.add.container(centerX, buttonStartY - 50)
+      
+      const badgeBg = this.add.graphics()
+      badgeBg.fillStyle(COLORS.gold, 0.2)
+      badgeBg.fillRoundedRect(-100, -20, 200, 40, 10)
+      badgeBg.lineStyle(2, COLORS.gold, 0.8)
+      badgeBg.strokeRoundedRect(-100, -20, 200, 40, 10)
+      
+      const trophy = this.add.text(-70, 0, '🏆', { fontSize: '20px' })
+      trophy.setOrigin(0.5)
+      
+      const champText = this.add.text(10, 0, 'SUPER BOWL CHAMPION', {
+        fontSize: '12px',
+        color: hexToCSS(COLORS.gold),
+        fontFamily: FONTS.display,
+      })
+      champText.setOrigin(0.5)
+      
+      championBadge.add([badgeBg, trophy, champText])
+      championBadge.setAlpha(0)
+      
+      this.tweens.add({
+        targets: championBadge,
+        alpha: 1,
+        duration: 500,
+        delay: 700
+      })
+    }
+    
     // Stagger entrance
-    playButton.setAlpha(0).setScale(0.9)
+    campaignButton.setAlpha(0).setScale(0.9)
+    endlessButton.setAlpha(0).setScale(0.9)
     leaderboardButton.setAlpha(0).setScale(0.9)
     
     this.tweens.add({
-      targets: playButton,
+      targets: campaignButton,
       alpha: 1,
       scale: 1,
       duration: 500,
@@ -279,11 +376,20 @@ export class MenuScene extends Phaser.Scene {
     })
     
     this.tweens.add({
-      targets: leaderboardButton,
+      targets: endlessButton,
       alpha: 1,
       scale: 1,
       duration: 500,
       delay: 900,
+      ease: 'Back.easeOut'
+    })
+    
+    this.tweens.add({
+      targets: leaderboardButton,
+      alpha: 1,
+      scale: 1,
+      duration: 500,
+      delay: 1000,
       ease: 'Back.easeOut'
     })
   }

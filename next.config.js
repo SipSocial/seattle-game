@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  reactStrictMode: true,
+  // Disabled Strict Mode - it causes double-mounting issues with Phaser game lifecycle
+  reactStrictMode: false,
   images: {
     remotePatterns: [
       {

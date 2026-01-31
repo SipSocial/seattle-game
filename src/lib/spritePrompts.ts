@@ -324,6 +324,274 @@ export const BACKGROUND_SPRITES: SpritePrompt[] = [
 ]
 
 /**
+ * OPPONENT FACE SPRITES - AI-Generated Player Portraits
+ * Unique stylized faces for each team to make the game feel modern and viral
+ */
+export interface OpponentFacePrompt extends SpritePrompt {
+  teamName: string
+  teamId: number
+  primaryColor: string
+  accentColor: string
+}
+
+export const OPPONENT_FACES: OpponentFacePrompt[] = [
+  // Preseason - Tutorial
+  {
+    name: 'Green Bay Packers Face',
+    key: 'face-green-bay-packers',
+    teamName: 'Green Bay Packers',
+    teamId: 1,
+    primaryColor: '#203731',
+    accentColor: '#FFB612',
+    prompt: 'Stylized football player portrait, cheese head warrior expression, green and gold helmet with G logo, Green Bay legend, frozen tundra tough, neon glow outline, futuristic holographic effect, 2D game character, mobile game art style, transparent background, 64x64 pixels',
+    negativePrompt: SPRITE_NEGATIVE,
+    width: 64,
+    height: 64,
+    description: 'Green Bay Packers runner face portrait (Tutorial)',
+    category: 'runner',
+  },
+  // Week 1 & Divisional & Week 17: 49ers
+  {
+    name: 'SF 49ers Face',
+    key: 'face-sf-49ers',
+    teamName: 'San Francisco 49ers',
+    teamId: 2,
+    primaryColor: '#AA0000',
+    accentColor: '#B3995D',
+    prompt: 'Stylized football player portrait, intense competitive expression, scarlet red helmet with gold trim, San Francisco style, powerful athlete look, neon glow outline, futuristic holographic shimmer, 2D game character, mobile game art style, transparent background, 64x64 pixels',
+    negativePrompt: SPRITE_NEGATIVE,
+    width: 64,
+    height: 64,
+    description: 'San Francisco 49ers runner face portrait',
+    category: 'runner',
+  },
+  // Week 2: Steelers
+  {
+    name: 'Pittsburgh Steelers Face',
+    key: 'face-pittsburgh-steelers',
+    teamName: 'Pittsburgh Steelers',
+    teamId: 3,
+    primaryColor: '#FFB612',
+    accentColor: '#101820',
+    prompt: 'Stylized football player portrait, tough steel worker expression, black helmet with yellow stripes, industrial strength look, Pittsburgh steel city vibe, neon glow outline, futuristic holographic effect, 2D game character, mobile game art style, transparent background, 64x64 pixels',
+    negativePrompt: SPRITE_NEGATIVE,
+    width: 64,
+    height: 64,
+    description: 'Pittsburgh Steelers runner face portrait',
+    category: 'runner',
+  },
+  // Week 3: Saints
+  {
+    name: 'New Orleans Saints Face',
+    key: 'face-new-orleans-saints',
+    teamName: 'New Orleans Saints',
+    teamId: 4,
+    primaryColor: '#D3BC8D',
+    accentColor: '#101820',
+    prompt: 'Stylized football player portrait, who dat swagger expression, gold and black helmet with fleur-de-lis, New Orleans jazz soul, bayou magic energy, neon glow outline, futuristic holographic effect, 2D game character, mobile game art style, transparent background, 64x64 pixels',
+    negativePrompt: SPRITE_NEGATIVE,
+    width: 64,
+    height: 64,
+    description: 'New Orleans Saints runner face portrait',
+    category: 'runner',
+  },
+  // Week 4 & Week 9: Cardinals
+  {
+    name: 'Arizona Cardinals Face',
+    key: 'face-arizona-cardinals',
+    teamName: 'Arizona Cardinals',
+    teamId: 5,
+    primaryColor: '#97233F',
+    accentColor: '#FFB612',
+    prompt: 'Stylized football player portrait, fierce determined expression, cardinal red helmet with gold accents, aggressive sports athlete, dynamic pose, neon glow outline, futuristic holographic effect, 2D game character, mobile game art style, transparent background, 64x64 pixels',
+    negativePrompt: SPRITE_NEGATIVE,
+    width: 64,
+    height: 64,
+    description: 'Arizona Cardinals runner face portrait',
+    category: 'runner',
+  },
+  // Week 5: Buccaneers
+  {
+    name: 'Tampa Bay Buccaneers Face',
+    key: 'face-tampa-bay-buccaneers',
+    teamName: 'Tampa Bay Buccaneers',
+    teamId: 6,
+    primaryColor: '#D50A0A',
+    accentColor: '#34302B',
+    prompt: 'Stylized football player portrait, pirate captain intensity, pewter and red helmet with skull flag, Tampa Bay swashbuckler, fire the cannons energy, neon glow outline, futuristic holographic effect, 2D game character, mobile game art style, transparent background, 64x64 pixels',
+    negativePrompt: SPRITE_NEGATIVE,
+    width: 64,
+    height: 64,
+    description: 'Tampa Bay Buccaneers runner face portrait',
+    category: 'runner',
+  },
+  // Week 6: Jaguars
+  {
+    name: 'Jacksonville Jaguars Face',
+    key: 'face-jacksonville-jaguars',
+    teamName: 'Jacksonville Jaguars',
+    teamId: 7,
+    primaryColor: '#006778',
+    accentColor: '#D7A22A',
+    prompt: 'Stylized football player portrait, fierce jaguar-like expression, teal helmet with gold jaguar accents, Florida speed athlete, predator intensity, neon glow outline, futuristic holographic effect, 2D game character, mobile game art style, transparent background, 64x64 pixels',
+    negativePrompt: SPRITE_NEGATIVE,
+    width: 64,
+    height: 64,
+    description: 'Jacksonville Jaguars runner face portrait',
+    category: 'runner',
+  },
+  // Week 7: Texans
+  {
+    name: 'Houston Texans Face',
+    key: 'face-houston-texans',
+    teamName: 'Houston Texans',
+    teamId: 8,
+    primaryColor: '#03202F',
+    accentColor: '#A71930',
+    prompt: 'Stylized football player portrait, Texas bull strength expression, navy blue helmet with red bull logo, Houston space city power, lone star energy, neon glow outline, futuristic holographic effect, 2D game character, mobile game art style, transparent background, 64x64 pixels',
+    negativePrompt: SPRITE_NEGATIVE,
+    width: 64,
+    height: 64,
+    description: 'Houston Texans runner face portrait',
+    category: 'runner',
+  },
+  // Week 8: Commanders
+  {
+    name: 'Washington Commanders Face',
+    key: 'face-washington-commanders',
+    teamName: 'Washington Commanders',
+    teamId: 9,
+    primaryColor: '#5A1414',
+    accentColor: '#FFB612',
+    prompt: 'Stylized football player portrait, commanding leadership expression, burgundy helmet with gold accents, Washington DC power, military precision look, neon glow outline, futuristic holographic effect, 2D game character, mobile game art style, transparent background, 64x64 pixels',
+    negativePrompt: SPRITE_NEGATIVE,
+    width: 64,
+    height: 64,
+    description: 'Washington Commanders runner face portrait',
+    category: 'runner',
+  },
+  // Week 10 & Week 15 & NFC Championship: Rams
+  {
+    name: 'LA Rams Face',
+    key: 'face-la-rams',
+    teamName: 'Los Angeles Rams',
+    teamId: 11,
+    primaryColor: '#003594',
+    accentColor: '#FFA300',
+    prompt: 'Stylized football player portrait, Hollywood star confidence, royal blue helmet with yellow ram horns, Los Angeles glamour athlete, championship swagger, neon glow outline, futuristic holographic effect, 2D game character, mobile game art style, transparent background, 64x64 pixels',
+    negativePrompt: SPRITE_NEGATIVE,
+    width: 64,
+    height: 64,
+    description: 'LA Rams runner face portrait',
+    category: 'runner',
+  },
+  // Week 11: Titans
+  {
+    name: 'Tennessee Titans Face',
+    key: 'face-tennessee-titans',
+    teamName: 'Tennessee Titans',
+    teamId: 12,
+    primaryColor: '#4B92DB',
+    accentColor: '#0C2340',
+    prompt: 'Stylized football player portrait, titan warrior expression, light blue helmet with flames, Nashville country strong, mythological power, neon glow outline, futuristic holographic effect, 2D game character, mobile game art style, transparent background, 64x64 pixels',
+    negativePrompt: SPRITE_NEGATIVE,
+    width: 64,
+    height: 64,
+    description: 'Tennessee Titans runner face portrait',
+    category: 'runner',
+  },
+  // Week 12: Vikings
+  {
+    name: 'Minnesota Vikings Face',
+    key: 'face-minnesota-vikings',
+    teamName: 'Minnesota Vikings',
+    teamId: 13,
+    primaryColor: '#4F2683',
+    accentColor: '#FFC62F',
+    prompt: 'Stylized football player portrait, viking warrior rage, purple helmet with golden horns, Minnesota nordic power, SKOL chant energy, neon glow outline, futuristic holographic effect, 2D game character, mobile game art style, transparent background, 64x64 pixels',
+    negativePrompt: SPRITE_NEGATIVE,
+    width: 64,
+    height: 64,
+    description: 'Minnesota Vikings runner face portrait',
+    category: 'runner',
+  },
+  // Week 13: Falcons
+  {
+    name: 'Atlanta Falcons Face',
+    key: 'face-atlanta-falcons',
+    teamName: 'Atlanta Falcons',
+    teamId: 14,
+    primaryColor: '#A71930',
+    accentColor: '#000000',
+    prompt: 'Stylized football player portrait, falcon bird of prey intensity, red helmet with black falcon design, Atlanta southern fire, rising up energy, neon glow outline, futuristic holographic effect, 2D game character, mobile game art style, transparent background, 64x64 pixels',
+    negativePrompt: SPRITE_NEGATIVE,
+    width: 64,
+    height: 64,
+    description: 'Atlanta Falcons runner face portrait',
+    category: 'runner',
+  },
+  // Week 14: Colts
+  {
+    name: 'Indianapolis Colts Face',
+    key: 'face-indianapolis-colts',
+    teamName: 'Indianapolis Colts',
+    teamId: 15,
+    primaryColor: '#002C5F',
+    accentColor: '#A2AAAD',
+    prompt: 'Stylized football player portrait, horseshoe power expression, royal blue helmet with white horseshoe, Indianapolis racing spirit, Peyton Manning legacy, neon glow outline, futuristic holographic effect, 2D game character, mobile game art style, transparent background, 64x64 pixels',
+    negativePrompt: SPRITE_NEGATIVE,
+    width: 64,
+    height: 64,
+    description: 'Indianapolis Colts runner face portrait',
+    category: 'runner',
+  },
+  // Week 16: Panthers
+  {
+    name: 'Carolina Panthers Face',
+    key: 'face-carolina-panthers',
+    teamName: 'Carolina Panthers',
+    teamId: 17,
+    primaryColor: '#0085CA',
+    accentColor: '#101820',
+    prompt: 'Stylized football player portrait, panther predator expression, carolina blue helmet with black panther, sleek feline agility, keep pounding intensity, neon glow outline, futuristic holographic effect, 2D game character, mobile game art style, transparent background, 64x64 pixels',
+    negativePrompt: SPRITE_NEGATIVE,
+    width: 64,
+    height: 64,
+    description: 'Carolina Panthers runner face portrait',
+    category: 'runner',
+  },
+  // Super Bowl: Patriots
+  {
+    name: 'New England Patriots Face',
+    key: 'face-new-england-patriots',
+    teamName: 'New England Patriots',
+    teamId: 21,
+    primaryColor: '#002244',
+    accentColor: '#C60C30',
+    prompt: 'Stylized football player portrait, ultimate champion expression, navy blue helmet with red patriot, Super Bowl dynasty aura, legendary competitor, premium golden neon glow, ultimate futuristic holographic effect, 2D game character, mobile game art style, transparent background, 72x72 pixels',
+    negativePrompt: SPRITE_NEGATIVE,
+    width: 72,
+    height: 72,
+    description: 'New England Patriots runner boss face portrait (Super Bowl)',
+    category: 'runner',
+  },
+]
+
+/**
+ * Get opponent face prompt by team name or stage ID
+ */
+export function getOpponentFacePrompt(stageId: number): OpponentFacePrompt | undefined {
+  return OPPONENT_FACES.find(f => f.teamId === stageId)
+}
+
+/**
+ * Get all opponent face prompts for batch generation
+ */
+export function getAllOpponentFacePrompts(): OpponentFacePrompt[] {
+  return OPPONENT_FACES
+}
+
+/**
  * UI SPRITES
  */
 export const UI_SPRITES: SpritePrompt[] = [

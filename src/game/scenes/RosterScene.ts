@@ -4,15 +4,32 @@ import { FULL_ROSTER, Defender } from '../data/roster'
 import { useGameStore } from '../../store/gameStore'
 import { AudioManager } from '../systems/AudioManager'
 
+// ===========================================
+// ROSTER SCENE - List-Based Player Selection
+// ===========================================
+// New Design: Scrollable list with player cards
+// showing jersey, name, and position
+// ===========================================
+
+const LAYOUT = {
+  safeTop: 16,
+  headerHeight: 100,
+  listTop: 110,
+  listBottom: 580,
+  buttonY: 640,
+  cardHeight: 64,
+  cardGap: 8,
+}
+
 export class RosterScene extends Phaser.Scene {
   private selectedJersey: number = 21
-  private jerseyCards: Map<number, Phaser.GameObjects.Container> = new Map()
-  private previewContainer!: Phaser.GameObjects.Container
-  private previewJerseyText!: Phaser.GameObjects.Text
-  private previewPositionText!: Phaser.GameObjects.Text
-  private previewGlow!: Phaser.GameObjects.Graphics
+  private playerCards: Map<number, Phaser.GameObjects.Container> = new Map()
   private scrollContainer!: Phaser.GameObjects.Container
-  private scrollMask!: Phaser.GameObjects.Graphics
+  private scrollY: number = 0
+  private maxScroll: number = 0
+  private isDragging: boolean = false
+  private dragStartY: number = 0
+  private scrollStartY: number = 0
 
   constructor() {
     super({ key: 'RosterScene' })
@@ -22,350 +39,351 @@ export class RosterScene extends Phaser.Scene {
     this.cameras.main.fadeIn(400)
     this.cameras.main.setBackgroundColor(COLORS.navy)
 
-    // Get current selection from store
     const { selectedDefender } = useGameStore.getState()
-    this.selectedJersey = selectedDefender
+    this.selectedJersey = selectedDefender || FULL_ROSTER[0]?.jersey || 21
 
-    // Create background
     this.createBackground()
-    
-    // Create header
     this.createHeader()
-    
-    // Create player preview
-    this.createPlayerPreview()
-    
-    // Create scrollable roster grid
-    this.createRosterGrid()
-    
-    // Create play button
-    this.createPlayButton()
-    
-    // Create back button
-    this.createBackButton()
+    this.createPlayerList()
+    this.createStartButton()
+    this.setupScrolling()
   }
 
+  // =========================================
+  // BACKGROUND
+  // =========================================
   private createBackground(): void {
     const graphics = this.add.graphics()
     
-    // Stadium-like gradient
     for (let y = 0; y < GAME_HEIGHT; y++) {
       const progress = y / GAME_HEIGHT
-      const r = Math.floor(0 + progress * 0)
-      const g = Math.floor(26 + progress * 20)
-      const b = Math.floor(51 + progress * 15)
+      const r = Math.floor(0 + progress * 10)
+      const g = Math.floor(20 + progress * 25)
+      const b = Math.floor(40 + progress * 20)
       graphics.fillStyle(Phaser.Display.Color.GetColor(r, g, b), 1)
       graphics.fillRect(0, y, GAME_WIDTH, 1)
     }
     
-    // Spotlight effect on preview area
-    const spotlight = this.add.graphics()
-    spotlight.fillStyle(0xffffff, 0.03)
-    spotlight.fillEllipse(GAME_WIDTH / 2, 150, 300, 200)
-    
-    // Field glow at bottom
-    const fieldGlow = this.add.graphics()
-    fieldGlow.fillStyle(COLORS.green, 0.08)
-    fieldGlow.fillEllipse(GAME_WIDTH / 2, GAME_HEIGHT + 50, GAME_WIDTH, 200)
+    // Top accent line
+    const accent = this.add.graphics()
+    accent.fillStyle(COLORS.green, 0.8)
+    accent.fillRect(0, 0, GAME_WIDTH, 3)
   }
 
+  // =========================================
+  // HEADER
+  // =========================================
   private createHeader(): void {
     const centerX = GAME_WIDTH / 2
     
+    // Back button
+    this.createBackButton()
+    
     // Title
-    const title = this.add.text(centerX, 45, 'SELECT YOUR DEFENDER', {
-      fontSize: '22px',
+    const title = this.add.text(centerX, 45, 'CHOOSE YOUR DEFENDER', {
+      fontSize: '20px',
       color: hexToCSS(COLORS.white),
       fontFamily: FONTS.display,
-      letterSpacing: 3,
+      letterSpacing: 1,
     })
     title.setOrigin(0.5)
-    title.setAlpha(0)
     
     // Subtitle
-    const subtitle = this.add.text(centerX, 70, '24-MAN DEFENSIVE ROSTER', {
+    const subtitle = this.add.text(centerX, 70, '2025 SEAHAWKS DEFENSE', {
       fontSize: '11px',
-      color: hexToCSS(COLORS.grey),
+      color: hexToCSS(COLORS.green),
       fontFamily: FONTS.body,
       letterSpacing: 2,
     })
     subtitle.setOrigin(0.5)
-    subtitle.setAlpha(0)
     
-    // Animate in
-    this.tweens.add({
-      targets: [title, subtitle],
-      alpha: 1,
-      y: '-=10',
-      duration: 500,
-      delay: 200,
-      ease: 'Power2'
+    // Roster count
+    const count = this.add.text(centerX, 92, `${FULL_ROSTER.length} PLAYERS`, {
+      fontSize: '9px',
+      color: hexToCSS(COLORS.grey),
+      fontFamily: FONTS.body,
     })
+    count.setOrigin(0.5)
   }
 
-  private createPlayerPreview(): void {
-    const centerX = GAME_WIDTH / 2
-    const previewY = 150
-    
-    this.previewContainer = this.add.container(centerX, previewY)
-    
-    // Outer glow ring (animated)
-    this.previewGlow = this.add.graphics()
-    this.previewGlow.lineStyle(4, COLORS.green, 0.4)
-    this.previewGlow.strokeCircle(0, 0, 65)
-    
-    // Pulsing animation
-    this.tweens.add({
-      targets: this.previewGlow,
-      scaleX: 1.15,
-      scaleY: 1.15,
-      alpha: 0.6,
-      duration: 1200,
-      yoyo: true,
-      repeat: -1,
-      ease: 'Sine.easeInOut'
-    })
-    
-    // Position-colored ring
-    const defender = FULL_ROSTER.find((d) => d.jersey === this.selectedJersey)
-    const posColor = getPositionGroupColor(defender?.positionGroup || 'DB')
-    
-    const positionRing = this.add.graphics()
-    positionRing.lineStyle(6, posColor, 1)
-    positionRing.strokeCircle(0, 0, 52)
-    positionRing.setName('positionRing')
-    
-    // Main circle background
-    const bgCircle = this.add.graphics()
-    bgCircle.fillStyle(COLORS.navyLight, 1)
-    bgCircle.fillCircle(0, 0, 48)
-    
-    // Inner gradient effect
-    const innerGlow = this.add.graphics()
-    innerGlow.fillStyle(COLORS.green, 0.1)
-    innerGlow.fillCircle(0, -15, 30)
-    
-    // Jersey number
-    this.previewJerseyText = this.add.text(0, -5, `${this.selectedJersey}`, {
-      fontSize: '42px',
-      color: hexToCSS(COLORS.white),
-      fontFamily: FONTS.display,
-    })
-    this.previewJerseyText.setOrigin(0.5)
-    
-    // Position label
-    this.previewPositionText = this.add.text(0, 75, defender?.position || 'CB', {
-      fontSize: '16px',
-      color: hexToCSS(posColor),
-      fontFamily: FONTS.heading,
-      letterSpacing: 2,
-    })
-    this.previewPositionText.setOrigin(0.5)
-    
-    // Position group badge
-    const groupBadge = this.createPositionBadge(defender?.positionGroup || 'DB', 0, 100)
-    groupBadge.setName('groupBadge')
-    
-    this.previewContainer.add([this.previewGlow, positionRing, bgCircle, innerGlow, this.previewJerseyText, this.previewPositionText, groupBadge])
-    
-    // Entrance animation
-    this.previewContainer.setScale(0)
-    this.tweens.add({
-      targets: this.previewContainer,
-      scale: 1,
-      duration: 600,
-      delay: 300,
-      ease: 'Back.easeOut'
-    })
-  }
-
-  private createPositionBadge(group: Defender['positionGroup'], x: number, y: number): Phaser.GameObjects.Container {
-    const container = this.add.container(x, y)
-    
-    const groupNames: Record<Defender['positionGroup'], string> = {
-      'DL': 'DEFENSIVE LINE',
-      'LB': 'LINEBACKER',
-      'DB': 'DEFENSIVE BACK'
-    }
+  private createBackButton(): void {
+    const btnSize = 40
+    const x = 28
+    const y = 36
     
     const bg = this.add.graphics()
-    bg.fillStyle(getPositionGroupColor(group), 0.2)
-    bg.fillRoundedRect(-70, -12, 140, 24, 12)
-    bg.lineStyle(1, getPositionGroupColor(group), 0.6)
-    bg.strokeRoundedRect(-70, -12, 140, 24, 12)
+    bg.fillStyle(COLORS.navyLight, 0.8)
+    bg.fillRoundedRect(-btnSize/2, -btnSize/2, btnSize, btnSize, 10)
     
-    const text = this.add.text(0, 0, groupNames[group], {
-      fontSize: '10px',
-      color: hexToCSS(getPositionGroupColor(group)),
-      fontFamily: FONTS.body,
-      letterSpacing: 1,
+    const arrow = this.add.text(0, 0, '←', {
+      fontSize: '20px',
+      color: hexToCSS(COLORS.grey),
+      fontFamily: FONTS.display,
     })
-    text.setOrigin(0.5)
+    arrow.setOrigin(0.5)
     
-    container.add([bg, text])
-    return container
+    const btn = this.add.container(x, y, [bg, arrow])
+    btn.setSize(btnSize, btnSize)
+    btn.setInteractive({ useHandCursor: true })
+    
+    btn.on('pointerover', () => arrow.setColor(hexToCSS(COLORS.green)))
+    btn.on('pointerout', () => arrow.setColor(hexToCSS(COLORS.grey)))
+    btn.on('pointerdown', () => btn.setScale(0.9))
+    btn.on('pointerup', () => {
+      btn.setScale(1)
+      AudioManager.playClick()
+      this.cameras.main.fadeOut(300)
+      this.time.delayedCall(300, () => this.scene.start('MenuScene'))
+    })
   }
 
-  private createRosterGrid(): void {
-    const startY = 250
-    const gridHeight = 280
-    const cols = 6
-    const cellWidth = 58
-    const cellHeight = 62
-    const startX = (GAME_WIDTH - cols * cellWidth) / 2 + cellWidth / 2
-    const rows = Math.ceil(FULL_ROSTER.length / cols)
-    const contentHeight = rows * cellHeight
+  // =========================================
+  // PLAYER LIST
+  // =========================================
+  private createPlayerList(): void {
+    const listHeight = LAYOUT.listBottom - LAYOUT.listTop
+    const totalHeight = FULL_ROSTER.length * (LAYOUT.cardHeight + LAYOUT.cardGap)
+    this.maxScroll = Math.max(0, totalHeight - listHeight)
     
     // Create scroll container
-    this.scrollContainer = this.add.container(0, startY)
+    this.scrollContainer = this.add.container(0, LAYOUT.listTop)
     
-    // Position group headers
-    const groups = ['DL', 'LB', 'DB'] as const
-    const groupLabels = { DL: 'D-LINE', LB: 'LINEBACKERS', DB: 'SECONDARY' }
+    // Group players by position group
+    const groups = this.groupPlayersByPosition()
     
-    // Create player cards
-    FULL_ROSTER.forEach((defender, index) => {
-      const col = index % cols
-      const row = Math.floor(index / cols)
-      const x = startX + col * cellWidth
-      const y = row * cellHeight
+    let yOffset = 0
+    
+    groups.forEach((players, groupName) => {
+      // Section header
+      const sectionHeader = this.createSectionHeader(groupName, yOffset)
+      this.scrollContainer.add(sectionHeader)
+      yOffset += 36
       
-      const card = this.createPlayerCard(x, y, defender, index)
-      this.jerseyCards.set(defender.jersey, card)
-      this.scrollContainer.add(card)
+      // Player cards
+      players.forEach((defender, index) => {
+        const card = this.createPlayerCard(defender, yOffset, index)
+        this.playerCards.set(defender.jersey, card)
+        this.scrollContainer.add(card)
+        yOffset += LAYOUT.cardHeight + LAYOUT.cardGap
+      })
+      
+      yOffset += 12 // Gap between sections
     })
     
-    this.updateSelection()
+    // Update max scroll based on actual content
+    this.maxScroll = Math.max(0, yOffset - listHeight + 20)
     
-    // Make scrollable if content is taller than visible area
-    if (contentHeight > gridHeight) {
-      this.setupScrolling(gridHeight, contentHeight)
-    }
-    
-    // Entrance animation for cards
-    this.jerseyCards.forEach((card, jersey) => {
-      const defender = FULL_ROSTER.find(d => d.jersey === jersey)
-      const index = FULL_ROSTER.indexOf(defender!)
+    // Entrance animation - fade in from right
+    let delay = 0
+    this.playerCards.forEach((card) => {
+      const originalX = card.x
       card.setAlpha(0)
-      card.setScale(0.8)
-      
+      card.x = originalX + 80
       this.tweens.add({
         targets: card,
         alpha: 1,
-        scale: 1,
-        duration: 300,
-        delay: 400 + index * 30,
-        ease: 'Back.easeOut'
+        x: originalX,
+        duration: 250,
+        delay: delay,
+        ease: 'Power2'
       })
+      delay += 20
     })
   }
 
-  private createPlayerCard(x: number, y: number, defender: Defender, index: number): Phaser.GameObjects.Container {
-    const size = 50
+  private groupPlayersByPosition(): Map<string, Defender[]> {
+    const groups = new Map<string, Defender[]>()
+    
+    const dl = FULL_ROSTER.filter(d => d.positionGroup === 'DL')
+    const lb = FULL_ROSTER.filter(d => d.positionGroup === 'LB')
+    const db = FULL_ROSTER.filter(d => d.positionGroup === 'DB')
+    
+    if (dl.length > 0) groups.set('DEFENSIVE LINE', dl)
+    if (lb.length > 0) groups.set('LINEBACKERS', lb)
+    if (db.length > 0) groups.set('SECONDARY', db)
+    
+    return groups
+  }
+
+  private createSectionHeader(title: string, y: number): Phaser.GameObjects.Container {
+    const container = this.add.container(GAME_WIDTH / 2, y + 18)
+    
+    // Left line
+    const leftLine = this.add.graphics()
+    leftLine.lineStyle(1, COLORS.grey, 0.3)
+    leftLine.lineBetween(-170, 0, -80, 0)
+    
+    // Title
+    const text = this.add.text(0, 0, title, {
+      fontSize: '10px',
+      color: hexToCSS(COLORS.grey),
+      fontFamily: FONTS.body,
+      letterSpacing: 2,
+    })
+    text.setOrigin(0.5)
+    
+    // Right line
+    const rightLine = this.add.graphics()
+    rightLine.lineStyle(1, COLORS.grey, 0.3)
+    rightLine.lineBetween(80, 0, 170, 0)
+    
+    container.add([leftLine, text, rightLine])
+    return container
+  }
+
+  private createPlayerCard(defender: Defender, y: number, index: number): Phaser.GameObjects.Container {
+    const width = GAME_WIDTH - 32
+    const height = LAYOUT.cardHeight
     const isSelected = defender.jersey === this.selectedJersey
     const posColor = getPositionGroupColor(defender.positionGroup)
     
     // Card background
     const bg = this.add.graphics()
-    this.drawCardBackground(bg, size, posColor, isSelected)
+    this.drawPlayerCard(bg, width, height, posColor, isSelected)
+    
+    // Position accent bar (left side)
+    const accentBar = this.add.graphics()
+    accentBar.fillStyle(posColor, isSelected ? 1 : 0.6)
+    accentBar.fillRoundedRect(-width/2, -height/2, 5, height, { tl: 12, bl: 12, tr: 0, br: 0 })
+    accentBar.setName('accentBar')
+    
+    // Jersey number circle
+    const jerseyBg = this.add.graphics()
+    jerseyBg.fillStyle(isSelected ? posColor : COLORS.navyLight, 1)
+    jerseyBg.fillCircle(-width/2 + 40, 0, 22)
+    if (!isSelected) {
+      jerseyBg.lineStyle(2, posColor, 0.5)
+      jerseyBg.strokeCircle(-width/2 + 40, 0, 22)
+    }
+    jerseyBg.setName('jerseyBg')
     
     // Jersey number
-    const jerseyText = this.add.text(0, 0, `${defender.jersey}`, {
+    const jerseyText = this.add.text(-width/2 + 40, 0, `${defender.jersey}`, {
       fontSize: '18px',
-      color: hexToCSS(COLORS.white),
+      color: isSelected ? hexToCSS(COLORS.navy) : hexToCSS(COLORS.white),
       fontFamily: FONTS.display,
     })
     jerseyText.setOrigin(0.5)
     jerseyText.setName('jerseyText')
     
-    // Position indicator (small dot)
-    const posIndicator = this.add.graphics()
-    posIndicator.fillStyle(posColor, 1)
-    posIndicator.fillCircle(0, size/2 - 8, 3)
+    // Player name
+    const nameText = this.add.text(-width/2 + 75, -8, defender.name.toUpperCase(), {
+      fontSize: '14px',
+      color: hexToCSS(COLORS.white),
+      fontFamily: FONTS.display,
+      letterSpacing: 0.5,
+    })
+    nameText.setName('nameText')
     
-    const container = this.add.container(x, y, [bg, jerseyText, posIndicator])
-    container.setSize(size, size)
+    // Position badge
+    const posBadge = this.add.graphics()
+    const posWidth = 45
+    posBadge.fillStyle(posColor, 0.2)
+    posBadge.fillRoundedRect(-width/2 + 75, 8, posWidth, 18, 4)
+    
+    const posText = this.add.text(-width/2 + 75 + posWidth/2, 17, defender.position, {
+      fontSize: '10px',
+      color: hexToCSS(posColor),
+      fontFamily: FONTS.body,
+    })
+    posText.setOrigin(0.5)
+    
+    // Selection indicator (right side)
+    const checkmark = this.add.text(width/2 - 25, 0, isSelected ? '✓' : '', {
+      fontSize: '20px',
+      color: hexToCSS(COLORS.green),
+      fontFamily: FONTS.display,
+    })
+    checkmark.setOrigin(0.5)
+    checkmark.setName('checkmark')
+    
+    const container = this.add.container(GAME_WIDTH / 2, y + height/2)
+    container.add([bg, accentBar, jerseyBg, jerseyText, nameText, posBadge, posText, checkmark])
+    container.setSize(width, height)
     container.setInteractive({ useHandCursor: true })
     container.setData('defender', defender)
     container.setData('bg', bg)
+    container.setData('width', width)
+    container.setData('height', height)
     
-    // Hover effects
+    // Interactions
     container.on('pointerover', () => {
       if (defender.jersey !== this.selectedJersey) {
-        this.tweens.add({
-          targets: container,
-          scaleX: 1.1,
-          scaleY: 1.1,
-          duration: 150,
-          ease: 'Power2'
-        })
-        this.drawCardBackground(bg, size, posColor, false, true)
+        this.tweens.add({ targets: container, scaleX: 1.02, duration: 100 })
+        bg.clear()
+        this.drawPlayerCard(bg, width, height, posColor, false, true)
       }
     })
     
     container.on('pointerout', () => {
       if (defender.jersey !== this.selectedJersey) {
-        this.tweens.add({
-          targets: container,
-          scaleX: 1,
-          scaleY: 1,
-          duration: 150,
-          ease: 'Power2'
-        })
-        this.drawCardBackground(bg, size, posColor, false, false)
+        this.tweens.add({ targets: container, scaleX: 1, duration: 100 })
+        bg.clear()
+        this.drawPlayerCard(bg, width, height, posColor, false, false)
       }
     })
     
-    container.on('pointerdown', () => {
-      this.selectDefender(defender.jersey)
+    container.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      this.dragStartY = pointer.y
+      this.scrollStartY = this.scrollY
+    })
+    
+    container.on('pointerup', (pointer: Phaser.Input.Pointer) => {
+      // Only select if it wasn't a scroll gesture
+      const dragDistance = Math.abs(pointer.y - this.dragStartY)
+      if (dragDistance < 10) {
+        this.selectDefender(defender.jersey)
+      }
     })
     
     return container
   }
 
-  private drawCardBackground(graphics: Phaser.GameObjects.Graphics, size: number, posColor: number, selected: boolean, hovered: boolean = false): void {
-    graphics.clear()
-    
-    const halfSize = size / 2
+  private drawPlayerCard(g: Phaser.GameObjects.Graphics, w: number, h: number, posColor: number, selected: boolean, hovered: boolean = false): void {
+    g.clear()
+    const half = { w: w/2, h: h/2 }
     
     if (selected) {
-      // Selected state - full color with glow
-      graphics.fillStyle(posColor, 0.9)
-      graphics.fillRoundedRect(-halfSize, -halfSize, size, size, 10)
-      graphics.lineStyle(3, COLORS.green, 1)
-      graphics.strokeRoundedRect(-halfSize, -halfSize, size, size, 10)
+      g.fillStyle(COLORS.navyLight, 1)
+      g.fillRoundedRect(-half.w, -half.h, w, h, 12)
+      g.lineStyle(2, COLORS.green, 1)
+      g.strokeRoundedRect(-half.w, -half.h, w, h, 12)
     } else if (hovered) {
-      // Hovered state
-      graphics.fillStyle(posColor, 0.5)
-      graphics.fillRoundedRect(-halfSize, -halfSize, size, size, 10)
-      graphics.lineStyle(2, COLORS.grey, 0.8)
-      graphics.strokeRoundedRect(-halfSize, -halfSize, size, size, 10)
+      g.fillStyle(COLORS.navyLight, 0.9)
+      g.fillRoundedRect(-half.w, -half.h, w, h, 12)
+      g.lineStyle(1, posColor, 0.6)
+      g.strokeRoundedRect(-half.w, -half.h, w, h, 12)
     } else {
-      // Default state
-      graphics.fillStyle(COLORS.navyLight, 0.6)
-      graphics.fillRoundedRect(-halfSize, -halfSize, size, size, 10)
-      graphics.lineStyle(1, posColor, 0.4)
-      graphics.strokeRoundedRect(-halfSize, -halfSize, size, size, 10)
+      g.fillStyle(COLORS.navyLight, 0.6)
+      g.fillRoundedRect(-half.w, -half.h, w, h, 12)
     }
   }
 
   private selectDefender(jersey: number): void {
+    if (jersey === this.selectedJersey) return
+    
     AudioManager.unlock()
     AudioManager.playClick()
     
-    const previousJersey = this.selectedJersey
+    const oldJersey = this.selectedJersey
     this.selectedJersey = jersey
     
-    this.updateSelection()
-    this.updatePreview(jersey)
+    // Update old card
+    const oldCard = this.playerCards.get(oldJersey)
+    if (oldCard) {
+      this.updateCardVisuals(oldCard, false)
+    }
     
-    // Animate the newly selected card
-    const newCard = this.jerseyCards.get(jersey)
+    // Update new card
+    const newCard = this.playerCards.get(jersey)
     if (newCard) {
+      this.updateCardVisuals(newCard, true)
+      
+      // Pop animation
       this.tweens.add({
         targets: newCard,
-        scaleX: 1.15,
-        scaleY: 1.15,
+        scaleX: 1.05,
+        scaleY: 1.05,
         duration: 100,
         yoyo: true,
         ease: 'Power2'
@@ -373,226 +391,151 @@ export class RosterScene extends Phaser.Scene {
     }
   }
 
-  private updateSelection(): void {
-    this.jerseyCards.forEach((container, jersey) => {
-      const defender = container.getData('defender') as Defender
-      const bg = container.getData('bg') as Phaser.GameObjects.Graphics
-      const isSelected = jersey === this.selectedJersey
-      const posColor = getPositionGroupColor(defender.positionGroup)
-      
-      this.drawCardBackground(bg, 50, posColor, isSelected)
-      container.setScale(isSelected ? 1.05 : 1)
-    })
-  }
-
-  private updatePreview(jersey: number): void {
-    const defender = FULL_ROSTER.find((d) => d.jersey === jersey)
-    if (!defender) return
-    
+  private updateCardVisuals(card: Phaser.GameObjects.Container, selected: boolean): void {
+    const defender = card.getData('defender') as Defender
+    const bg = card.getData('bg') as Phaser.GameObjects.Graphics
+    const width = card.getData('width') as number
+    const height = card.getData('height') as number
     const posColor = getPositionGroupColor(defender.positionGroup)
     
-    // Animate jersey number change
-    this.tweens.add({
-      targets: this.previewJerseyText,
-      scaleX: 0,
-      scaleY: 0,
-      duration: 100,
-      onComplete: () => {
-        this.previewJerseyText.setText(`${jersey}`)
-        this.tweens.add({
-          targets: this.previewJerseyText,
-          scaleX: 1,
-          scaleY: 1,
-          duration: 200,
-          ease: 'Back.easeOut'
-        })
+    // Update background
+    this.drawPlayerCard(bg, width, height, posColor, selected)
+    
+    // Update accent bar
+    const accentBar = card.getByName('accentBar') as Phaser.GameObjects.Graphics
+    if (accentBar) {
+      accentBar.clear()
+      accentBar.fillStyle(posColor, selected ? 1 : 0.6)
+      accentBar.fillRoundedRect(-width/2, -height/2, 5, height, { tl: 12, bl: 12, tr: 0, br: 0 })
+    }
+    
+    // Update jersey background
+    const jerseyBg = card.getByName('jerseyBg') as Phaser.GameObjects.Graphics
+    if (jerseyBg) {
+      jerseyBg.clear()
+      jerseyBg.fillStyle(selected ? posColor : COLORS.navyLight, 1)
+      jerseyBg.fillCircle(-width/2 + 40, 0, 22)
+      if (!selected) {
+        jerseyBg.lineStyle(2, posColor, 0.5)
+        jerseyBg.strokeCircle(-width/2 + 40, 0, 22)
+      }
+    }
+    
+    // Update jersey text color
+    const jerseyText = card.getByName('jerseyText') as Phaser.GameObjects.Text
+    if (jerseyText) {
+      jerseyText.setColor(selected ? hexToCSS(COLORS.navy) : hexToCSS(COLORS.white))
+    }
+    
+    // Update checkmark
+    const checkmark = card.getByName('checkmark') as Phaser.GameObjects.Text
+    if (checkmark) {
+      checkmark.setText(selected ? '✓' : '')
+    }
+  }
+
+  // =========================================
+  // SCROLLING
+  // =========================================
+  private setupScrolling(): void {
+    this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      if (pointer.y > LAYOUT.listTop && pointer.y < LAYOUT.listBottom) {
+        this.isDragging = true
+        this.dragStartY = pointer.y
+        this.scrollStartY = this.scrollY
       }
     })
     
-    // Update position text
-    this.previewPositionText.setText(defender.position)
-    this.previewPositionText.setColor(hexToCSS(posColor))
-    
-    // Update position ring
-    const positionRing = this.previewContainer.getByName('positionRing') as Phaser.GameObjects.Graphics
-    if (positionRing) {
-      positionRing.clear()
-      positionRing.lineStyle(6, posColor, 1)
-      positionRing.strokeCircle(0, 0, 52)
-    }
-    
-    // Update group badge
-    const oldBadge = this.previewContainer.getByName('groupBadge') as Phaser.GameObjects.Container
-    if (oldBadge) {
-      oldBadge.destroy()
-    }
-    const newBadge = this.createPositionBadge(defender.positionGroup, 0, 100)
-    newBadge.setName('groupBadge')
-    this.previewContainer.add(newBadge)
-    
-    // Pulse the glow
-    this.tweens.add({
-      targets: this.previewGlow,
-      scaleX: 1.3,
-      scaleY: 1.3,
-      alpha: 0.8,
-      duration: 200,
-      yoyo: true,
-      ease: 'Power2'
-    })
-  }
-
-  private setupScrolling(visibleHeight: number, contentHeight: number): void {
-    const maxScroll = contentHeight - visibleHeight
-    let currentScroll = 0
-    
-    // Enable dragging
     this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
-      if (pointer.isDown && pointer.y > 250 && pointer.y < 250 + visibleHeight) {
-        const deltaY = pointer.prevPosition.y - pointer.y
-        currentScroll = Phaser.Math.Clamp(currentScroll + deltaY, 0, maxScroll)
-        this.scrollContainer.y = 250 - currentScroll
+      if (this.isDragging && pointer.isDown) {
+        const deltaY = this.dragStartY - pointer.y
+        this.scrollY = Phaser.Math.Clamp(this.scrollStartY + deltaY, 0, this.maxScroll)
+        this.scrollContainer.y = LAYOUT.listTop - this.scrollY
       }
     })
     
-    // Mouse wheel support
-    this.input.on('wheel', (_pointer: Phaser.Input.Pointer, _gameObjects: unknown, _deltaX: number, deltaY: number) => {
-      currentScroll = Phaser.Math.Clamp(currentScroll + deltaY * 0.5, 0, maxScroll)
-      this.scrollContainer.y = 250 - currentScroll
+    this.input.on('pointerup', () => {
+      this.isDragging = false
+    })
+    
+    this.input.on('wheel', (_pointer: Phaser.Input.Pointer, _gameObjects: unknown, _dx: number, dy: number) => {
+      this.scrollY = Phaser.Math.Clamp(this.scrollY + dy * 0.5, 0, this.maxScroll)
+      this.scrollContainer.y = LAYOUT.listTop - this.scrollY
     })
   }
 
-  private createPlayButton(): void {
+  // =========================================
+  // START BUTTON
+  // =========================================
+  private createStartButton(): void {
     const centerX = GAME_WIDTH / 2
-    const y = GAME_HEIGHT - 65
-    const width = 220
-    const height = 52
+    const width = 280
+    const height = 58
     
-    // Button glow
+    // Glow
     const glow = this.add.graphics()
-    glow.fillStyle(COLORS.green, 0.3)
-    glow.fillRoundedRect(centerX - width/2 - 5, y - height/2 - 5, width + 10, height + 10, 16)
+    glow.fillStyle(COLORS.green, 0.2)
+    glow.fillRoundedRect(centerX - width/2 - 8, LAYOUT.buttonY - height/2 - 8, width + 16, height + 16, 20)
     glow.setAlpha(0)
     
-    // Main button
+    // Background
     const bg = this.add.graphics()
     bg.fillStyle(COLORS.green, 1)
     bg.fillRoundedRect(-width/2, -height/2, width, height, 14)
     
-    // Shine effect
+    // Shine
     const shine = this.add.graphics()
-    shine.fillStyle(0xffffff, 0.2)
-    shine.fillRoundedRect(-width/2 + 4, -height/2 + 4, width - 8, height/2 - 4, { tl: 10, tr: 10, bl: 0, br: 0 })
+    shine.fillStyle(0xffffff, 0.15)
+    shine.fillRoundedRect(-width/2 + 4, -height/2 + 4, width - 8, height/2 - 6, { tl: 10, tr: 10, bl: 0, br: 0 })
     
+    // Label
     const label = this.add.text(0, 0, 'START GAME', {
-      fontSize: '22px',
+      fontSize: '24px',
       color: hexToCSS(COLORS.navy),
       fontFamily: FONTS.display,
+      letterSpacing: 2,
     })
     label.setOrigin(0.5)
     
-    const container = this.add.container(centerX, y, [bg, shine, label])
-    container.setSize(width, height)
-    container.setInteractive({ useHandCursor: true })
+    const btn = this.add.container(centerX, LAYOUT.buttonY, [bg, shine, label])
+    btn.setSize(width, height)
+    btn.setInteractive({ useHandCursor: true })
+    btn.setAlpha(0)
+    btn.setScale(0.9)
     
     // Entrance animation
-    container.setAlpha(0)
-    container.setScale(0.9)
     this.tweens.add({
-      targets: container,
+      targets: btn,
       alpha: 1,
       scale: 1,
-      duration: 500,
+      duration: 400,
       delay: 800,
       ease: 'Back.easeOut'
     })
     
-    // Hover effects
-    container.on('pointerover', () => {
-      this.tweens.add({
-        targets: container,
-        scaleX: 1.05,
-        scaleY: 1.05,
-        duration: 150
-      })
-      this.tweens.add({
-        targets: glow,
-        alpha: 1,
-        duration: 150
-      })
+    // Hover
+    btn.on('pointerover', () => {
+      this.tweens.add({ targets: btn, scale: 1.03, duration: 100 })
+      this.tweens.add({ targets: glow, alpha: 1, duration: 100 })
     })
     
-    container.on('pointerout', () => {
-      this.tweens.add({
-        targets: container,
-        scaleX: 1,
-        scaleY: 1,
-        duration: 150
-      })
-      this.tweens.add({
-        targets: glow,
-        alpha: 0,
-        duration: 150
-      })
+    btn.on('pointerout', () => {
+      this.tweens.add({ targets: btn, scale: 1, duration: 100 })
+      this.tweens.add({ targets: glow, alpha: 0, duration: 100 })
     })
     
-    container.on('pointerdown', () => container.setScale(0.95))
+    btn.on('pointerdown', () => btn.setScale(0.97))
     
-    container.on('pointerup', () => {
+    btn.on('pointerup', () => {
+      btn.setScale(1.03)
       AudioManager.unlock()
       AudioManager.playClick()
       
-      // Save selection
       useGameStore.getState().setSelectedDefender(this.selectedJersey)
       useGameStore.getState().startGame()
       
       this.cameras.main.fadeOut(300)
-      this.time.delayedCall(300, () => {
-        this.scene.start('GameScene')
-      })
-    })
-  }
-
-  private createBackButton(): void {
-    const backBtn = this.add.text(25, 25, '← BACK', {
-      fontSize: '14px',
-      color: hexToCSS(COLORS.grey),
-      fontFamily: FONTS.body,
-    })
-    backBtn.setInteractive({ useHandCursor: true })
-    backBtn.setAlpha(0)
-    
-    this.tweens.add({
-      targets: backBtn,
-      alpha: 1,
-      duration: 400,
-      delay: 500
-    })
-    
-    backBtn.on('pointerover', () => {
-      backBtn.setColor(hexToCSS(COLORS.green))
-      this.tweens.add({
-        targets: backBtn,
-        x: 30,
-        duration: 150
-      })
-    })
-    
-    backBtn.on('pointerout', () => {
-      backBtn.setColor(hexToCSS(COLORS.grey))
-      this.tweens.add({
-        targets: backBtn,
-        x: 25,
-        duration: 150
-      })
-    })
-    
-    backBtn.on('pointerdown', () => {
-      AudioManager.playClick()
-      this.cameras.main.fadeOut(300)
-      this.time.delayedCall(300, () => {
-        this.scene.start('MenuScene')
-      })
+      this.time.delayedCall(300, () => this.scene.start('GameScene'))
     })
   }
 }

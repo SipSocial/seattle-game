@@ -2,23 +2,35 @@ import * as Phaser from 'phaser'
 import { GAME_WIDTH, GAME_HEIGHT, COLORS, FONTS, hexToCSS } from '../config/phaserConfig'
 import { useGameStore } from '../../store/gameStore'
 import { AudioManager } from '../systems/AudioManager'
+import { getStageByGame } from '../data/campaign'
 
 export class GameOverScene extends Phaser.Scene {
   private nameInput: string = ''
   private nameText!: Phaser.GameObjects.Text
   private cursorVisible = true
+  private isCampaignMode = false
 
   constructor() {
     super({ key: 'GameOverScene' })
   }
 
+  init(data: { isCampaignMode?: boolean }): void {
+    this.isCampaignMode = data.isCampaignMode ?? false
+  }
+
   create(): void {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/5051b6de-b0ce-411d-bf90-110293cecd7e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'GameOverScene.ts:create',message:'GameOverScene create started',data:{},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'C'})}).catch(()=>{});
+    // #endregion
     this.cameras.main.fadeIn(400)
     this.cameras.main.setBackgroundColor(COLORS.navy)
     
     this.nameInput = ''
     
     const { score, wave, tackles, highScore, playerName } = useGameStore.getState()
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/5051b6de-b0ce-411d-bf90-110293cecd7e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'GameOverScene.ts:create:afterStore',message:'Store state retrieved',data:{score,wave,tackles,highScore,playerName},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'D'})}).catch(()=>{});
+    // #endregion
     
     if (playerName) {
       this.nameInput = playerName
@@ -29,6 +41,9 @@ export class GameOverScene extends Phaser.Scene {
     this.createStats(wave, tackles)
     this.createNameEntry()
     this.createButtons()
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/5051b6de-b0ce-411d-bf90-110293cecd7e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'GameOverScene.ts:create:complete',message:'GameOverScene create completed',data:{},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'C'})}).catch(()=>{});
+    // #endregion
   }
 
   private createBackground(): void {
@@ -317,8 +332,87 @@ export class GameOverScene extends Phaser.Scene {
     // Submit button
     this.createSubmitButton(centerX, 570)
     
-    // Play again button
-    this.createRetryButton(centerX, 630)
+    // Campaign-specific buttons
+    if (this.isCampaignMode) {
+      this.createCampaignButtons(centerX, 630)
+    } else {
+      // Play again button
+      this.createRetryButton(centerX, 630)
+    }
+  }
+  
+  private createCampaignButtons(x: number, y: number): void {
+    const { campaign } = useGameStore.getState()
+    const currentStage = getStageByGame(campaign.currentGame)
+    
+    // Retry this game button
+    const retryBtn = this.add.text(x, y, `RETRY ${currentStage.location.city.toUpperCase()}`, {
+      fontSize: '14px',
+      color: hexToCSS(COLORS.green),
+      fontFamily: FONTS.body,
+    })
+    retryBtn.setOrigin(0.5)
+    retryBtn.setInteractive({ useHandCursor: true })
+    retryBtn.setAlpha(0)
+    
+    this.tweens.add({
+      targets: retryBtn,
+      alpha: 1,
+      duration: 400,
+      delay: 1000
+    })
+
+    retryBtn.on('pointerover', () => {
+      retryBtn.setColor(hexToCSS(COLORS.greenLight))
+      this.tweens.add({ targets: retryBtn, y: y - 2, duration: 150 })
+    })
+    
+    retryBtn.on('pointerout', () => {
+      retryBtn.setColor(hexToCSS(COLORS.green))
+      this.tweens.add({ targets: retryBtn, y: y, duration: 150 })
+    })
+    
+    retryBtn.on('pointerdown', () => {
+      AudioManager.playClick()
+      useGameStore.getState().startCampaignGame()
+      this.cameras.main.fadeOut(300)
+      this.time.delayedCall(300, () => {
+        this.scene.start('RosterScene')
+      })
+    })
+    
+    // Back to map button
+    const mapBtn = this.add.text(x, y + 35, 'BACK TO MAP', {
+      fontSize: '12px',
+      color: hexToCSS(COLORS.grey),
+      fontFamily: FONTS.body,
+    })
+    mapBtn.setOrigin(0.5)
+    mapBtn.setInteractive({ useHandCursor: true })
+    mapBtn.setAlpha(0)
+    
+    this.tweens.add({
+      targets: mapBtn,
+      alpha: 0.7,
+      duration: 400,
+      delay: 1100
+    })
+
+    mapBtn.on('pointerover', () => {
+      mapBtn.setColor(hexToCSS(COLORS.white))
+    })
+    
+    mapBtn.on('pointerout', () => {
+      mapBtn.setColor(hexToCSS(COLORS.grey))
+    })
+    
+    mapBtn.on('pointerdown', () => {
+      AudioManager.playClick()
+      this.cameras.main.fadeOut(300)
+      this.time.delayedCall(300, () => {
+        this.scene.start('MapScene')
+      })
+    })
   }
 
   private createSubmitButton(x: number, y: number): void {
@@ -385,7 +479,8 @@ export class GameOverScene extends Phaser.Scene {
 
       this.cameras.main.fadeOut(300)
       this.time.delayedCall(300, () => {
-        this.scene.start('LeaderboardScene', { fromGameOver: true })
+        // Go to EngageScene first (Follow/Enter/Share CTAs)
+        this.scene.start('EngageScene')
       })
     })
   }

@@ -8,6 +8,8 @@ export default function GameCanvas() {
   const gameRef = useRef<any>(null)
 
   useEffect(() => {
+    let isMounted = true
+    
     // Initialize Phaser game only on client side
     const initGame = async () => {
       if (typeof window === 'undefined') return
@@ -18,8 +20,12 @@ export default function GameCanvas() {
         // Dynamic import of game module to avoid SSR issues
         const { createGame } = await import('../../../src/game/main')
         
+        if (!isMounted) return
+        
         // Small delay to ensure container is ready
-        await new Promise((resolve) => setTimeout(resolve, 100))
+        await new Promise((resolve) => setTimeout(resolve, 50))
+        
+        if (!isMounted) return
         
         gameRef.current = createGame()
         setGameLoaded(true)
@@ -32,24 +38,23 @@ export default function GameCanvas() {
 
     // Cleanup on unmount
     return () => {
-      const cleanup = async () => {
-        if (gameRef.current) {
-          const { destroyGame } = await import('../../../src/game/main')
+      isMounted = false
+      if (gameRef.current) {
+        import('../../../src/game/main').then(({ destroyGame }) => {
           destroyGame()
           gameRef.current = null
-          setGameLoaded(false)
-        }
+        })
       }
-      cleanup()
     }
   }, [])
 
   return (
     <div 
-      className="fixed inset-0 bg-[#0b1f24] flex flex-col overflow-hidden"
+      className="fixed inset-0 flex flex-col overflow-hidden"
       style={{
         height: '100dvh',
         width: '100vw',
+        backgroundColor: 'var(--seahawks-navy)',
       }}
     >
       {/* Game Container - takes full space */}
@@ -67,7 +72,13 @@ export default function GameCanvas() {
       />
 
       {/* Back to Menu Link */}
-      <div className="absolute top-2 left-2 z-50 safe-area-inset">
+      <div 
+        className="absolute z-50"
+        style={{
+          top: 'max(env(safe-area-inset-top), 8px)',
+          left: 'max(env(safe-area-inset-left), 8px)',
+        }}
+      >
         <a
           href="/"
           className="text-white/30 hover:text-white/70 text-xs flex items-center gap-1 transition-colors p-2"

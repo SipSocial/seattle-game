@@ -562,9 +562,46 @@ body {
 #game-container canvas {
   display: block;
   max-width: 100%;
-  max-height: 100vh;
+  max-height: 100dvh;
   border-radius: 8px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+/* ============================================
+   SAFE AREA UTILITIES
+   ============================================ */
+
+.safe-area-top {
+  padding-top: max(env(safe-area-inset-top), 20px);
+}
+
+.safe-area-bottom {
+  padding-bottom: max(env(safe-area-inset-bottom), 16px);
+}
+
+.safe-area-left {
+  padding-left: max(env(safe-area-inset-left), 16px);
+}
+
+.safe-area-right {
+  padding-right: max(env(safe-area-inset-right), 16px);
+}
+
+.safe-area-x {
+  padding-left: max(env(safe-area-inset-left), 16px);
+  padding-right: max(env(safe-area-inset-right), 16px);
+}
+
+.safe-area-y {
+  padding-top: max(env(safe-area-inset-top), 20px);
+  padding-bottom: max(env(safe-area-inset-bottom), 16px);
+}
+
+.safe-area-all {
+  padding-top: max(env(safe-area-inset-top), 20px);
+  padding-bottom: max(env(safe-area-inset-bottom), 16px);
+  padding-left: max(env(safe-area-inset-left), 16px);
+  padding-right: max(env(safe-area-inset-right), 16px);
 }
 
 /* ============================================

@@ -242,7 +242,7 @@ export default function Home() {
       </section>
 
       {/* ===== BOTTOM SECTION: Position Selector ===== */}
-      <section className="relative z-10 px-6 pb-4">
+      <section className="relative z-10 px-6 pb-2">
         <h2 
           className="text-[11px] text-center mb-3 tracking-[0.25em] opacity-0 animate-slide-up"
           style={{ 
@@ -322,11 +322,10 @@ export default function Home() {
 
       {/* ===== FOOTER ===== */}
       <footer 
-        className="relative z-10 px-6 py-4 text-center opacity-0 animate-slide-up"
+        className="relative z-10 px-6 py-3 text-center opacity-0 animate-slide-up safe-area-bottom"
         style={{ 
           animationDelay: '1.2s', 
           animationFillMode: 'forwards',
-          paddingBottom: 'max(env(safe-area-inset-bottom), 16px)',
         }}
       >
         <div className="flex items-center justify-center gap-2 mb-2">

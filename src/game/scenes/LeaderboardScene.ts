@@ -110,7 +110,8 @@ export class LeaderboardScene extends Phaser.Scene {
     this.add.text(95, headerY, 'NAME', { fontSize: '10px', color: hexToCSS(COLORS.grey), fontFamily: FONTS.body })
     this.add.text(180, headerY, 'JERSEY', { fontSize: '10px', color: hexToCSS(COLORS.grey), fontFamily: FONTS.body })
     this.add.text(260, headerY, 'SCORE', { fontSize: '10px', color: hexToCSS(COLORS.grey), fontFamily: FONTS.body })
-    this.add.text(350, headerY, 'W', { fontSize: '10px', color: hexToCSS(COLORS.grey), fontFamily: FONTS.body })
+    this.add.text(340, headerY, 'W', { fontSize: '10px', color: hexToCSS(COLORS.grey), fontFamily: FONTS.body })
+    this.add.text(370, headerY, '⭐', { fontSize: '10px' }).setOrigin(0.5) // 12th Man badge column
 
     if (leaderboard.length === 0) {
       const noScores = this.add.text(centerX, 300, 'No scores yet!\nBe the first defender.', {
@@ -216,16 +217,27 @@ export class LeaderboardScene extends Phaser.Scene {
         score.setAlpha(0)
 
         // Wave
-        const wave = this.add.text(350, y + 10, `${entry.wave}`, {
+        const wave = this.add.text(340, y + 10, `${entry.wave}`, {
           fontSize: '12px',
           color: hexToCSS(COLORS.grey),
           fontFamily: FONTS.body,
         })
         wave.setOrigin(0, 0.5)
         wave.setAlpha(0)
+        
+        // 12th Man Badge for engaged users (completed Follow/Enter/Share)
+        let badge: Phaser.GameObjects.Text | null = null
+        if (entry.hasEngaged) {
+          badge = this.add.text(370, y + 10, '⭐', {
+            fontSize: '14px',
+          })
+          badge.setOrigin(0.5)
+          badge.setAlpha(0)
+        }
 
         // Animate row in
-        const elements = [rowBg, name, jerseyBg, jersey, score, wave]
+        const elements: (Phaser.GameObjects.Graphics | Phaser.GameObjects.Text)[] = [rowBg, name, jerseyBg, jersey, score, wave]
+        if (badge) elements.push(badge)
         elements.forEach((el, i) => {
           this.tweens.add({
             targets: el,

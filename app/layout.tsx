@@ -63,14 +63,11 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
       </head>
       <body 
-        className="antialiased overflow-hidden"
+        className="antialiased overflow-hidden min-h-screen"
         style={{
           overscrollBehavior: 'none',
-          position: 'fixed',
-          width: '100%',
-          height: '100%',
           fontFamily: 'var(--font-inter), system-ui, sans-serif',
-          backgroundColor: '#002244',
+          backgroundColor: 'var(--seahawks-navy)',
         }}
       >
         {children}
