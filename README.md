@@ -1,142 +1,257 @@
-# Road to the Super Bowl - Seattle Darkside
+# Seattle Seahawks Defense - Road to Super Bowl LX
 
-A fast, arcade-style, mobile-first 2D side-scrolling football fantasy game built with Next.js and Phaser 3.
+A premium, mobile-first browser game featuring the Seattle Seahawks' "Dark Side" defense on their journey to Super Bowl LX. Built with Next.js, Phaser 3, and Leonardo AI.
+
+**Live Demo**: https://seattle-game.vercel.app
+
+---
 
 ## Game Overview
 
-Control the **Seattle Darkside** defensive unit as you march down the field toward the Super Bowl! Face 9 challenging opponents in rapid button-mashing clashes. Win each battle to earn power-ups and continue your journey to victory.
+### Campaign Mode
+Follow the 2025 Seattle Seahawks schedule from Week 1 through the Super Bowl in San Francisco. Face real opponents (49ers, Steelers, Rams, Patriots) across 20 stages with increasing difficulty.
+
+### Endless Mode
+Survive infinite waves of runners. Compete for high scores on the leaderboard.
 
 ### Gameplay
+- **Select your defender** from the 11 defensive starters
+- **Control your player** by dragging to move
+- **Tackle runners** coming down the field
+- **Build combos** to charge the 12th Man Megaphone
+- **Catch power-ups** for boosts and abilities
 
-- **Road Scene**: Watch your team march forward toward each opponent
-- **Clash Scene**: Tap rapidly to fill your Force meter before time runs out
-- **Power-Up Selection**: Choose from 3 random power-ups after each victory
-- **9 Levels**: Progress through 8 opponents + the Super Bowl finale
+---
 
-## Getting Started
+## Screenshots
+
+| Player Selection | Campaign Map | Gameplay |
+|------------------|--------------|----------|
+| 3D rotating players with animated backgrounds | Interactive US map with flight path | Wave-based defense gameplay |
+
+---
+
+## Quick Start
 
 ### Prerequisites
-
-- Node.js 18+ 
-- npm or yarn
+- Node.js 18+
+- npm
+- Leonardo AI API key (for asset generation)
 
 ### Installation
 
 ```bash
+# Clone repository
+git clone https://github.com/SipSocial/seattle-game.git
+cd seattle-game
+
+# Install dependencies
 npm install
-```
 
-### Development
+# Create environment file
+echo "LEONARDO_API_KEY=your_key_here" > .env.local
 
-```bash
+# Start development server
 npm run dev
 ```
 
-Open [http://localhost:30094](http://localhost:30094) with your browser.
+Open [http://localhost:3004](http://localhost:3004)
 
-**Important**: The app runs on port **30094** (not the default 3000).
+> **Note**: The app runs on port **3004** (configured in package.json)
 
-### Build for Production
+### Production Build
 
 ```bash
 npm run build
 npm run start
 ```
 
-## Deployment
+### Deploy to Vercel
 
-This project is configured for Vercel deployment:
+```bash
+vercel --prod
+```
 
-1. Push your code to a Git repository
-2. Import your repository in [Vercel](https://vercel.com)
-3. Vercel will automatically detect Next.js and deploy your app
+---
+
+## Features
+
+### Visual
+- 🎨 Photorealistic 3D player renders via Leonardo AI
+- 🌌 Animated video backgrounds
+- ✨ Smooth 60fps animations with Framer Motion
+- 📱 Mobile-first responsive design
+- 🏈 Real player likenesses and stats
+
+### Gameplay
+- 🏆 20-stage campaign following 2025 Seahawks schedule
+- ♾️ Endless mode with high score tracking
+- 🎮 Touch, mouse, and keyboard support
+- ⚡ DrinksIP-branded power-ups
+- 📣 12th Man Megaphone super ability
+
+### Technical
+- ⚛️ React + Next.js 14 App Router
+- 🎮 Phaser 3 game engine
+- 📦 Zustand state management
+- 🖼️ Leonardo AI for dynamic asset generation
+- 🚀 Vercel edge deployment
+
+---
 
 ## Project Structure
 
 ```
 seattle-game/
-├── app/
-│   ├── layout.tsx          # Root layout with metadata
-│   ├── page.tsx            # Marketing landing page
-│   ├── play/
-│   │   ├── page.tsx        # Game route (client-only Phaser)
-│   │   └── components/
-│   │       └── RotateOverlay.tsx  # Portrait mode warning
-│   └── globals.css         # Global styles
+├── app/                          # Next.js App Router
+│   ├── page.tsx                  # Home/landing page
+│   ├── play/                     # Game entry point
+│   ├── campaign/                 # Campaign map
+│   ├── mockup/                   # Player selection
+│   ├── admin/                    # Asset generation tools
+│   └── api/                      # API routes
+│       └── leonardo/             # Leonardo AI integration
+│
+├── components/game/              # React game components
+│   ├── CampaignMapV2.tsx         # Interactive US map
+│   ├── PlayerSelect.tsx          # Player selection UI
+│   └── StageTransition.tsx       # Stage entry screen
+│
 ├── src/
-│   ├── game/
-│   │   ├── config/
-│   │   │   └── phaserConfig.ts    # Phaser configuration
-│   │   ├── scenes/
-│   │   │   ├── BootScene.ts       # Initial scene
-│   │   │   ├── MenuScene.ts        # Main menu
-│   │   │   ├── RoadScene.ts        # Marching to opponent
-│   │   │   ├── ClashScene.ts       # Button-mash gameplay
-│   │   │   ├── PowerUpScene.ts     # Power-up selection
-│   │   │   └── VictoryScene.ts     # Super Bowl victory
-│   │   ├── data/
-│   │   │   ├── levels.ts           # 9 level configurations
-│   │   │   └── teams.ts            # Team data & colors
-│   │   ├── systems/
-│   │   │   ├── input.ts            # Input handling (touch/mouse/keyboard)
-│   │   │   └── balance.ts          # Game balance & math
-│   │   └── main.ts                 # Phaser game instance
-│   └── store/
-│       └── gameStore.ts            # Zustand state management
-├── next.config.js          # Next.js configuration
-├── vercel.json             # Vercel deployment settings
-└── tsconfig.json           # TypeScript configuration
+│   ├── game/                     # Phaser game code
+│   │   ├── scenes/               # Game scenes
+│   │   └── data/                 # Game data files
+│   ├── store/                    # Zustand state
+│   └── lib/                      # Utilities & API clients
+│
+└── .cursor/rules/                # Documentation
+    ├── ARCHITECTURE.md           # Technical design
+    ├── DESIGN_PLAN.md            # Visual guidelines
+    ├── RULES.md                  # Coding standards
+    └── AGENT_WORKFLOW.md         # Multi-agent process
 ```
+
+---
 
 ## Customization
 
-### Adjusting Difficulty
+### Campaign Data
+Edit `src/game/data/campaign.ts`:
+- Stage order and opponents
+- Difficulty settings per stage
+- City locations on map
 
-Edit level configurations in `src/game/data/levels.ts`:
-- `targetForce`: Required force to win
-- `timeLimitSec`: Time limit per clash
-- `opponentResistance`: How fast force decays
+### Roster
+Edit `src/game/data/roster.ts`:
+- Player names and numbers
+- Positions and stats
+- Starter lineup
 
-### Modifying Power-Ups
+### Power-Ups
+Edit `src/game/data/powerups.ts`:
+- Power-up effects
+- Duration and strength
+- Visual styling
 
-Edit power-up pool and effects in:
-- `src/game/systems/balance.ts` - Power-up definitions and effects
+### Colors
+Edit `src/game/config/phaserConfig.ts`:
+- Seahawks colors: Navy (#002244), Green (#69BE28)
+- UI colors and gradients
 
-### Changing Team Colors
+---
 
-Edit team colors in `src/game/data/teams.ts`:
-- Seattle Darkside: `#0F6E6A` (primary), `#7ED957` (accent), `#0B1F24` (trim)
-- Opponent teams: Each has unique color palette
+## Leonardo AI Integration
 
-## Game Features
+The game uses Leonardo AI for photorealistic asset generation:
 
-- 9-stage progression system
-- Button-mash gameplay mechanic
-- Retry assist system (5% reduction per retry, max 20%)
-- 5 power-up types with unique effects
-- Mobile-first design with portrait/landscape handling
-- Touch, mouse, and keyboard input support
-- Procedural graphics (no external assets required)
-- Victory celebration with confetti
-- State persistence across sessions
+### Admin Tools
+- `/admin/players` - Generate player portraits
+- `/admin/sprites` - Generate game sprites
 
-## Brand & Legal
+### Generated Assets
+- Player portraits (transparent PNG)
+- Stadium backgrounds (animated video)
+- Campaign map (US map at night)
+- Dark Side team plane (animated)
+- City backgrounds for each stage
 
-- **No NFL team names, logos, or branding**
-- **No real team references**
-- All teams are fictional
-- Seattle Darkside uses custom color scheme: `#0F6E6A`, `#7ED957`, `#0B1F24`
+### API Endpoints
+- `POST /api/leonardo/generate` - Start generation
+- `GET /api/leonardo/status/[id]` - Check status
+- `POST /api/players/remove-background` - Remove backgrounds
+
+---
 
 ## Tech Stack
 
-- **Next.js 14+** (App Router)
-- **TypeScript**
-- **Phaser 3** (game engine)
-- **Zustand** (state management)
-- **Tailwind CSS** (styling)
+| Layer | Technology |
+|-------|------------|
+| Framework | Next.js 14 (App Router) |
+| Language | TypeScript |
+| Game Engine | Phaser 3 |
+| State | Zustand |
+| Styling | Tailwind CSS v4 |
+| Animation | Framer Motion |
+| AI Assets | Leonardo AI |
+| Deployment | Vercel |
 
-## Learn More
+---
 
-- [Next.js Documentation](https://nextjs.org/docs)
-- [Phaser 3 Documentation](https://photonstorm.github.io/phaser3-docs/)
-- [Vercel Documentation](https://vercel.com/docs)
+## Documentation
+
+Full documentation lives in `.cursor/rules/`:
+
+| Document | Purpose |
+|----------|---------|
+| `project-context.md` | Current state & quick reference |
+| `ARCHITECTURE.md` | Technical architecture & data flow |
+| `DESIGN_PLAN.md` | Visual design & UI patterns |
+| `RULES.md` | Coding standards & best practices |
+| `AGENT_WORKFLOW.md` | Multi-agent collaboration guide |
+
+---
+
+## Development
+
+### Commands
+
+```bash
+npm run dev      # Start dev server (port 3004)
+npm run build    # Production build
+npm run lint     # Run ESLint
+npm run start    # Start production server
+```
+
+### Key Files
+
+| Purpose | Location |
+|---------|----------|
+| Game state | `src/store/gameStore.ts` |
+| Phaser config | `src/game/config/phaserConfig.ts` |
+| Campaign data | `src/game/data/campaign.ts` |
+| Player images | `src/game/data/playerImages.ts` |
+| Leonardo assets | `src/game/data/campaignAssets.ts` |
+
+---
+
+## Credits
+
+- **Game Design**: DeMarcus Lawrence & Team
+- **Development**: Cursor AI Agents
+- **Assets**: Leonardo AI
+- **Brand Integration**: DrinkSip
+
+---
+
+## License
+
+Private project - Seattle Seahawks Defense Game
+
+---
+
+## Links
+
+- **Live Game**: https://seattle-game.vercel.app
+- **Repository**: https://github.com/SipSocial/seattle-game
+- **Leonardo AI**: https://leonardo.ai
+- **Vercel**: https://vercel.com
