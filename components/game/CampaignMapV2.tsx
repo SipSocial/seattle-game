@@ -338,45 +338,61 @@ export function CampaignMapV2({
             animate={{ scale: 1, opacity: 1 }}
             transition={{ delay: 0.5 + Math.random() * 0.5, type: 'spring' }}
           >
-            {/* Outer glow ring */}
-            <div
+            {/* Outer glow ring - pulsing for unlocked playable locations */}
+            <motion.div
               className="absolute inset-0 rounded-full"
               style={{
                 transform: 'scale(1.5)',
                 background: location.hasCurrentGame
-                  ? 'radial-gradient(circle, rgba(105, 190, 40, 0.4) 0%, transparent 70%)'
+                  ? 'radial-gradient(circle, rgba(105, 190, 40, 0.5) 0%, transparent 70%)'
+                  : location.hasUnlockedGames && !location.hasCompletedGames
+                  ? 'radial-gradient(circle, rgba(105, 190, 40, 0.35) 0%, transparent 70%)'
                   : location.hasCompletedGames
                   ? 'radial-gradient(circle, rgba(105, 190, 40, 0.2) 0%, transparent 70%)'
                   : 'radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%)',
               }}
+              animate={
+                location.hasUnlockedGames && !location.hasCurrentGame && !location.hasCompletedGames
+                  ? { scale: [1.5, 1.8, 1.5], opacity: [1, 0.7, 1] }
+                  : {}
+              }
+              transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
             />
 
             {/* Main marker */}
-            <div
+            <motion.div
               className={`relative flex items-center justify-center rounded-full transition-all ${
-                location.hasCurrentGame ? 'w-12 h-12' : 'w-10 h-10'
+                location.hasCurrentGame ? 'w-12 h-12' : location.hasUnlockedGames ? 'w-11 h-11' : 'w-10 h-10'
               }`}
               style={{
                 background: location.hasCurrentGame
                   ? 'linear-gradient(135deg, #69BE28 0%, #4a9c1c 100%)'
+                  : location.hasUnlockedGames && !location.hasCompletedGames
+                  ? 'linear-gradient(135deg, #1a4a1a 0%, #0d3a0d 100%)'
                   : location.hasCompletedGames
                   ? 'linear-gradient(135deg, #002244 0%, #001a33 100%)'
-                  : location.hasUnlockedGames
-                  ? 'linear-gradient(135deg, #1a2a3a 0%, #0a1a2a 100%)'
                   : 'linear-gradient(135deg, #333 0%, #222 100%)',
                 border: location.hasCurrentGame
                   ? '3px solid #69BE28'
+                  : location.hasUnlockedGames && !location.hasCompletedGames
+                  ? '2px solid #69BE28'
                   : location.hasCompletedGames
                   ? '2px solid #69BE28'
-                  : location.hasUnlockedGames
-                  ? '2px solid rgba(105, 190, 40, 0.5)'
                   : '2px solid rgba(255, 255, 255, 0.2)',
                 boxShadow: location.hasCurrentGame
                   ? '0 0 30px rgba(105, 190, 40, 0.6)'
+                  : location.hasUnlockedGames && !location.hasCompletedGames
+                  ? '0 0 20px rgba(105, 190, 40, 0.4)'
                   : location.hasCompletedGames
                   ? '0 4px 20px rgba(0, 0, 0, 0.4)'
                   : '0 2px 10px rgba(0, 0, 0, 0.3)',
               }}
+              animate={
+                location.hasUnlockedGames && !location.hasCurrentGame && !location.hasCompletedGames
+                  ? { scale: [1, 1.05, 1] }
+                  : {}
+              }
+              transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
             >
               {/* Icon or abbreviation */}
               {location.hasCurrentGame ? (
@@ -385,50 +401,78 @@ export function CampaignMapV2({
                   transition={{ duration: 2, repeat: Infinity }}
                   className="w-3 h-3 rounded-full bg-white"
                 />
-              ) : location.hasCompletedGames && !location.hasUnlockedGames ? (
+              ) : location.hasUnlockedGames && !location.hasCompletedGames ? (
+                // Playable location - show play icon
+                <motion.svg 
+                  className="w-5 h-5 text-[#69BE28]" 
+                  fill="currentColor" 
+                  viewBox="0 0 24 24"
+                  animate={{ scale: [1, 1.1, 1] }}
+                  transition={{ duration: 1.5, repeat: Infinity }}
+                >
+                  <path d="M8 5v14l11-7z" />
+                </motion.svg>
+              ) : location.hasCompletedGames ? (
                 <svg className="w-5 h-5 text-[#69BE28]" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
                 </svg>
-              ) : !location.hasUnlockedGames ? (
+              ) : (
                 <svg className="w-4 h-4 text-white/40" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z" />
                 </svg>
-              ) : (
-                <span className="text-white font-bold text-xs">
-                  {location.city.substring(0, 3).toUpperCase()}
-                </span>
               )}
 
-              {/* Game count badge */}
+              {/* Game count badge - animated for playable locations */}
               {location.gamesCount > 1 && (
-                <div
+                <motion.div
                   className="absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold"
                   style={{
-                    background: location.hasCurrentGame
+                    background: location.hasCurrentGame || (location.hasUnlockedGames && !location.hasCompletedGames)
                       ? 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)'
                       : 'linear-gradient(135deg, #69BE28 0%, #4a9c1c 100%)',
                     color: '#000',
                     border: '2px solid #002244',
+                    boxShadow: location.hasUnlockedGames && !location.hasCompletedGames
+                      ? '0 0 10px rgba(255, 215, 0, 0.6)'
+                      : 'none',
                   }}
+                  animate={
+                    location.hasUnlockedGames && !location.hasCompletedGames
+                      ? { scale: [1, 1.15, 1] }
+                      : {}
+                  }
+                  transition={{ duration: 1, repeat: Infinity }}
                 >
                   {location.gamesCount}
-                </div>
+                </motion.div>
               )}
-            </div>
+            </motion.div>
 
             {/* City label */}
             <div
               className="absolute left-1/2 -translate-x-1/2 whitespace-nowrap text-center"
-              style={{ top: location.hasCurrentGame ? '56px' : '48px' }}
+              style={{ top: location.hasCurrentGame ? '56px' : location.hasUnlockedGames ? '52px' : '48px' }}
             >
               <div
                 className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded"
                 style={{
-                  background: 'rgba(0, 0, 0, 0.6)',
-                  color: location.hasCurrentGame ? '#69BE28' : 'rgba(255, 255, 255, 0.7)',
+                  background: location.hasCurrentGame || (location.hasUnlockedGames && !location.hasCompletedGames)
+                    ? 'rgba(0, 34, 68, 0.9)'
+                    : 'rgba(0, 0, 0, 0.6)',
+                  color: location.hasCurrentGame 
+                    ? '#69BE28' 
+                    : location.hasUnlockedGames && !location.hasCompletedGames
+                    ? '#69BE28'
+                    : 'rgba(255, 255, 255, 0.7)',
+                  border: location.hasUnlockedGames && !location.hasCompletedGames
+                    ? '1px solid rgba(105, 190, 40, 0.4)'
+                    : 'none',
                 }}
               >
                 {location.city}
+                {location.hasUnlockedGames && !location.hasCompletedGames && !location.hasCurrentGame && (
+                  <span className="ml-1 text-[#FFD700]">▶</span>
+                )}
               </div>
             </div>
           </motion.button>
