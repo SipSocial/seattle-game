@@ -6,14 +6,14 @@ import { GameScene } from '../scenes/GameScene'
 // See: /components/game/ for React overlays (GameOver, Leaderboard, etc.)
 // See: /components/ui/ for shared UI components
 
-// Portrait orientation for mobile-first
-export const GAME_WIDTH = 400
-export const GAME_HEIGHT = 700
+// Portrait orientation for mobile-first (1440p crisp resolution)
+export const GAME_WIDTH = 800
+export const GAME_HEIGHT = 1400
 
-// Field zones
-export const FIELD_TOP = 80 // Score/wave display area
-export const FIELD_BOTTOM = GAME_HEIGHT - 20 // End zone line
-export const END_ZONE_Y = GAME_HEIGHT - 40 // Where TDs are scored
+// Field zones (scaled for 1440p)
+export const FIELD_TOP = 160 // Score/wave display area
+export const FIELD_BOTTOM = GAME_HEIGHT - 40 // End zone line
+export const END_ZONE_Y = GAME_HEIGHT - 80 // Where TDs are scored
 
 // ============================================
 // SEATTLE SEAHAWKS OFFICIAL COLORS
@@ -91,6 +91,10 @@ export const phaserConfig: Phaser.Types.Core.GameConfig = {
   render: {
     pixelArt: false,
     antialias: true,
+    roundPixels: false, // Allow sub-pixel positioning for smoother movement
+    transparent: false,
+    clearBeforeRender: true,
+    powerPreference: 'high-performance', // Request high-perf GPU for smooth rendering
   },
   input: {
     activePointers: 2, // Support multi-touch

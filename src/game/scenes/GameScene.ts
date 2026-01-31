@@ -10,17 +10,22 @@ import { DEFENDER_SPRITES, getDefenderSprite } from '../systems/PremiumVisuals'
 // SEAHAWKS DEFENSE - PREMIUM GAME EXPERIENCE
 // ============================================
 
-// Game constants
-const DEFENDER_RADIUS = 28
-const RUNNER_RADIUS = 14
-const POWER_UP_RADIUS = 20
+// Game constants (scaled for 1440p resolution)
+const DEFENDER_RADIUS = 56  // 28 * 2 for higher res
+const RUNNER_RADIUS = 28    // 14 * 2 for higher res
+const POWER_UP_RADIUS = 40  // 20 * 2 for higher res
 
-// Speeds
-const BASE_RUNNER_SPEED = 70
-const SPEED_PER_WAVE = 10
-const MAX_RUNNER_SPEED = 220
-const DEFENDER_SPEED = 350
-const AI_DEFENDER_SPEED = 90
+// Speeds (scaled for higher res, boosted for responsive feel)
+const BASE_RUNNER_SPEED = 140   // 70 * 2
+const SPEED_PER_WAVE = 20       // 10 * 2
+const MAX_RUNNER_SPEED = 440    // 220 * 2
+const DEFENDER_SPEED = 900      // Increased significantly for snappy response
+const AI_DEFENDER_SPEED = 180   // 90 * 2
+
+// Movement smoothing settings for buttery controls
+const PLAYER_LERP_SPEED = 0.25      // Interpolation factor (0.1 = smooth, 0.5 = snappy)
+const PLAYER_VELOCITY_SMOOTHING = 0.15  // Velocity interpolation for extra smoothness
+const INPUT_DEADZONE = 3            // Ignore tiny movements for precision
 
 // Wave settings
 const BASE_SPAWN_INTERVAL = 900
@@ -32,8 +37,8 @@ const MAX_WAVE_DURATION = 30000
 const STARTING_LIVES = 4
 
 // Defender movement restriction - defenders stay in bottom 33% of field
-// GAME_HEIGHT is 700, so 67% from top = 469px (defender can't go ABOVE this line)
-const DEFENDER_MIN_Y = 469
+// GAME_HEIGHT is 1400, so 67% from top = 938px (defender can't go ABOVE this line)
+const DEFENDER_MIN_Y = 938
 
 function getWaveDuration(wave: number): number {
   return Math.min(MAX_WAVE_DURATION, BASE_WAVE_DURATION + (wave - 1) * WAVE_DURATION_INCREASE)
@@ -797,8 +802,8 @@ export class GameScene extends Phaser.Scene {
   }
 
   private createDefenders(): void {
-    // Spawn player in lower portion of screen
-    const playerDefender = this.createDefenderSprite(GAME_WIDTH / 2, GAME_HEIGHT - 160, true)
+    // Spawn player in lower portion of screen (scaled for 1440p)
+    const playerDefender = this.createDefenderSprite(GAME_WIDTH / 2, GAME_HEIGHT - 320, true)
     this.defenders.push(playerDefender)
     
     for (let i = 1; i < this.stats.defenderCount; i++) {
@@ -1029,13 +1034,13 @@ export class GameScene extends Phaser.Scene {
     this.waveText = this.add.text(-1000, -1000, '', { fontSize: '1px' })
     this.livesContainer = this.add.container(-1000, -1000)
     
-    // === TIMER BAR - Positioned below React HUD ===
+    // === TIMER BAR - Positioned below React HUD (scaled for 1440p) ===
     this.timerBg = this.add.graphics()
     this.timerBg.setDepth(uiDepth)
     this.timerBg.fillStyle(0x000000, 0.5)
-    this.timerBg.fillRoundedRect(20, 85, GAME_WIDTH - 40, 8, 4) // Moved down to y=85
-    this.timerBg.lineStyle(1, COLORS.green, 0.3)
-    this.timerBg.strokeRoundedRect(20, 85, GAME_WIDTH - 40, 8, 4)
+    this.timerBg.fillRoundedRect(40, 170, GAME_WIDTH - 80, 16, 8)
+    this.timerBg.lineStyle(2, COLORS.green, 0.3)
+    this.timerBg.strokeRoundedRect(40, 170, GAME_WIDTH - 80, 16, 8)
     
     this.timerBar = this.add.graphics()
     this.timerBar.setDepth(uiDepth + 1)
@@ -1044,9 +1049,9 @@ export class GameScene extends Phaser.Scene {
     // Tackles text hidden (moved off-screen)
     this.killsText = this.add.text(-1000, -1000, '', { fontSize: '1px' })
     
-    // === COMBO TEXT - More dramatic ===
-    this.comboText = this.add.text(GAME_WIDTH / 2, 130, '', {
-      fontSize: '32px',
+    // === COMBO TEXT - More dramatic (scaled for 1440p) ===
+    this.comboText = this.add.text(GAME_WIDTH / 2, 260, '', {
+      fontSize: '56px',
       color: hexToCSS(COLORS.gold),
       fontFamily: FONTS.display,
     })
@@ -1080,30 +1085,30 @@ export class GameScene extends Phaser.Scene {
 
   private createFanMeterUI(): void {
     const { wave } = useGameStore.getState()
-    const meterWidth = 120
-    const meterHeight = 16
-    const meterX = GAME_WIDTH - meterWidth - 15
-    const meterY = GAME_HEIGHT - 30
+    const meterWidth = 240   // Scaled for 1440p
+    const meterHeight = 32
+    const meterX = GAME_WIDTH - meterWidth - 30
+    const meterY = GAME_HEIGHT - 60
     
     // Background glow (hidden initially, shown when meter is full)
     this.fanMeterGlow = this.add.graphics()
     this.fanMeterGlow.fillStyle(COLORS.green, 0.3)
-    this.fanMeterGlow.fillRoundedRect(meterX - 4, meterY - 4, meterWidth + 8, meterHeight + 8, 10)
+    this.fanMeterGlow.fillRoundedRect(meterX - 8, meterY - 8, meterWidth + 16, meterHeight + 16, 20)
     this.fanMeterGlow.setAlpha(0)
     
     // Background
     this.fanMeterBg = this.add.graphics()
     this.fanMeterBg.fillStyle(COLORS.navyLight, 0.8)
-    this.fanMeterBg.fillRoundedRect(meterX, meterY, meterWidth, meterHeight, 6)
-    this.fanMeterBg.lineStyle(1, COLORS.grey, 0.4)
-    this.fanMeterBg.strokeRoundedRect(meterX, meterY, meterWidth, meterHeight, 6)
+    this.fanMeterBg.fillRoundedRect(meterX, meterY, meterWidth, meterHeight, 12)
+    this.fanMeterBg.lineStyle(2, COLORS.grey, 0.4)
+    this.fanMeterBg.strokeRoundedRect(meterX, meterY, meterWidth, meterHeight, 12)
     
     // Fill bar
     this.fanMeterBar = this.add.graphics()
     
     // Label with 12 icon
-    this.fanMeterLabel = this.add.text(meterX - 5, meterY + meterHeight / 2, '12', {
-      fontSize: '12px',
+    this.fanMeterLabel = this.add.text(meterX - 10, meterY + meterHeight / 2, '12', {
+      fontSize: '24px',
       color: hexToCSS(COLORS.green),
       fontFamily: FONTS.display,
     })
@@ -1119,10 +1124,10 @@ export class GameScene extends Phaser.Scene {
 
   private updateFanMeterDisplay(): void {
     const { wave } = useGameStore.getState()
-    const meterWidth = 120
-    const meterHeight = 16
-    const meterX = GAME_WIDTH - meterWidth - 15
-    const meterY = GAME_HEIGHT - 30
+    const meterWidth = 240   // Scaled for 1440p
+    const meterHeight = 32
+    const meterX = GAME_WIDTH - meterWidth - 30
+    const meterY = GAME_HEIGHT - 60
     
     // Show/hide based on wave
     const isVisible = wave >= 3
@@ -1140,7 +1145,7 @@ export class GameScene extends Phaser.Scene {
     this.fanMeterBar.clear()
     
     // Calculate fill width
-    const fillWidth = (meterWidth - 4) * (this.fanMeter / 100)
+    const fillWidth = (meterWidth - 8) * (this.fanMeter / 100)
     
     // Color changes based on meter level
     let barColor = COLORS.grey
@@ -1154,7 +1159,7 @@ export class GameScene extends Phaser.Scene {
     
     if (fillWidth > 0) {
       this.fanMeterBar.fillStyle(barColor, 1)
-      this.fanMeterBar.fillRoundedRect(meterX + 2, meterY + 2, fillWidth, meterHeight - 4, 4)
+      this.fanMeterBar.fillRoundedRect(meterX + 4, meterY + 4, fillWidth, meterHeight - 8, 8)
     }
     
     // Pulsing glow when megaphone is on screen
@@ -1174,15 +1179,15 @@ export class GameScene extends Phaser.Scene {
   }
 
   private createPauseButton(): void {
-    const buttonSize = 36
-    const x = GAME_WIDTH - buttonSize / 2 - 10
-    const y = 85
+    const buttonSize = 72  // Scaled for 1440p
+    const x = GAME_WIDTH - buttonSize / 2 - 20
+    const y = 170
     
     const bg = this.add.graphics()
     bg.fillStyle(COLORS.navyLight, 0.8)
-    bg.fillRoundedRect(-buttonSize / 2, -buttonSize / 2, buttonSize, buttonSize, 8)
+    bg.fillRoundedRect(-buttonSize / 2, -buttonSize / 2, buttonSize, buttonSize, 16)
     
-    const icon = this.add.text(0, 0, '⏸', { fontSize: '18px' })
+    const icon = this.add.text(0, 0, '⏸', { fontSize: '36px' })
     icon.setOrigin(0.5)
     icon.setName('pauseIcon')
     
@@ -1228,15 +1233,15 @@ export class GameScene extends Phaser.Scene {
     overlay.fillStyle(0x000000, 0.7)
     overlay.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT)
     
-    const pausedText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 30, 'PAUSED', {
-      fontSize: '42px',
+    const pausedText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 60, 'PAUSED', {
+      fontSize: '84px',
       color: hexToCSS(COLORS.white),
       fontFamily: FONTS.display,
     })
     pausedText.setOrigin(0.5)
     
-    const resumeHint = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 20, 'Tap pause button to resume', {
-      fontSize: '14px',
+    const resumeHint = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 40, 'Tap pause button to resume', {
+      fontSize: '28px',
       color: hexToCSS(COLORS.grey),
       fontFamily: FONTS.body,
     })
@@ -1361,42 +1366,42 @@ export class GameScene extends Phaser.Scene {
   private spawnMegaphone(): void {
     if (this.megaphone) return // Only one megaphone at a time
     
-    const x = Phaser.Math.Between(60, GAME_WIDTH - 60)
+    const x = Phaser.Math.Between(120, GAME_WIDTH - 120)  // Scaled spawn area
     const y = -POWER_UP_RADIUS * 2
     
     // Create megaphone container with eye-catching design
     const megaphoneRadius = POWER_UP_RADIUS * 1.5
     
-    // Outer glow ring (animated)
+    // Outer glow ring (animated) - scaled line widths for 1440p
     const glowRing = this.add.graphics()
-    glowRing.lineStyle(4, COLORS.green, 0.8)
-    glowRing.strokeCircle(0, 0, megaphoneRadius + 8)
+    glowRing.lineStyle(8, COLORS.green, 0.8)
+    glowRing.strokeCircle(0, 0, megaphoneRadius + 16)
     glowRing.setName('glowRing')
     
     // Inner glow
     const innerGlow = this.add.graphics()
     innerGlow.fillStyle(COLORS.green, 0.3)
-    innerGlow.fillCircle(0, 0, megaphoneRadius + 4)
+    innerGlow.fillCircle(0, 0, megaphoneRadius + 8)
     
     // Main body - gold/green gradient look
     const body = this.add.graphics()
     body.fillStyle(COLORS.gold, 1)
     body.fillCircle(0, 0, megaphoneRadius)
-    body.lineStyle(3, COLORS.green, 1)
+    body.lineStyle(6, COLORS.green, 1)
     body.strokeCircle(0, 0, megaphoneRadius)
     
-    // Highlight
+    // Highlight (scaled for 1440p)
     const highlight = this.add.graphics()
     highlight.fillStyle(0xffffff, 0.3)
-    highlight.fillCircle(-6, -8, 10)
+    highlight.fillCircle(-12, -16, 20)
     
-    // Megaphone icon
-    const icon = this.add.text(0, 0, '📣', { fontSize: '28px' })
+    // Megaphone icon (scaled for 1440p)
+    const icon = this.add.text(0, 0, '📣', { fontSize: '56px' })
     icon.setOrigin(0.5)
     
     // "12" label below
-    const label = this.add.text(0, megaphoneRadius + 15, '12th MAN', {
-      fontSize: '10px',
+    const label = this.add.text(0, megaphoneRadius + 30, '12th MAN', {
+      fontSize: '20px',
       color: hexToCSS(COLORS.green),
       fontFamily: FONTS.display,
     })
@@ -1443,12 +1448,12 @@ export class GameScene extends Phaser.Scene {
   }
   
   private showMegaphoneSpawnText(): void {
-    const text = this.add.text(GAME_WIDTH / 2, 140, '📣 MEGAPHONE INCOMING!', {
-      fontSize: '20px',
+    const text = this.add.text(GAME_WIDTH / 2, 280, '📣 MEGAPHONE INCOMING!', {
+      fontSize: '40px',
       color: hexToCSS(COLORS.green),
       fontFamily: FONTS.display,
       stroke: hexToCSS(COLORS.navy),
-      strokeThickness: 3,
+      strokeThickness: 6,
     })
     text.setOrigin(0.5)
     text.setScale(0)
@@ -1593,10 +1598,10 @@ export class GameScene extends Phaser.Scene {
   
   
   private createMegaphoneShockwave(x: number, y: number): void {
-    // Primary shockwave from megaphone position
+    // Primary shockwave from megaphone position (scaled for 1440p)
     const shockwave = this.add.graphics()
-    shockwave.lineStyle(6, COLORS.green, 1)
-    shockwave.strokeCircle(x, y, 30)
+    shockwave.lineStyle(12, COLORS.green, 1)
+    shockwave.strokeCircle(x, y, 60)
     
     this.tweens.add({
       targets: shockwave,
@@ -1611,8 +1616,8 @@ export class GameScene extends Phaser.Scene {
     // Secondary wave
     this.time.delayedCall(100, () => {
       const wave2 = this.add.graphics()
-      wave2.lineStyle(4, COLORS.gold, 0.9)
-      wave2.strokeCircle(x, y, 25)
+      wave2.lineStyle(8, COLORS.gold, 0.9)
+      wave2.strokeCircle(x, y, 50)
       
       this.tweens.add({
         targets: wave2,
@@ -1628,8 +1633,8 @@ export class GameScene extends Phaser.Scene {
     // Third wave
     this.time.delayedCall(200, () => {
       const wave3 = this.add.graphics()
-      wave3.lineStyle(3, COLORS.greenLight, 0.8)
-      wave3.strokeCircle(x, y, 20)
+      wave3.lineStyle(6, COLORS.greenLight, 0.8)
+      wave3.strokeCircle(x, y, 40)
       
       this.tweens.add({
         targets: wave3,
@@ -1642,16 +1647,16 @@ export class GameScene extends Phaser.Scene {
       })
     })
     
-    // Particle burst from megaphone
+    // Particle burst from megaphone (scaled for 1440p)
     for (let i = 0; i < 20; i++) {
       const particle = this.add.graphics()
       const particleColor = i % 3 === 0 ? COLORS.green : (i % 3 === 1 ? COLORS.gold : COLORS.white)
       particle.fillStyle(particleColor, 1)
-      particle.fillCircle(0, 0, 3 + Math.random() * 4)
+      particle.fillCircle(0, 0, 6 + Math.random() * 8)
       particle.setPosition(x, y)
       
       const angle = (i / 20) * Math.PI * 2
-      const distance = 100 + Math.random() * 80
+      const distance = 200 + Math.random() * 160
       
       this.tweens.add({
         targets: particle,
@@ -1740,6 +1745,13 @@ export class GameScene extends Phaser.Scene {
   }
 
   private setupInput(): void {
+    // ============================================
+    // ZERO-LAG INPUT SYSTEM
+    // Captures pointer position via multiple methods
+    // for the most responsive touch/mouse tracking
+    // ============================================
+    
+    // Event-based tracking for immediate response
     this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
       this.pointer.x = pointer.x
       this.pointer.y = pointer.y
@@ -1749,8 +1761,26 @@ export class GameScene extends Phaser.Scene {
       AudioManager.resume()
       this.pointer.x = pointer.x
       this.pointer.y = pointer.y
-      // Megaphone power-up is now activated by tackling it, not tapping the meter
     })
+    
+    // Track during drag release too
+    this.input.on('pointerup', (pointer: Phaser.Input.Pointer) => {
+      this.pointer.x = pointer.x
+      this.pointer.y = pointer.y
+    })
+    
+    // Enable smooth pointer tracking (reduces input lag on mobile)
+    this.input.setPollAlways()
+  }
+  
+  // Called at the START of each frame for lowest latency
+  private syncPointerPosition(): void {
+    const activePointer = this.input.activePointer
+    if (activePointer && activePointer.isDown) {
+      // Direct sync from active pointer - bypasses event queue
+      this.pointer.x = activePointer.x
+      this.pointer.y = activePointer.y
+    }
   }
 
   private startWave(): void {
@@ -2082,6 +2112,9 @@ export class GameScene extends Phaser.Scene {
   }
 
   update(time: number, delta: number): void {
+    // Sync pointer position first for lowest input latency
+    this.syncPointerPosition()
+    
     if (this.isGameOver || this.isPaused) return
     
     const store = useGameStore.getState()
@@ -2150,7 +2183,7 @@ export class GameScene extends Phaser.Scene {
   private updateTimerBar(wave: number): void {
     const waveDuration = getWaveDuration(wave)
     const progress = Math.min(1, this.waveTimer / waveDuration)
-    const barWidth = GAME_WIDTH - 40
+    const barWidth = GAME_WIDTH - 80  // Scaled for 1440p
     const fillWidth = barWidth * progress
     
     this.timerBar.clear()
@@ -2159,41 +2192,77 @@ export class GameScene extends Phaser.Scene {
       // Dynamic color based on progress
       const color = progress < 0.7 ? COLORS.green : (progress < 0.9 ? COLORS.gold : COLORS.dlRed)
       
-      // Main fill with glow (y=87 to match timerBg at y=85)
+      // Main fill with glow (scaled for 1440p - y=174 to match timerBg at y=170)
       this.timerBar.fillStyle(color, 0.9)
-      this.timerBar.fillRoundedRect(22, 87, fillWidth - 4, 4, 2)
+      this.timerBar.fillRoundedRect(44, 174, fillWidth - 8, 8, 4)
       
       // Top shine
       this.timerBar.fillStyle(0xffffff, 0.3)
-      this.timerBar.fillRoundedRect(22, 87, fillWidth - 4, 1, { tl: 2, tr: 2, bl: 0, br: 0 })
+      this.timerBar.fillRoundedRect(44, 174, fillWidth - 8, 2, { tl: 4, tr: 4, bl: 0, br: 0 })
       
       // Glow at the end of the bar
-      if (fillWidth > 10) {
+      if (fillWidth > 20) {
         this.timerBar.fillStyle(color, 0.4)
-        this.timerBar.fillCircle(20 + fillWidth - 2, 89, 6)
+        this.timerBar.fillCircle(40 + fillWidth - 4, 178, 12)
       }
     }
   }
 
+  // Velocity tracking for smooth movement
+  private playerVelocity = { x: 0, y: 0 }
+  
   private updatePlayerDefender(delta: number): void {
     const player = this.defenders.find(d => d.isPlayer)
     if (!player) return
     
-    const speed = DEFENDER_SPEED * this.stats.speedMultiplier * (delta / 1000)
-    const dx = this.pointer.x - player.sprite.x
-    const dy = this.pointer.y - player.sprite.y
+    // ============================================
+    // BUTTERY SMOOTH PLAYER MOVEMENT
+    // Uses lerp interpolation + velocity smoothing
+    // for responsive yet fluid controls
+    // ============================================
+    
+    const targetX = Phaser.Math.Clamp(this.pointer.x, DEFENDER_RADIUS, GAME_WIDTH - DEFENDER_RADIUS)
+    const targetY = Phaser.Math.Clamp(this.pointer.y, DEFENDER_MIN_Y, GAME_HEIGHT - DEFENDER_RADIUS)
+    
+    const dx = targetX - player.sprite.x
+    const dy = targetY - player.sprite.y
     const dist = Math.sqrt(dx * dx + dy * dy)
     
-    if (dist > 5) {
-      const moveX = (dx / dist) * Math.min(speed, dist)
-      const moveY = (dy / dist) * Math.min(speed, dist)
-      
-      player.sprite.x += moveX
-      player.sprite.y += moveY
-      
-      player.sprite.x = Phaser.Math.Clamp(player.sprite.x, DEFENDER_RADIUS, GAME_WIDTH - DEFENDER_RADIUS)
-      player.sprite.y = Phaser.Math.Clamp(player.sprite.y, DEFENDER_MIN_Y, GAME_HEIGHT - DEFENDER_RADIUS)
+    // Skip micro-movements for precision (reduces jitter)
+    if (dist < INPUT_DEADZONE) {
+      // Smoothly decay velocity to zero
+      this.playerVelocity.x *= 0.8
+      this.playerVelocity.y *= 0.8
+      return
     }
+    
+    // Calculate frame-independent lerp factor
+    // Higher values = snappier response, lower = smoother trail
+    const deltaFactor = Math.min(delta / 16.67, 3) // Normalize to 60fps, cap at 3x
+    const baseLerp = PLAYER_LERP_SPEED * deltaFactor
+    
+    // Dynamic lerp: faster when far away, smoother when close
+    // This creates a "magnetic" feel - quick to respond, precise to stop
+    const distanceFactor = Math.min(dist / 200, 1)
+    const dynamicLerp = baseLerp * (0.6 + distanceFactor * 0.4)
+    
+    // Calculate desired velocity toward target
+    const maxSpeed = DEFENDER_SPEED * this.stats.speedMultiplier * (delta / 1000)
+    const desiredVelX = (dx / dist) * Math.min(maxSpeed, dist * dynamicLerp * 60)
+    const desiredVelY = (dy / dist) * Math.min(maxSpeed, dist * dynamicLerp * 60)
+    
+    // Smooth the velocity for extra fluidity (reduces sharp direction changes)
+    const velSmooth = 1 - Math.pow(1 - PLAYER_VELOCITY_SMOOTHING, deltaFactor)
+    this.playerVelocity.x = Phaser.Math.Linear(this.playerVelocity.x, desiredVelX, velSmooth)
+    this.playerVelocity.y = Phaser.Math.Linear(this.playerVelocity.y, desiredVelY, velSmooth)
+    
+    // Apply smoothed velocity
+    player.sprite.x += this.playerVelocity.x * (delta / 1000)
+    player.sprite.y += this.playerVelocity.y * (delta / 1000)
+    
+    // Final boundary clamp
+    player.sprite.x = Phaser.Math.Clamp(player.sprite.x, DEFENDER_RADIUS, GAME_WIDTH - DEFENDER_RADIUS)
+    player.sprite.y = Phaser.Math.Clamp(player.sprite.y, DEFENDER_MIN_Y, GAME_HEIGHT - DEFENDER_RADIUS)
     
     // Update tackle radius indicator at helmet position
     const tackleRadiusIndicator = player.sprite.getByName('tackleRadius') as Phaser.GameObjects.Graphics
@@ -2201,7 +2270,7 @@ export class GameScene extends Phaser.Scene {
       const helmetOffsetY = tackleRadiusIndicator.getData('helmetOffsetY') || 0
       const baseRadius = tackleRadiusIndicator.getData('baseRadius') || DEFENDER_RADIUS
       tackleRadiusIndicator.clear()
-      tackleRadiusIndicator.lineStyle(2, COLORS.green, 0.2)
+      tackleRadiusIndicator.lineStyle(4, COLORS.green, 0.2) // Thicker line for higher res
       tackleRadiusIndicator.strokeCircle(0, helmetOffsetY, baseRadius * this.stats.tackleRadiusMultiplier + RUNNER_RADIUS)
     }
   }
@@ -2606,16 +2675,16 @@ export class GameScene extends Phaser.Scene {
   }
 
   private createPremiumTackleEffect(x: number, y: number, color: number): void {
-    // Burst particles
+    // Burst particles (scaled for 1440p)
     for (let i = 0; i < 12; i++) {
       const particle = this.add.graphics()
       const particleColor = i % 3 === 0 ? COLORS.green : (i % 3 === 1 ? color : COLORS.white)
       particle.fillStyle(particleColor, 1)
-      particle.fillCircle(0, 0, 2 + Math.random() * 3)
+      particle.fillCircle(0, 0, 4 + Math.random() * 6)
       particle.setPosition(x, y)
       
       const angle = (i / 12) * Math.PI * 2
-      const distance = 40 + Math.random() * 20
+      const distance = 80 + Math.random() * 40
       
       this.tweens.add({
         targets: particle,
@@ -2629,10 +2698,10 @@ export class GameScene extends Phaser.Scene {
       })
     }
     
-    // Impact ring
+    // Impact ring (scaled for 1440p)
     const ring = this.add.graphics()
-    ring.lineStyle(4, COLORS.green, 1)
-    ring.strokeCircle(x, y, 15)
+    ring.lineStyle(8, COLORS.green, 1)
+    ring.strokeCircle(x, y, 30)
     
     this.tweens.add({
       targets: ring,
@@ -2644,10 +2713,10 @@ export class GameScene extends Phaser.Scene {
       onComplete: () => ring.destroy(),
     })
     
-    // Flash
+    // Flash (scaled for 1440p)
     const flash = this.add.graphics()
     flash.fillStyle(0xffffff, 0.3)
-    flash.fillCircle(x, y, 30)
+    flash.fillCircle(x, y, 60)
     
     this.tweens.add({
       targets: flash,
@@ -2679,11 +2748,12 @@ export class GameScene extends Phaser.Scene {
   private updateLivesDisplay(): void {
     this.livesContainer.removeAll(true)
     
-    const totalWidth = this.stats.lives * 22
-    const startX = -totalWidth / 2 + 11
+    // Scaled for 1440p
+    const totalWidth = this.stats.lives * 44
+    const startX = -totalWidth / 2 + 22
     
     for (let i = 0; i < this.stats.lives; i++) {
-      const heart = this.add.text(startX + i * 22, 0, '❤️', { fontSize: '16px' })
+      const heart = this.add.text(startX + i * 44, 0, '❤️', { fontSize: '32px' })
       heart.setOrigin(0.5)
       this.livesContainer.add(heart)
     }
