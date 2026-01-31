@@ -13,6 +13,7 @@ interface CityPreviewProps {
   onClose: () => void
   onPlay: () => void
   highScore?: number
+  isLocked?: boolean
 }
 
 export function CityPreview({
@@ -21,6 +22,7 @@ export function CityPreview({
   onClose,
   onPlay,
   highScore,
+  isLocked = false,
 }: CityPreviewProps) {
   const cityAsset = getCityAsset(stage.location.city)
   const opponentShort = stage.visuals.opponent.name.split(' ').slice(-1)[0]
@@ -275,18 +277,39 @@ export function CityPreview({
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.45 }}
             >
-              <GradientButton
-                size="lg"
-                fullWidth
-                onClick={onPlay}
-                icon={
-                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M8 5v14l11-7z" />
-                  </svg>
-                }
-              >
-                {stage.isSuperBowl ? 'Play Super Bowl' : 'Start Game'}
-              </GradientButton>
+              {isLocked ? (
+                <>
+                  <div
+                    className="w-full py-3 px-6 rounded-xl text-center font-bold uppercase tracking-wider flex items-center justify-center gap-2"
+                    style={{
+                      background: 'rgba(255, 255, 255, 0.1)',
+                      color: 'rgba(255, 255, 255, 0.4)',
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                    }}
+                  >
+                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z" />
+                    </svg>
+                    Stage Locked
+                  </div>
+                  <p className="text-center text-xs text-white/40">
+                    Complete previous stages to unlock
+                  </p>
+                </>
+              ) : (
+                <GradientButton
+                  size="lg"
+                  fullWidth
+                  onClick={onPlay}
+                  icon={
+                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M8 5v14l11-7z" />
+                    </svg>
+                  }
+                >
+                  {stage.isSuperBowl ? 'Play Super Bowl' : 'Start Game'}
+                </GradientButton>
+              )}
 
               <GhostButton fullWidth onClick={onClose}>
                 Back to Map

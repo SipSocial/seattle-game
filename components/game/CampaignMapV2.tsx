@@ -5,16 +5,33 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { VideoBackground } from '@/components/ui/VideoBackground'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { GradientButton } from '@/components/ui/GradientButton'
+import { GhostButton } from '@/components/ui/GhostButton'
 import { FlightPath } from './FlightPath'
 import { CityMarker } from './CityMarker'
 import { CityPreview } from './CityPreview'
 import { useGameStore } from '@/src/store/gameStore'
 import { CAMPAIGN_STAGES, CampaignStage } from '@/src/game/data/campaign'
-import { PLACEHOLDER_ASSETS } from '@/src/game/data/campaignAssets'
+import { PLACEHOLDER_ASSETS, getCityAsset } from '@/src/game/data/campaignAssets'
 
 // Default background (will be replaced with Leonardo-generated map)
 const MAP_VIDEO = PLACEHOLDER_ASSETS.mapVideo
 const MAP_POSTER = PLACEHOLDER_ASSETS.mapPoster
+
+// Unique location type for grouping multiple games
+interface UniqueLocation {
+  key: string
+  city: string
+  state: string
+  coordinates: { x: number; y: number }
+  stages: CampaignStage[]
+  // Derived status based on stages
+  hasCurrentGame: boolean
+  hasCompletedGames: boolean
+  hasUnlockedGames: boolean
+  gamesCount: number
+  // The stage to show by default (current > first unlocked > first)
+  primaryStage: CampaignStage
+}
 
 interface CampaignMapV2Props {
   onSelectStage: (stageId: number) => void
@@ -36,6 +53,7 @@ export function CampaignMapV2({
   const mapContainerRef = useRef<HTMLDivElement>(null)
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 })
   const [selectedStage, setSelectedStage] = useState<CampaignStage | null>(null)
+  const [selectedLocation, setSelectedLocation] = useState<UniqueLocation | null>(null)
   const [showPlaneArrived, setShowPlaneArrived] = useState(false)
 
   // Get completed stage IDs
@@ -75,19 +93,77 @@ export function CampaignMapV2({
     [campaign.stagesUnlocked]
   )
 
-  // Handle marker click
-  const handleMarkerClick = useCallback((stage: CampaignStage) => {
-    if (isStageUnlocked(stage.id)) {
-      setSelectedStage(stage)
+  // Group stages by unique locations (no overlapping bubbles)
+  const uniqueLocations = useMemo(() => {
+    const locationMap = new Map<string, UniqueLocation>()
+
+    CAMPAIGN_STAGES.forEach(stage => {
+      const key = `${stage.location.coordinates.x}-${stage.location.coordinates.y}`
+
+      if (locationMap.has(key)) {
+        // Add stage to existing location
+        const existing = locationMap.get(key)!
+        existing.stages.push(stage)
+        existing.gamesCount++
+
+        // Update status
+        if (stage.id === campaign.currentStageId) {
+          existing.hasCurrentGame = true
+          existing.primaryStage = stage
+        }
+        if (completedStageIds.includes(stage.id)) {
+          existing.hasCompletedGames = true
+        }
+        if (isStageUnlocked(stage.id)) {
+          existing.hasUnlockedGames = true
+          // If no current game, use first unlocked as primary
+          if (!existing.hasCurrentGame && !existing.primaryStage) {
+            existing.primaryStage = stage
+          }
+        }
+      } else {
+        // Create new location
+        locationMap.set(key, {
+          key,
+          city: stage.location.city,
+          state: stage.location.state,
+          coordinates: stage.location.coordinates,
+          stages: [stage],
+          hasCurrentGame: stage.id === campaign.currentStageId,
+          hasCompletedGames: completedStageIds.includes(stage.id),
+          hasUnlockedGames: isStageUnlocked(stage.id),
+          gamesCount: 1,
+          primaryStage: stage,
+        })
+      }
+    })
+
+    return Array.from(locationMap.values())
+  }, [campaign.currentStageId, completedStageIds, isStageUnlocked])
+
+  // Handle marker click - show location picker if multiple games, or preview if single
+  const handleMarkerClick = useCallback((location: UniqueLocation) => {
+    if (location.gamesCount === 1) {
+      // Single game - go directly to preview
+      setSelectedStage(location.primaryStage)
+    } else {
+      // Multiple games - show location picker
+      setSelectedLocation(location)
     }
-  }, [isStageUnlocked])
+  }, [])
+
+  // Handle selecting a specific stage from location picker
+  const handleStageSelect = useCallback((stage: CampaignStage) => {
+    setSelectedLocation(null)
+    setSelectedStage(stage)
+  }, [])
 
   // Handle play button
   const handlePlay = useCallback(() => {
-    if (selectedStage) {
+    if (selectedStage && isStageUnlocked(selectedStage.id)) {
       onSelectStage(selectedStage.id)
     }
-  }, [selectedStage, onSelectStage])
+  }, [selectedStage, isStageUnlocked, onSelectStage])
 
   // Handle plane arrival
   const handlePlaneArrival = useCallback(() => {
@@ -98,17 +174,14 @@ export function CampaignMapV2({
     }, 500)
   }, [currentStage])
 
-  // Calculate city marker positions
-  const cityPositions = useMemo(() => {
-    return CAMPAIGN_STAGES.map(stage => ({
-      stage,
-      x: stage.location.coordinates.x * dimensions.width,
-      y: stage.location.coordinates.y * dimensions.height,
-      isCompleted: completedStageIds.includes(stage.id),
-      isCurrent: stage.id === campaign.currentStageId,
-      isLocked: !isStageUnlocked(stage.id),
+  // Calculate unique location positions for markers
+  const locationPositions = useMemo(() => {
+    return uniqueLocations.map(location => ({
+      location,
+      x: location.coordinates.x * dimensions.width,
+      y: location.coordinates.y * dimensions.height,
     }))
-  }, [dimensions, completedStageIds, campaign.currentStageId, isStageUnlocked])
+  }, [uniqueLocations, dimensions])
 
   return (
     <main className="fixed inset-0 overflow-hidden">
@@ -247,19 +320,118 @@ export function CampaignMapV2({
           showAirplane={true}
         />
 
-        {/* City Markers */}
-        {cityPositions.map(({ stage, x, y, isCompleted, isCurrent, isLocked }) => (
-          <CityMarker
-            key={stage.id}
-            stage={stage}
-            x={x}
-            y={y}
-            isCompleted={isCompleted}
-            isCurrent={isCurrent}
-            isLocked={isLocked}
-            onClick={() => handleMarkerClick(stage)}
-            size={isCurrent ? 'lg' : 'md'}
-          />
+        {/* Unique Location Markers (no overlaps) */}
+        {locationPositions.map(({ location, x, y }) => (
+          <motion.button
+            key={location.key}
+            className="absolute pointer-events-auto"
+            style={{
+              left: x,
+              top: y,
+              transform: 'translate(-50%, -50%)',
+              zIndex: location.hasCurrentGame ? 20 : 10,
+            }}
+            onClick={() => handleMarkerClick(location)}
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.95 }}
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ delay: 0.5 + Math.random() * 0.5, type: 'spring' }}
+          >
+            {/* Outer glow ring */}
+            <div
+              className="absolute inset-0 rounded-full"
+              style={{
+                transform: 'scale(1.5)',
+                background: location.hasCurrentGame
+                  ? 'radial-gradient(circle, rgba(105, 190, 40, 0.4) 0%, transparent 70%)'
+                  : location.hasCompletedGames
+                  ? 'radial-gradient(circle, rgba(105, 190, 40, 0.2) 0%, transparent 70%)'
+                  : 'radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%)',
+              }}
+            />
+
+            {/* Main marker */}
+            <div
+              className={`relative flex items-center justify-center rounded-full transition-all ${
+                location.hasCurrentGame ? 'w-12 h-12' : 'w-10 h-10'
+              }`}
+              style={{
+                background: location.hasCurrentGame
+                  ? 'linear-gradient(135deg, #69BE28 0%, #4a9c1c 100%)'
+                  : location.hasCompletedGames
+                  ? 'linear-gradient(135deg, #002244 0%, #001a33 100%)'
+                  : location.hasUnlockedGames
+                  ? 'linear-gradient(135deg, #1a2a3a 0%, #0a1a2a 100%)'
+                  : 'linear-gradient(135deg, #333 0%, #222 100%)',
+                border: location.hasCurrentGame
+                  ? '3px solid #69BE28'
+                  : location.hasCompletedGames
+                  ? '2px solid #69BE28'
+                  : location.hasUnlockedGames
+                  ? '2px solid rgba(105, 190, 40, 0.5)'
+                  : '2px solid rgba(255, 255, 255, 0.2)',
+                boxShadow: location.hasCurrentGame
+                  ? '0 0 30px rgba(105, 190, 40, 0.6)'
+                  : location.hasCompletedGames
+                  ? '0 4px 20px rgba(0, 0, 0, 0.4)'
+                  : '0 2px 10px rgba(0, 0, 0, 0.3)',
+              }}
+            >
+              {/* Icon or abbreviation */}
+              {location.hasCurrentGame ? (
+                <motion.div
+                  animate={{ scale: [1, 1.2, 1] }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                  className="w-3 h-3 rounded-full bg-white"
+                />
+              ) : location.hasCompletedGames && !location.hasUnlockedGames ? (
+                <svg className="w-5 h-5 text-[#69BE28]" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
+                </svg>
+              ) : !location.hasUnlockedGames ? (
+                <svg className="w-4 h-4 text-white/40" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z" />
+                </svg>
+              ) : (
+                <span className="text-white font-bold text-xs">
+                  {location.city.substring(0, 3).toUpperCase()}
+                </span>
+              )}
+
+              {/* Game count badge */}
+              {location.gamesCount > 1 && (
+                <div
+                  className="absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold"
+                  style={{
+                    background: location.hasCurrentGame
+                      ? 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)'
+                      : 'linear-gradient(135deg, #69BE28 0%, #4a9c1c 100%)',
+                    color: '#000',
+                    border: '2px solid #002244',
+                  }}
+                >
+                  {location.gamesCount}
+                </div>
+              )}
+            </div>
+
+            {/* City label */}
+            <div
+              className="absolute left-1/2 -translate-x-1/2 whitespace-nowrap text-center"
+              style={{ top: location.hasCurrentGame ? '56px' : '48px' }}
+            >
+              <div
+                className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded"
+                style={{
+                  background: 'rgba(0, 0, 0, 0.6)',
+                  color: location.hasCurrentGame ? '#69BE28' : 'rgba(255, 255, 255, 0.7)',
+                }}
+              >
+                {location.city}
+              </div>
+            </div>
+          </motion.button>
         ))}
       </div>
 
@@ -312,6 +484,189 @@ export function CampaignMapV2({
         </motion.div>
       </div>
 
+      {/* Location Picker Modal (for cities with multiple games) */}
+      <AnimatePresence>
+        {selectedLocation && (
+          <motion.div
+            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            {/* Backdrop */}
+            <motion.div
+              className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+              onClick={() => setSelectedLocation(null)}
+            />
+
+            {/* City background */}
+            {getCityAsset(selectedLocation.city)?.backgroundImage && (
+              <motion.div
+                className="absolute inset-0 overflow-hidden opacity-30"
+                initial={{ scale: 1.1 }}
+                animate={{ scale: 1 }}
+              >
+                <img
+                  src={getCityAsset(selectedLocation.city)?.backgroundImage || ''}
+                  alt={selectedLocation.city}
+                  className="w-full h-full object-cover"
+                />
+              </motion.div>
+            )}
+
+            {/* Panel */}
+            <motion.div
+              className="relative z-10 w-full max-w-md mx-4 mb-4 sm:mb-0"
+              initial={{ y: 100, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 100, opacity: 0 }}
+              transition={{ type: 'spring', damping: 25 }}
+            >
+              <GlassCard variant="green" padding="lg">
+                {/* Header */}
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h2 className="text-xl font-black text-white uppercase">
+                      {selectedLocation.city}
+                    </h2>
+                    <p className="text-xs text-white/50">
+                      {selectedLocation.gamesCount} games at this location
+                    </p>
+                  </div>
+                  <motion.button
+                    onClick={() => setSelectedLocation(null)}
+                    className="w-8 h-8 rounded-full flex items-center justify-center"
+                    style={{ background: 'rgba(255, 255, 255, 0.1)' }}
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                  >
+                    <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </motion.button>
+                </div>
+
+                {/* Games list */}
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {selectedLocation.stages.map((stage, index) => {
+                    const isCompleted = completedStageIds.includes(stage.id)
+                    const isCurrent = stage.id === campaign.currentStageId
+                    const isUnlocked = isStageUnlocked(stage.id)
+                    const opponentShort = stage.visuals.opponent.name.split(' ').slice(-1)[0]
+
+                    return (
+                      <motion.button
+                        key={stage.id}
+                        className="w-full text-left p-3 rounded-xl transition-all"
+                        style={{
+                          background: isCurrent
+                            ? 'linear-gradient(135deg, rgba(105, 190, 40, 0.3) 0%, rgba(0, 34, 68, 0.3) 100%)'
+                            : 'rgba(255, 255, 255, 0.05)',
+                          border: isCurrent
+                            ? '2px solid #69BE28'
+                            : '1px solid rgba(255, 255, 255, 0.1)',
+                          opacity: isUnlocked ? 1 : 0.5,
+                        }}
+                        onClick={() => handleStageSelect(stage)}
+                        whileHover={{ scale: isUnlocked ? 1.02 : 1 }}
+                        whileTap={{ scale: isUnlocked ? 0.98 : 1 }}
+                        initial={{ x: -20, opacity: 0 }}
+                        animate={{ x: 0, opacity: 1 }}
+                        transition={{ delay: index * 0.05 }}
+                      >
+                        <div className="flex items-center gap-3">
+                          {/* Status icon */}
+                          <div
+                            className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                            style={{
+                              background: isCompleted
+                                ? 'linear-gradient(135deg, #69BE28 0%, #4a9c1c 100%)'
+                                : isCurrent
+                                ? 'linear-gradient(135deg, #69BE28 0%, #002244 100%)'
+                                : 'rgba(255, 255, 255, 0.1)',
+                            }}
+                          >
+                            {isCompleted ? (
+                              <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
+                              </svg>
+                            ) : isCurrent ? (
+                              <motion.div
+                                className="w-2 h-2 rounded-full bg-white"
+                                animate={{ scale: [1, 1.3, 1] }}
+                                transition={{ duration: 1.5, repeat: Infinity }}
+                              />
+                            ) : !isUnlocked ? (
+                              <svg className="w-4 h-4 text-white/40" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z" />
+                              </svg>
+                            ) : (
+                              <span className="text-white/60 text-xs font-bold">
+                                {index + 1}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Info */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span
+                                className="text-[10px] font-bold uppercase tracking-wider"
+                                style={{
+                                  color: stage.isPlayoff || stage.isSuperBowl ? '#FFD700' : '#69BE28',
+                                }}
+                              >
+                                {stage.weekLabel}
+                              </span>
+                              {isCurrent && (
+                                <span className="text-[9px] bg-[#69BE28] text-black px-1.5 py-0.5 rounded-full font-bold uppercase">
+                                  Next
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-white font-bold truncate">
+                              {stage.location.isHome ? 'vs' : '@'} {opponentShort}
+                            </div>
+                          </div>
+
+                          {/* Arrow */}
+                          {isUnlocked && (
+                            <svg className="w-4 h-4 text-white/40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                            </svg>
+                          )}
+                        </div>
+                      </motion.button>
+                    )
+                  })}
+                </div>
+
+                {/* Quick play button for current game at this location */}
+                {selectedLocation.hasCurrentGame && (
+                  <div className="mt-4 pt-4 border-t border-white/10">
+                    <GradientButton
+                      size="md"
+                      fullWidth
+                      onClick={() => {
+                        const currentGameHere = selectedLocation.stages.find(
+                          s => s.id === campaign.currentStageId
+                        )
+                        if (currentGameHere) {
+                          setSelectedLocation(null)
+                          onSelectStage(currentGameHere.id)
+                        }
+                      }}
+                    >
+                      Play {selectedLocation.stages.find(s => s.id === campaign.currentStageId)?.weekLabel}
+                    </GradientButton>
+                  </div>
+                )}
+              </GlassCard>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* City Preview Modal */}
       <CityPreview
         stage={selectedStage || currentStage}
@@ -321,6 +676,7 @@ export function CampaignMapV2({
         highScore={
           selectedStage ? campaign.stageHighScores[selectedStage.id] : undefined
         }
+        isLocked={selectedStage ? !isStageUnlocked(selectedStage.id) : false}
       />
 
       {/* Legend */}
