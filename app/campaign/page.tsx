@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { motion, AnimatePresence } from 'framer-motion'
-import { CampaignMap } from '@/components/game/CampaignMap'
+import { motion } from 'framer-motion'
+import { CampaignMapV2 } from '@/components/game/CampaignMapV2'
 import { useGameStore } from '@/src/store/gameStore'
 
 export default function CampaignPage() {
@@ -39,9 +39,13 @@ export default function CampaignPage() {
       animate={{ opacity: mounted && !isExiting ? 1 : 0 }}
       transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
     >
-      <CampaignMap 
+      <CampaignMapV2 
         onSelectStage={handleSelectStage}
         onBack={handleBack}
+        // Pass custom Leonardo assets here when generated:
+        // mapVideoUrl={...}
+        // mapImageUrl={...}
+        // airplaneUrl={...}
       />
     </motion.div>
   )
