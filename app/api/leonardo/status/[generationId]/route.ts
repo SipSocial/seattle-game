@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createLeonardoClient } from '@/src/lib/leonardo'
 
+// Disable caching for this route
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 export async function GET(
   request: NextRequest,
   { params }: { params: { generationId: string } }
@@ -17,12 +21,17 @@ export async function GET(
 
     const { generationId } = params
     const result = await client.getGeneration(generationId)
+    
+    console.log(`[Status API] Generation ${generationId}:`, JSON.stringify(result, null, 2))
 
     const status = result.generations_by_pk.status
-    const images = result.generations_by_pk.generated_images.map((img) => ({
-      id: img.id,
-      url: img.url,
-    }))
+    // Include all images regardless of NSFW flag (Leonardo flags sports content as NSFW due to "celebrity" detection)
+    const images = result.generations_by_pk.generated_images
+      .filter((img) => img.url) // Only include images with URLs
+      .map((img) => ({
+        id: img.id,
+        url: img.url,
+      }))
 
     return NextResponse.json({
       success: true,

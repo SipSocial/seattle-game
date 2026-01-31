@@ -231,11 +231,12 @@ export class BootScene extends Phaser.Scene {
     // Fade in
     this.cameras.main.fadeIn(600)
 
-    // Transition to menu
+    // Transition directly to game (React handles player selection before Phaser loads)
     this.time.delayedCall(2500, () => {
       this.cameras.main.fadeOut(500)
       this.time.delayedCall(500, () => {
-        this.scene.start('MenuScene')
+        // Go directly to GameScene - player selection is handled by React
+        this.scene.start('GameScene')
       })
     })
   }

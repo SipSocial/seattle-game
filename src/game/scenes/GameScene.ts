@@ -4,6 +4,7 @@ import { useGameStore } from '../../store/gameStore'
 import { AudioManager } from '../systems/AudioManager'
 import { FULL_ROSTER } from '../data/roster'
 import { getStageByGame, CampaignStage, GAMES_PER_STAGE } from '../data/campaign'
+import { DEFENDER_SPRITES, getDefenderSprite } from '../systems/PremiumVisuals'
 
 // ============================================
 // SEAHAWKS DEFENSE - PREMIUM GAME EXPERIENCE
@@ -176,9 +177,33 @@ export class GameScene extends Phaser.Scene {
   // Background elements
   private fieldParticles: Phaser.GameObjects.Graphics[] = []
   private stageAtmosphere: Phaser.GameObjects.Graphics[] = []
+  private backgroundVideo: Phaser.GameObjects.Video | null = null
+  private premiumOverlays: Phaser.GameObjects.Graphics[] = []
+  
+  // Premium visual constants
+  private static readonly STADIUM_VIDEO = 'https://cdn.leonardo.ai/users/eb9a23b8-36c0-4667-b97f-64fdee85d14b/generations/4b5f0ad3-9f4e-413f-b44a-053e9af6240c/4b5f0ad3-9f4e-413f-b44a-053e9af6240c.mp4'
+  private static readonly STADIUM_POSTER = 'https://cdn.leonardo.ai/users/eb9a23b8-36c0-4667-b97f-64fdee85d14b/generations/16412705-ca65-400e-bb78-80ff29be860a/segments/2:2:1/Phoenix_Empty_NFL_football_field_at_night_dramatic_billowing_s_0.jpg'
 
   constructor() {
     super({ key: 'GameScene' })
+  }
+
+  preload(): void {
+    // Load defender sprites for photo-realistic gameplay
+    const { selectedDefender } = useGameStore.getState()
+    
+    // Load ALL defender images for premium visuals
+    DEFENDER_SPRITES.forEach(defender => {
+      const key = `defender_${defender.jersey}`
+      if (!this.textures.exists(key)) {
+        this.load.image(key, defender.imageUrl)
+      }
+    })
+    
+    // Load stadium background image (video loaded separately due to CORS)
+    if (!this.textures.exists('stadium_bg')) {
+      this.load.image('stadium_bg', GameScene.STADIUM_POSTER)
+    }
   }
 
   create(): void {
@@ -326,159 +351,200 @@ export class GameScene extends Phaser.Scene {
   }
 
   private drawPremiumField(): void {
-    const graphics = this.add.graphics()
+    // ============================================================
+    // PREMIUM PHOTO-REALISTIC STADIUM BACKGROUND
+    // ============================================================
     
-    // Get field tint and sky gradient from stage if in campaign mode
-    let baseGreen = { r: 45, g: 90, b: 39 }
-    let lightGreen = { r: 58, g: 114, b: 51 }
-    let skyTop = { r: 26, g: 42, b: 58 }  // Default dark navy
-    let skyBottom = { r: 45, g: 74, b: 90 } // Default lighter navy
-    
-    if (this.isCampaignMode && this.currentStage) {
-      // Field tint
-      const fieldTint = this.currentStage.visuals.fieldTint
-      const tintColor = Phaser.Display.Color.HexStringToColor(fieldTint)
-      baseGreen = { r: tintColor.red, g: tintColor.green, b: tintColor.blue }
-      lightGreen = { 
-        r: Math.min(255, tintColor.red + 15), 
-        g: Math.min(255, tintColor.green + 25), 
-        b: Math.min(255, tintColor.blue + 15) 
-      }
-      
-      // Sky gradient from stage visuals
-      const [skyTopHex, skyBottomHex] = this.currentStage.visuals.skyGradient
-      const skyTopColor = Phaser.Display.Color.HexStringToColor(skyTopHex)
-      const skyBottomColor = Phaser.Display.Color.HexStringToColor(skyBottomHex)
-      skyTop = { r: skyTopColor.red, g: skyTopColor.green, b: skyTopColor.blue }
-      skyBottom = { r: skyBottomColor.red, g: skyBottomColor.green, b: skyBottomColor.blue }
+    // Layer 1: Base dark gradient (always visible)
+    const baseGradient = this.add.graphics()
+    baseGradient.setDepth(-100)
+    for (let y = 0; y < GAME_HEIGHT; y++) {
+      const progress = y / GAME_HEIGHT
+      // Dark navy gradient
+      const r = Math.floor(0 + progress * 10)
+      const g = Math.floor(15 + progress * 25)
+      const b = Math.floor(35 + progress * 30)
+      baseGradient.fillStyle(Phaser.Display.Color.GetColor(r, g, b), 1)
+      baseGradient.fillRect(0, y, GAME_WIDTH, 1)
     }
     
-    // Sky gradient at the top portion (top 25% of screen)
-    const skyHeight = Math.floor(GAME_HEIGHT * 0.25)
-    for (let y = 0; y < skyHeight; y++) {
-      const progress = y / skyHeight
-      const r = Math.floor(skyTop.r + (skyBottom.r - skyTop.r) * progress)
-      const g = Math.floor(skyTop.g + (skyBottom.g - skyTop.g) * progress)
-      const b = Math.floor(skyTop.b + (skyBottom.b - skyTop.b) * progress)
-      
-      graphics.fillStyle(Phaser.Display.Color.GetColor(r, g, b), 1)
-      graphics.fillRect(0, y, GAME_WIDTH, 1)
+    // Layer 2: Stadium background image
+    if (this.textures.exists('stadium_bg')) {
+      const bgImage = this.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, 'stadium_bg')
+      bgImage.setDisplaySize(GAME_WIDTH * 1.3, GAME_HEIGHT * 1.3)
+      bgImage.setDepth(-99)
+      bgImage.setAlpha(0.6)
     }
     
-    // Blend zone from sky to field (next 10%)
-    const blendHeight = Math.floor(GAME_HEIGHT * 0.10)
-    for (let y = 0; y < blendHeight; y++) {
-      const progress = y / blendHeight
-      const r = Math.floor(skyBottom.r + (baseGreen.r - skyBottom.r) * progress)
-      const g = Math.floor(skyBottom.g + (baseGreen.g - skyBottom.g) * progress)
-      const b = Math.floor(skyBottom.b + (baseGreen.b - skyBottom.b) * progress)
-      
-      graphics.fillStyle(Phaser.Display.Color.GetColor(r, g, b), 1)
-      graphics.fillRect(0, skyHeight + y, GAME_WIDTH, 1)
-    }
+    // Layer 3: Dramatic lighting overlays
+    this.createPremiumLighting()
     
-    // Rich turf gradient for the rest of the field
-    const fieldStart = skyHeight + blendHeight
-    for (let y = fieldStart; y < GAME_HEIGHT; y++) {
-      const progress = (y - fieldStart) / (GAME_HEIGHT - fieldStart)
-      
-      const r = Math.floor(baseGreen.r + (lightGreen.r - baseGreen.r) * progress * 0.5)
-      const g = Math.floor(baseGreen.g + (lightGreen.g - baseGreen.g) * progress * 0.3)
-      const b = Math.floor(baseGreen.b + (lightGreen.b - baseGreen.b) * progress * 0.5)
-      
-      graphics.fillStyle(Phaser.Display.Color.GetColor(r, g, b), 1)
-      graphics.fillRect(0, y, GAME_WIDTH, 1)
-    }
+    // Layer 4: Subtle field markings (floating above background)
+    this.createMinimalFieldMarkings()
     
-    // Turf texture pattern
-    const texture = this.add.graphics()
-    texture.lineStyle(1, 0xffffff, 0.02)
-    for (let x = 0; x < GAME_WIDTH; x += 8) {
-      texture.moveTo(x, 0)
-      texture.lineTo(x + 4, GAME_HEIGHT)
-      texture.strokePath()
-    }
+    // Layer 5: Atmospheric particles
+    this.createPremiumParticles()
+  }
+  
+  private createPremiumLighting(): void {
+    // Top stadium lights - bright white glow
+    const topLights = this.add.graphics()
+    topLights.setDepth(-90)
+    topLights.fillStyle(0xffffff, 0.08)
+    topLights.fillEllipse(GAME_WIDTH / 2, -80, GAME_WIDTH * 1.5, 300)
+    this.premiumOverlays.push(topLights)
     
-    // Yard lines with glow
-    const yardLines = this.add.graphics()
-    for (let y = 80; y < GAME_HEIGHT - 20; y += 80) {
+    // Pulsing light animation
+    this.tweens.add({
+      targets: topLights,
+      alpha: 0.15,
+      duration: 3000,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut'
+    })
+    
+    // Green spotlight from center (Seahawks branding)
+    const greenSpotlight = this.add.graphics()
+    greenSpotlight.setDepth(-89)
+    greenSpotlight.fillStyle(COLORS.green, 0.08)
+    greenSpotlight.fillEllipse(GAME_WIDTH / 2, 0, GAME_WIDTH * 0.8, 400)
+    this.premiumOverlays.push(greenSpotlight)
+    
+    this.tweens.add({
+      targets: greenSpotlight,
+      alpha: 0.15,
+      scaleX: 1.1,
+      scaleY: 1.1,
+      duration: 4000,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut'
+    })
+    
+    // Bottom field glow
+    const fieldGlow = this.add.graphics()
+    fieldGlow.setDepth(-88)
+    fieldGlow.fillStyle(COLORS.green, 0.1)
+    fieldGlow.fillEllipse(GAME_WIDTH / 2, GAME_HEIGHT + 100, GAME_WIDTH * 1.5, 400)
+    this.premiumOverlays.push(fieldGlow)
+    
+    // Vignette effect (dark edges)
+    const vignette = this.add.graphics()
+    vignette.setDepth(-85)
+    // Left edge
+    for (let x = 0; x < 60; x++) {
+      vignette.fillStyle(0x000000, 0.4 * (1 - x / 60))
+      vignette.fillRect(x, 0, 1, GAME_HEIGHT)
+    }
+    // Right edge
+    for (let x = 0; x < 60; x++) {
+      vignette.fillStyle(0x000000, 0.4 * (1 - x / 60))
+      vignette.fillRect(GAME_WIDTH - x, 0, 1, GAME_HEIGHT)
+    }
+    // Top edge
+    for (let y = 0; y < 80; y++) {
+      vignette.fillStyle(0x000000, 0.5 * (1 - y / 80))
+      vignette.fillRect(0, y, GAME_WIDTH, 1)
+    }
+    // Bottom gradient to dark
+    for (let y = 0; y < 120; y++) {
+      const progress = y / 120
+      vignette.fillStyle(0x000000, 0.6 * progress)
+      vignette.fillRect(0, GAME_HEIGHT - 120 + y, GAME_WIDTH, 1)
+    }
+    this.premiumOverlays.push(vignette)
+  }
+  
+  private createMinimalFieldMarkings(): void {
+    // Subtle yard lines (very minimal, premium look)
+    const lines = this.add.graphics()
+    lines.setDepth(-80)
+    lines.setAlpha(0.15)
+    
+    // Only a few key yard lines
+    const yardPositions = [GAME_HEIGHT * 0.25, GAME_HEIGHT * 0.5, GAME_HEIGHT * 0.75]
+    yardPositions.forEach(y => {
       // Glow
-      yardLines.lineStyle(6, 0xffffff, 0.05)
-      yardLines.moveTo(30, y)
-      yardLines.lineTo(GAME_WIDTH - 30, y)
-      yardLines.strokePath()
-      
-      // Main line
-      yardLines.lineStyle(2, 0xffffff, 0.25)
-      yardLines.moveTo(30, y)
-      yardLines.lineTo(GAME_WIDTH - 30, y)
-      yardLines.strokePath()
-      
-      // Hash marks
-      yardLines.lineStyle(1, 0xffffff, 0.15)
-      for (let x = 30; x < GAME_WIDTH - 30; x += 20) {
-        yardLines.fillStyle(0xffffff, 0.15)
-        yardLines.fillRect(x, y - 3, 2, 6)
-      }
-    }
+      lines.lineStyle(8, 0xffffff, 0.03)
+      lines.lineBetween(40, y, GAME_WIDTH - 40, y)
+      // Line
+      lines.lineStyle(2, 0xffffff, 0.2)
+      lines.lineBetween(40, y, GAME_WIDTH - 40, y)
+    })
     
-    // Endzone at bottom (Seahawks Navy)
+    // Endzone with premium styling
     const endzone = this.add.graphics()
-    endzone.fillStyle(COLORS.navy, 0.4)
-    endzone.fillRect(0, GAME_HEIGHT - 60, GAME_WIDTH, 60)
+    endzone.setDepth(-79)
+    endzone.fillStyle(COLORS.navy, 0.5)
+    endzone.fillRect(0, GAME_HEIGHT - 70, GAME_WIDTH, 70)
     
-    // Endzone text
-    const endzoneText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT - 30, 'SEAHAWKS', {
-      fontSize: '24px',
+    // Endzone glow line
+    endzone.lineStyle(3, COLORS.green, 0.4)
+    endzone.lineBetween(0, GAME_HEIGHT - 70, GAME_WIDTH, GAME_HEIGHT - 70)
+    
+    // SEAHAWKS text in endzone
+    const endzoneText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT - 35, 'SEAHAWKS', {
+      fontSize: '28px',
       color: hexToCSS(COLORS.green),
       fontFamily: FONTS.display,
     })
     endzoneText.setOrigin(0.5)
-    endzoneText.setAlpha(0.15)
+    endzoneText.setAlpha(0.25)
+    endzoneText.setDepth(-78)
     
-    // Spawn zone indicator (top)
-    const spawnZone = this.add.graphics()
-    spawnZone.fillStyle(0xff0000, 0.05)
-    spawnZone.fillRect(0, 0, GAME_WIDTH, 65)
+    // Danger zone at top (where runners spawn)
+    const dangerZone = this.add.graphics()
+    dangerZone.setDepth(-77)
+    dangerZone.fillStyle(0xff0000, 0.08)
+    dangerZone.fillRect(0, 0, GAME_WIDTH, 70)
     
-    // Field border with glow
-    const border = this.add.graphics()
-    border.lineStyle(4, COLORS.green, 0.3)
-    border.strokeRect(8, 8, GAME_WIDTH - 16, GAME_HEIGHT - 16)
-    border.lineStyle(2, COLORS.green, 0.6)
-    border.strokeRect(10, 10, GAME_WIDTH - 20, GAME_HEIGHT - 20)
+    // Subtle red glow line
+    dangerZone.lineStyle(2, 0xff3333, 0.3)
+    dangerZone.lineBetween(0, 70, GAME_WIDTH, 70)
   }
-
-  private createAtmosphereEffects(): void {
-    // If in campaign mode, use stage-specific atmosphere
-    if (this.isCampaignMode && this.currentStage) {
-      this.createStageAtmosphere()
-      return
-    }
-    
-    // Default: Floating particles for stadium atmosphere
-    for (let i = 0; i < 10; i++) {
+  
+  private createPremiumParticles(): void {
+    // Floating stadium dust/atmosphere particles
+    for (let i = 0; i < 20; i++) {
       const particle = this.add.graphics()
-      particle.fillStyle(COLORS.green, 0.2 + Math.random() * 0.2)
-      particle.fillCircle(0, 0, 1 + Math.random())
+      particle.setDepth(-70)
       
-      particle.setPosition(Math.random() * GAME_WIDTH, Math.random() * GAME_HEIGHT)
+      // Vary colors between white, green, and subtle gold
+      const colors = [0xffffff, COLORS.green, 0xffd700]
+      const color = colors[Math.floor(Math.random() * colors.length)]
+      particle.fillStyle(color, 0.2 + Math.random() * 0.3)
+      particle.fillCircle(0, 0, 1 + Math.random() * 2)
       
+      const startX = Math.random() * GAME_WIDTH
+      const startY = Math.random() * GAME_HEIGHT
+      particle.setPosition(startX, startY)
+      
+      // Floating upward animation
       this.tweens.add({
         targets: particle,
-        y: particle.y - 80,
+        y: startY - 150 - Math.random() * 100,
+        x: startX + (Math.random() - 0.5) * 80,
         alpha: 0,
-        duration: 3000 + Math.random() * 2000,
+        duration: 5000 + Math.random() * 4000,
         repeat: -1,
-        delay: Math.random() * 2000,
+        delay: Math.random() * 4000,
         onRepeat: () => {
-          particle.setPosition(Math.random() * GAME_WIDTH, GAME_HEIGHT)
-          particle.setAlpha(0.2 + Math.random() * 0.2)
+          particle.setPosition(Math.random() * GAME_WIDTH, GAME_HEIGHT + 20)
+          particle.setAlpha(0.2 + Math.random() * 0.3)
         }
       })
       
       this.fieldParticles.push(particle)
     }
+  }
+
+  private createAtmosphereEffects(): void {
+    // If in campaign mode, use stage-specific atmosphere (weather effects)
+    if (this.isCampaignMode && this.currentStage) {
+      this.createStageAtmosphere()
+    }
+    // Premium particles are already created in drawPremiumField -> createPremiumParticles
     
     // Stadium lights glow at top
     const lightsGlow = this.add.graphics()
@@ -731,7 +797,8 @@ export class GameScene extends Phaser.Scene {
   }
 
   private createDefenders(): void {
-    const playerDefender = this.createDefenderSprite(GAME_WIDTH / 2, GAME_HEIGHT - 150, true)
+    // Spawn player in lower portion of screen
+    const playerDefender = this.createDefenderSprite(GAME_WIDTH / 2, GAME_HEIGHT - 160, true)
     this.defenders.push(playerDefender)
     
     for (let i = 1; i < this.stats.defenderCount; i++) {
@@ -744,57 +811,169 @@ export class GameScene extends Phaser.Scene {
     const defender = FULL_ROSTER.find(d => d.jersey === selectedDefender)
     const posColor = defender ? getPositionGroupColor(defender.positionGroup) : COLORS.green
     
-    // Outer pulse ring
-    const pulseRing = this.add.graphics()
-    pulseRing.lineStyle(2, isPlayer ? COLORS.green : 0x00897B, 0.3)
-    pulseRing.strokeCircle(0, 0, DEFENDER_RADIUS + 12)
+    // Container for all defender elements
+    const spriteChildren: Phaser.GameObjects.GameObject[] = []
     
-    // Tackle radius indicator
-    const tackleRadius = this.add.graphics()
-    tackleRadius.lineStyle(1, COLORS.green, 0.15)
-    tackleRadius.strokeCircle(0, 0, DEFENDER_RADIUS * this.stats.tackleRadiusMultiplier + RUNNER_RADIUS)
-    tackleRadius.setName('tackleRadius')
-    
-    // Main body with gradient effect
-    const body = this.add.graphics()
-    if (isPlayer) {
-      body.fillStyle(COLORS.navy, 1)
-      body.fillCircle(0, 0, DEFENDER_RADIUS)
-      body.lineStyle(4, posColor, 1)
-      body.strokeCircle(0, 0, DEFENDER_RADIUS)
-    } else {
-      body.fillStyle(COLORS.navyLight, 1)
-      body.fillCircle(0, 0, DEFENDER_RADIUS - 2)
-      body.lineStyle(3, 0x00897B, 0.8)
-      body.strokeCircle(0, 0, DEFENDER_RADIUS - 2)
+    // For AI defenders, pick a random loaded teammate
+    let jerseyToUse = selectedDefender
+    if (!isPlayer) {
+      const aiDefenders = DEFENDER_SPRITES.filter(d => d.jersey !== selectedDefender)
+      const randomAI = aiDefenders[Math.floor(Math.random() * aiDefenders.length)]
+      if (randomAI) {
+        jerseyToUse = randomAI.jersey
+      }
     }
     
-    // Inner highlight
-    const highlight = this.add.graphics()
-    highlight.fillStyle(0xffffff, 0.1)
-    highlight.fillCircle(-5, -8, 12)
+    const textureKey = `defender_${jerseyToUse}`
+    const hasTexture = this.textures.exists(textureKey)
     
-    // Jersey number
-    const jersey = this.add.text(0, 0, isPlayer ? `${selectedDefender}` : '★', {
-      fontSize: isPlayer ? '22px' : '20px',
-      color: '#ffffff',
-      fontFamily: FONTS.display,
-    })
-    jersey.setOrigin(0.5)
+    // ============================================================
+    // PREMIUM PHOTO-REALISTIC DEFENDER
+    // Player defender is LARGE (like the mockup), AI defenders smaller
+    // ============================================================
     
-    const sprite = this.add.container(x, y, [pulseRing, tackleRadius, body, highlight, jersey])
-    sprite.setSize(DEFENDER_RADIUS * 2, DEFENDER_RADIUS * 2)
+    const playerScale = isPlayer ? 1.0 : 0.5 // AI defenders are half size
+    const baseHeight = isPlayer ? 150 : 90 // Smaller player, proportional AI
     
-    // Pulse animation
-    this.tweens.add({
-      targets: pulseRing,
-      scaleX: 1.2,
-      scaleY: 1.2,
-      alpha: 0,
-      duration: 1000,
-      repeat: -1,
-      ease: 'Sine.easeOut'
-    })
+    // Ground shadow - ellipse beneath player
+    const shadowY = baseHeight * 0.45
+    const shadow = this.add.graphics()
+    shadow.fillStyle(0x000000, 0.5)
+    shadow.fillEllipse(0, shadowY, baseHeight * 0.6 * playerScale, baseHeight * 0.15 * playerScale)
+    spriteChildren.push(shadow)
+    
+    // Tackle radius indicator (gameplay element) - positioned at HELMET level
+    // Very subtle so it doesn't distract from the premium visuals
+    const tackleRadius = this.add.graphics()
+    const effectiveRadius = DEFENDER_RADIUS * (isPlayer ? 1.8 : 1.2)
+    const helmetOffsetY = hasTexture ? -(baseHeight * 0.55) : 0
+    tackleRadius.lineStyle(1.5, COLORS.green, isPlayer ? 0.15 : 0.1)
+    tackleRadius.strokeCircle(0, helmetOffsetY, effectiveRadius + RUNNER_RADIUS)
+    tackleRadius.setName('tackleRadius')
+    tackleRadius.setData('helmetOffsetY', helmetOffsetY)
+    tackleRadius.setData('baseRadius', effectiveRadius)
+    spriteChildren.push(tackleRadius)
+    
+    if (hasTexture) {
+      // === PREMIUM: Photo-realistic player image ===
+      
+      // Calculate helmet position (where collision happens)
+      const helmetY = -(baseHeight * 0.55)
+      const glowColor = isPlayer ? COLORS.green : 0x00897B
+      
+      // SUBTLE ground reflection glow (not an orb)
+      if (isPlayer) {
+        const groundGlow = this.add.graphics()
+        groundGlow.fillStyle(glowColor, 0.15)
+        groundGlow.fillEllipse(0, baseHeight * 0.35, baseHeight * 0.8, baseHeight * 0.15)
+        spriteChildren.push(groundGlow)
+      }
+      
+      // THE PLAYER IMAGE - MASSIVE AND PROMINENT
+      const playerImage = this.add.image(0, 0, textureKey)
+      const scale = baseHeight / playerImage.height
+      playerImage.setScale(scale)
+      playerImage.setOrigin(0.5, 0.75) // Anchor at waist level
+      
+      // Add drop shadow effect
+      playerImage.setPostPipeline('DropShadow')
+      
+      spriteChildren.push(playerImage)
+      
+      // For player: floating animation
+      if (isPlayer) {
+        this.tweens.add({
+          targets: playerImage,
+          y: playerImage.y - 5,
+          duration: 2000,
+          yoyo: true,
+          repeat: -1,
+          ease: 'Sine.easeInOut'
+        })
+      }
+      
+      // Jersey number badge - positioned just below the player's feet
+      const badgeY = baseHeight * 0.25 // Closer to feet
+      const badgeSize = isPlayer ? { w: 48, h: 30, font: '20px' } : { w: 28, h: 18, font: '12px' }
+      
+      const badgeBg = this.add.graphics()
+      badgeBg.fillStyle(glowColor, 0.95)
+      badgeBg.fillRoundedRect(-badgeSize.w / 2, badgeY, badgeSize.w, badgeSize.h, 8)
+      // Border
+      badgeBg.lineStyle(2, 0xffffff, 0.3)
+      badgeBg.strokeRoundedRect(-badgeSize.w / 2, badgeY, badgeSize.w, badgeSize.h, 8)
+      spriteChildren.push(badgeBg)
+      
+      const jerseyText = this.add.text(0, badgeY + badgeSize.h / 2, `${jerseyToUse}`, {
+        fontSize: badgeSize.font,
+        color: '#002244',
+        fontFamily: FONTS.display,
+      })
+      jerseyText.setOrigin(0.5)
+      spriteChildren.push(jerseyText)
+      
+      // Player name for main player - larger and more prominent like mockup
+      if (isPlayer) {
+        const spriteData = getDefenderSprite(jerseyToUse)
+        if (spriteData) {
+          const lastName = spriteData.name.split(' ').pop()?.toUpperCase() || ''
+          const nameText = this.add.text(0, badgeY + badgeSize.h + 6, lastName, {
+            fontSize: '14px',
+            color: hexToCSS(COLORS.green),
+            fontFamily: FONTS.display,
+            fontStyle: 'bold',
+          })
+          nameText.setOrigin(0.5, 0)
+          spriteChildren.push(nameText)
+        }
+      }
+      
+    } else {
+      // === FALLBACK: Premium styled circle ===
+      const circleRadius = DEFENDER_RADIUS * playerScale * 1.2
+      
+      // Glow
+      const glow = this.add.graphics()
+      glow.fillStyle(isPlayer ? COLORS.green : 0x00897B, 0.3)
+      glow.fillCircle(0, 0, circleRadius + 15)
+      spriteChildren.push(glow)
+      
+      // Main body
+      const body = this.add.graphics()
+      body.fillStyle(COLORS.navy, 1)
+      body.fillCircle(0, 0, circleRadius)
+      body.lineStyle(4, posColor, 1)
+      body.strokeCircle(0, 0, circleRadius)
+      spriteChildren.push(body)
+      
+      // Highlight
+      const highlight = this.add.graphics()
+      highlight.fillStyle(0xffffff, 0.15)
+      highlight.fillCircle(-circleRadius * 0.2, -circleRadius * 0.3, circleRadius * 0.4)
+      spriteChildren.push(highlight)
+      
+      // Jersey number
+      const jersey = this.add.text(0, 0, isPlayer ? `${selectedDefender}` : '★', {
+        fontSize: isPlayer ? '28px' : '20px',
+        color: '#ffffff',
+        fontFamily: FONTS.display,
+      })
+      jersey.setOrigin(0.5)
+      spriteChildren.push(jersey)
+    }
+    
+    const sprite = this.add.container(x, y, spriteChildren)
+    sprite.setDepth(10) // Above field, below UI
+    
+    // Store collision data for tall player images
+    // The collision point is at the HELMET (upper body), not feet
+    // For 220px player: helmet is about 80px from top, so offset is -(220 * 0.65) = -143px from feet
+    // For 110px AI: offset is about -72px
+    const collisionOffsetY = hasTexture ? -(baseHeight * 0.55) : 0 // Move collision UP to helmet area
+    const collisionRadius = DEFENDER_RADIUS * (isPlayer ? 1.8 : 1.2) // Larger radius for tall images
+    
+    sprite.setData('collisionOffsetY', collisionOffsetY)
+    sprite.setData('collisionRadius', collisionRadius)
     
     return {
       sprite,
@@ -805,103 +984,159 @@ export class GameScene extends Phaser.Scene {
   }
 
   private addAIDefender(): void {
-    const angle = Math.random() * Math.PI * 2
-    const dist = 80 + Math.random() * 50
-    const x = GAME_WIDTH / 2 + Math.cos(angle) * dist
-    const y = GAME_HEIGHT / 2 + Math.sin(angle) * dist
+    // AI defenders spawn in the upper field (opponent's side) ready to intercept
+    const aiCount = this.defenders.filter(d => !d.isPlayer).length
+    
+    // Spread across the upper field
+    const spreadWidth = GAME_WIDTH * 0.6
+    const xOffset = (aiCount % 3 - 1) * (spreadWidth / 2)
+    const x = GAME_WIDTH / 2 + xOffset + (Math.random() - 0.5) * 50
+    
+    // Upper-mid field position (opponent's territory)
+    const y = DEFENDER_MIN_Y + 80 + Math.random() * 60
     
     const defender = this.createDefenderSprite(x, y, false)
     this.defenders.push(defender)
     
-    // Spawn effect
+    // Dramatic spawn effect - drops in from top
     defender.sprite.setScale(0)
+    defender.sprite.setAlpha(0)
+    defender.sprite.y = y - 100
+    
     this.tweens.add({
       targets: defender.sprite,
       scale: 1,
-      duration: 400,
+      alpha: 1,
+      y: y,
+      duration: 500,
       ease: 'Back.easeOut',
     })
   }
 
   private createPremiumUI(): void {
-    // Top bar background
+    // ============================================================
+    // PREMIUM GLASS-MORPHISM UI (Matching mockup style)
+    // ============================================================
+    
+    const uiDepth = 50 // All UI elements above gameplay
+    
+    // === TOP BAR - Glass effect ===
     const topBar = this.add.graphics()
-    topBar.fillStyle(COLORS.navy, 0.7)
-    topBar.fillRect(0, 0, GAME_WIDTH, 70)
-    topBar.lineStyle(1, COLORS.green, 0.3)
-    topBar.lineBetween(0, 70, GAME_WIDTH, 70)
+    topBar.setDepth(uiDepth)
+    // Gradient from solid to transparent
+    for (let y = 0; y < 80; y++) {
+      const alpha = 0.85 - (y / 80) * 0.5
+      topBar.fillStyle(0x000000, alpha)
+      topBar.fillRect(0, y, GAME_WIDTH, 1)
+    }
+    // Green accent line at bottom
+    topBar.lineStyle(2, COLORS.green, 0.5)
+    topBar.lineBetween(0, 75, GAME_WIDTH, 75)
     
-    // Score
-    this.scoreText = this.add.text(15, 12, 'SCORE', {
-      fontSize: '10px',
-      color: hexToCSS(COLORS.grey),
+    // === SCORE (Left side) ===
+    const scoreContainer = this.add.container(20, 15)
+    scoreContainer.setDepth(uiDepth + 1)
+    
+    // Score label with glow
+    this.scoreText = this.add.text(0, 0, 'SCORE', {
+      fontSize: '9px',
+      color: hexToCSS(COLORS.green),
       fontFamily: FONTS.body,
-      letterSpacing: 1,
+      letterSpacing: 3,
     })
+    this.scoreText.setAlpha(0.7)
+    scoreContainer.add(this.scoreText)
     
-    const scoreValue = this.add.text(15, 24, '0', {
-      fontSize: '20px',
-      color: hexToCSS(COLORS.white),
+    // Score value - BIG and prominent
+    const scoreValue = this.add.text(0, 12, '0', {
+      fontSize: '28px',
+      color: '#FFFFFF',
       fontFamily: FONTS.display,
     })
     scoreValue.setName('scoreValue')
+    scoreValue.setShadow(0, 0, hexToCSS(COLORS.green), 10, true, true)
+    scoreContainer.add(scoreValue)
     
-    // Wave indicator
-    this.waveText = this.add.text(GAME_WIDTH - 15, 12, 'WAVE', {
-      fontSize: '10px',
-      color: hexToCSS(COLORS.grey),
+    // === WAVE (Right side) ===
+    const waveContainer = this.add.container(GAME_WIDTH - 20, 15)
+    waveContainer.setDepth(uiDepth + 1)
+    
+    this.waveText = this.add.text(0, 0, 'WAVE', {
+      fontSize: '9px',
+      color: hexToCSS(COLORS.green),
       fontFamily: FONTS.body,
-      letterSpacing: 1,
+      letterSpacing: 3,
     })
     this.waveText.setOrigin(1, 0)
+    this.waveText.setAlpha(0.7)
+    waveContainer.add(this.waveText)
     
-    // In campaign mode, show wave X/Y format
     const waveDisplay = this.isCampaignMode ? `1/${this.maxWaves}` : '1'
-    const waveValue = this.add.text(GAME_WIDTH - 15, 24, waveDisplay, {
-      fontSize: '20px',
+    const waveValue = this.add.text(0, 12, waveDisplay, {
+      fontSize: '28px',
       color: hexToCSS(COLORS.green),
       fontFamily: FONTS.display,
     })
     waveValue.setOrigin(1, 0)
     waveValue.setName('waveValue')
+    waveValue.setShadow(0, 0, hexToCSS(COLORS.green), 10, true, true)
+    waveContainer.add(waveValue)
     
-    // Lives (center)
-    this.livesContainer = this.add.container(GAME_WIDTH / 2, 22)
+    // === LIVES (Center) - Premium hearts ===
+    this.livesContainer = this.add.container(GAME_WIDTH / 2, 28)
+    this.livesContainer.setDepth(uiDepth + 1)
     this.updateLivesDisplay()
     
-    // Timer bar background
+    // === TIMER BAR - Sleek design ===
     this.timerBg = this.add.graphics()
-    this.timerBg.fillStyle(COLORS.navyLight, 0.8)
-    this.timerBg.fillRoundedRect(15, 50, GAME_WIDTH - 30, 12, 6)
+    this.timerBg.setDepth(uiDepth)
+    this.timerBg.fillStyle(0x000000, 0.5)
+    this.timerBg.fillRoundedRect(20, 55, GAME_WIDTH - 40, 10, 5)
+    this.timerBg.lineStyle(1, COLORS.green, 0.3)
+    this.timerBg.strokeRoundedRect(20, 55, GAME_WIDTH - 40, 10, 5)
     
-    // Timer bar
     this.timerBar = this.add.graphics()
+    this.timerBar.setDepth(uiDepth + 1)
     
-    // Tackles counter
-    this.killsText = this.add.text(15, GAME_HEIGHT - 25, 'TACKLES: 0', {
-      fontSize: '11px',
-      color: hexToCSS(COLORS.grey),
+    // === BOTTOM HUD - Glass effect ===
+    const bottomBar = this.add.graphics()
+    bottomBar.setDepth(uiDepth)
+    for (let y = 0; y < 60; y++) {
+      const alpha = (y / 60) * 0.7
+      bottomBar.fillStyle(0x000000, alpha)
+      bottomBar.fillRect(0, GAME_HEIGHT - 60 + y, GAME_WIDTH, 1)
+    }
+    
+    // Tackles counter with icon
+    this.killsText = this.add.text(20, GAME_HEIGHT - 30, '🏈 TACKLES: 0', {
+      fontSize: '12px',
+      color: hexToCSS(COLORS.green),
       fontFamily: FONTS.body,
     })
+    this.killsText.setDepth(uiDepth + 1)
+    this.killsText.setAlpha(0.8)
     
-    // Combo indicator (hidden initially)
-    this.comboText = this.add.text(GAME_WIDTH / 2, 120, '', {
-      fontSize: '24px',
+    // === COMBO TEXT - More dramatic ===
+    this.comboText = this.add.text(GAME_WIDTH / 2, 130, '', {
+      fontSize: '32px',
       color: hexToCSS(COLORS.gold),
       fontFamily: FONTS.display,
     })
     this.comboText.setOrigin(0.5)
     this.comboText.setAlpha(0)
+    this.comboText.setDepth(uiDepth + 5)
+    this.comboText.setShadow(0, 0, hexToCSS(COLORS.gold), 20, true, true)
     
-    // Stats panel
-    this.statsText = this.add.text(GAME_WIDTH - 10, GAME_HEIGHT - 60, '', {
-      fontSize: '10px',
+    // === STATS PANEL - Glass card style ===
+    this.statsText = this.add.text(GAME_WIDTH - 15, GAME_HEIGHT - 80, '', {
+      fontSize: '11px',
       color: hexToCSS(COLORS.grey),
       fontFamily: FONTS.body,
-      lineSpacing: 4,
+      lineSpacing: 6,
       align: 'right',
     })
     this.statsText.setOrigin(1, 0)
+    this.statsText.setDepth(uiDepth + 1)
     this.updateStatsDisplay()
   }
   
@@ -1336,11 +1571,18 @@ export class GameScene extends Phaser.Scene {
     const megaphoneRadius = megaphone.sprite.getData('radius') || POWER_UP_RADIUS * 1.5
     
     for (const defender of this.defenders) {
-      const dx = defender.sprite.x - megaphone.sprite.x
-      const dy = defender.sprite.y - megaphone.sprite.y
+      // Use helmet position for collision (same as runner collision)
+      const collisionOffsetY = defender.sprite.getData('collisionOffsetY') || 0
+      const collisionRadius = defender.sprite.getData('collisionRadius') || DEFENDER_RADIUS
+      
+      const defenderHelmetX = defender.sprite.x
+      const defenderHelmetY = defender.sprite.y + collisionOffsetY
+      
+      const dx = defenderHelmetX - megaphone.sprite.x
+      const dy = defenderHelmetY - megaphone.sprite.y
       const dist = Math.sqrt(dx * dx + dy * dy)
       
-      const hitRadius = DEFENDER_RADIUS * this.stats.tackleRadiusMultiplier + megaphoneRadius
+      const hitRadius = collisionRadius * this.stats.tackleRadiusMultiplier + megaphoneRadius
       
       if (dist < hitRadius) {
         this.triggerMegaphonePowerUp()
@@ -1678,142 +1920,203 @@ export class GameScene extends Phaser.Scene {
       }
     }
     
-    // Adjusted difficulty curve - smoother progression
-    // In campaign mode, also consider stage difficulty
+    // Adjusted difficulty curve
     const effectiveWave = Math.floor(wave * this.difficultyModifier)
     if (effectiveWave >= 5 && this.runnersThisWave % 4 === 0) runnerType = 'TANK'
     if (effectiveWave >= 8 && this.runnersThisWave % 3 === 0) runnerType = 'FAST'
     
     const typeDef = RUNNER_TYPES[runnerType]
     
-    const x = Phaser.Math.Between(40, GAME_WIDTH - 40)
-    const y = -RUNNER_RADIUS
+    const x = Phaser.Math.Between(50, GAME_WIDTH - 50)
+    const y = -30
     
     // Apply difficulty modifier to runner speed
     const waveSpeed = Math.min(MAX_RUNNER_SPEED, BASE_RUNNER_SPEED + (wave * SPEED_PER_WAVE))
     const speed = waveSpeed * typeDef.speedMult * this.stats.enemySpeedMultiplier * this.difficultyModifier
     
-    const radius = RUNNER_RADIUS * typeDef.size
+    // ============================================================
+    // PREMIUM HELMET DESIGN - NFL-style football helmet
+    // Descending toward the player like an incoming threat
+    // ============================================================
     
-    // Get opponent accent color for holographic effects
+    const baseRadius = RUNNER_RADIUS * 1.3
+    const radius = baseRadius * typeDef.size
+    const helmetWidth = radius * 2
+    const helmetHeight = radius * 2.2 // Slightly taller for helmet shape
+    
+    // Get opponent colors (stage-specific or type default)
+    const primaryColor = this.currentStage?.visuals.opponent.primary || typeDef.color
     const accentColor = this.currentStage?.visuals.opponent.accent || 0xFFFFFF
+    
+    // Type-based ring colors
+    const ringColor = runnerType === 'BOSS' ? 0xFFD700 : 
+                      runnerType === 'TANK' ? 0xFF4444 : 
+                      runnerType === 'FAST' ? 0x00BFFF : accentColor
     
     const spriteChildren: Phaser.GameObjects.GameObject[] = []
     
-    // === FUTURISTIC HOLOGRAPHIC RUNNER DESIGN ===
+    // === LAYER 0: Drop shadow ===
+    const shadow = this.add.graphics()
+    shadow.fillStyle(0x000000, 0.3)
+    shadow.fillEllipse(3, 5, helmetWidth * 0.9, helmetHeight * 0.3)
+    spriteChildren.push(shadow)
     
-    // Outer holographic shimmer ring (pulsing)
-    const hologramRing = this.add.graphics()
-    hologramRing.lineStyle(1, accentColor, 0.4)
-    hologramRing.strokeCircle(0, 0, radius + 6)
-    hologramRing.setName('hologramRing')
-    spriteChildren.push(hologramRing)
+    // === LAYER 1: Motion trail (for fast runners) ===
+    if (runnerType === 'FAST') {
+      const trail = this.add.graphics()
+      trail.fillStyle(primaryColor, 0.15)
+      trail.fillEllipse(0, -helmetHeight * 0.8, helmetWidth * 0.4, helmetHeight * 0.8)
+      trail.fillStyle(primaryColor, 0.08)
+      trail.fillEllipse(0, -helmetHeight * 1.2, helmetWidth * 0.3, helmetHeight * 0.6)
+      spriteChildren.push(trail)
+    }
     
-    // Neon glow effect
-    const glowOuter = this.add.graphics()
-    glowOuter.fillStyle(typeDef.color, 0.15)
-    glowOuter.fillCircle(0, 0, radius + 4)
-    spriteChildren.push(glowOuter)
+    // === LAYER 2: Outer glow ring ===
+    const glowRing = this.add.graphics()
+    glowRing.lineStyle(3, ringColor, 0.5)
+    glowRing.strokeEllipse(0, 0, helmetWidth + 12, helmetHeight + 10)
+    glowRing.setName('energyRing')
+    spriteChildren.push(glowRing)
     
-    // Motion trail indicator (vertical lines behind)
-    const trail = this.add.graphics()
-    trail.fillStyle(typeDef.color, 0.3)
-    trail.fillRect(-radius * 0.3, -radius - 2, radius * 0.6, 4)
-    trail.fillStyle(typeDef.color, 0.2)
-    trail.fillRect(-radius * 0.2, -radius - 6, radius * 0.4, 4)
-    trail.setName('trail')
-    spriteChildren.push(trail)
+    // === LAYER 3: Helmet shell ===
+    const helmet = this.add.graphics()
     
-    // Runner body with gradient effect (simulated)
-    const body = this.add.graphics()
-    // Inner lighter color (center highlight)
-    const lighterColor = Phaser.Display.Color.IntegerToColor(typeDef.color)
-    const brightColor = Phaser.Display.Color.GetColor(
-      Math.min(255, lighterColor.red + 40),
-      Math.min(255, lighterColor.green + 40),
-      Math.min(255, lighterColor.blue + 40)
+    // Main helmet dome (egg-shaped)
+    helmet.fillStyle(primaryColor, 1)
+    helmet.fillEllipse(0, 0, helmetWidth, helmetHeight)
+    
+    // 3D shading - top highlight
+    const lighterColor = Phaser.Display.Color.IntegerToColor(primaryColor)
+    const highlightColor = Phaser.Display.Color.GetColor(
+      Math.min(255, lighterColor.red + 60),
+      Math.min(255, lighterColor.green + 60),
+      Math.min(255, lighterColor.blue + 60)
     )
-    body.fillStyle(typeDef.color, 1)
-    body.fillCircle(0, 0, radius)
-    body.fillStyle(brightColor, 0.4)
-    body.fillCircle(-radius * 0.2, -radius * 0.2, radius * 0.5)
-    spriteChildren.push(body)
+    helmet.fillStyle(highlightColor, 0.5)
+    helmet.fillEllipse(0, -helmetHeight * 0.2, helmetWidth * 0.85, helmetHeight * 0.4)
     
-    // Neon border glow (accent color)
-    const neonBorder = this.add.graphics()
-    neonBorder.lineStyle(3, accentColor, 0.7)
-    neonBorder.strokeCircle(0, 0, radius)
-    neonBorder.lineStyle(1, 0xffffff, 0.5)
-    neonBorder.strokeCircle(0, 0, radius - 1)
-    spriteChildren.push(neonBorder)
+    // Glossy shine spot
+    helmet.fillStyle(0xffffff, 0.4)
+    helmet.fillEllipse(-radius * 0.35, -radius * 0.5, radius * 0.5, radius * 0.35)
     
-    // Helmet face indicator (stylized)
-    const faceIndicator = this.add.graphics()
-    faceIndicator.fillStyle(0x000000, 0.4)
-    faceIndicator.fillEllipse(0, -radius * 0.1, radius * 1.2, radius * 0.8)
-    // Visor shine
-    faceIndicator.fillStyle(0xffffff, 0.3)
-    faceIndicator.fillEllipse(-radius * 0.2, -radius * 0.3, radius * 0.4, radius * 0.2)
-    spriteChildren.push(faceIndicator)
+    spriteChildren.push(helmet)
     
-    // Type icon (jersey number or type indicator)
-    const iconText = runnerType === 'BOSS' ? '👑' : runnerType === 'FAST' ? '⚡' : runnerType === 'TANK' ? '🛡️' : runnerType === 'ZIGZAG' ? '🌀' : '🏈'
-    const icon = this.add.text(0, radius * 0.1, iconText, { 
-      fontSize: `${Math.max(10, 8 + typeDef.size * 4)}px` 
-    })
-    icon.setOrigin(0.5)
-    spriteChildren.push(icon)
+    // === LAYER 4: Helmet stripe (team accent) ===
+    const stripe = this.add.graphics()
+    stripe.fillStyle(accentColor, 0.9)
+    stripe.fillRect(-4, -helmetHeight * 0.45, 8, helmetHeight * 0.9)
+    spriteChildren.push(stripe)
     
-    // Add boss-specific effects
+    // === LAYER 5: Facemask ===
+    const facemask = this.add.graphics()
+    facemask.fillStyle(0x1a1a1a, 0.85) // Dark grey/black
+    // Facemask opening shape - rounded rectangle at bottom
+    facemask.fillRoundedRect(-radius * 0.7, radius * 0.15, radius * 1.4, radius * 0.7, 8)
+    
+    // Facemask bars (horizontal lines)
+    facemask.lineStyle(2.5, 0x333333, 1)
+    const barSpacing = radius * 0.18
+    for (let i = 0; i < 3; i++) {
+      const barY = radius * 0.25 + (i * barSpacing)
+      facemask.beginPath()
+      facemask.moveTo(-radius * 0.6, barY)
+      facemask.lineTo(radius * 0.6, barY)
+      facemask.strokePath()
+    }
+    
+    // Facemask shine
+    facemask.fillStyle(0xffffff, 0.15)
+    facemask.fillRoundedRect(-radius * 0.5, radius * 0.2, radius * 0.4, radius * 0.2, 3)
+    spriteChildren.push(facemask)
+    
+    // === LAYER 6: Helmet outline ===
+    const outline = this.add.graphics()
+    outline.lineStyle(3, 0x000000, 0.6)
+    outline.strokeEllipse(0, 0, helmetWidth, helmetHeight)
+    outline.lineStyle(2, accentColor, 0.4)
+    outline.strokeEllipse(0, 0, helmetWidth - 4, helmetHeight - 4)
+    spriteChildren.push(outline)
+    
+    // === LAYER 7: Type badge ===
+    const badgeMap: Record<RunnerType, { emoji: string, color: number }> = {
+      NORMAL: { emoji: '', color: 0 }, // No badge for normal
+      FAST: { emoji: '⚡', color: 0x00BFFF },
+      TANK: { emoji: '🛡️', color: 0xFF4444 },
+      ZIGZAG: { emoji: '🌀', color: 0x9932CC },
+      BOSS: { emoji: '👑', color: 0xFFD700 },
+    }
+    const badge = badgeMap[runnerType]
+    if (badge.emoji) {
+      // Badge background
+      const badgeBg = this.add.graphics()
+      badgeBg.fillStyle(badge.color, 0.9)
+      badgeBg.fillCircle(radius * 0.65, -radius * 0.5, radius * 0.35)
+      badgeBg.lineStyle(2, 0xffffff, 0.5)
+      badgeBg.strokeCircle(radius * 0.65, -radius * 0.5, radius * 0.35)
+      spriteChildren.push(badgeBg)
+      
+      const icon = this.add.text(radius * 0.65, -radius * 0.5, badge.emoji, { 
+        fontSize: `${14 * typeDef.size}px` 
+      })
+      icon.setOrigin(0.5)
+      spriteChildren.push(icon)
+    }
+    
+    // === BOSS SPECIAL EFFECTS ===
     if (runnerType === 'BOSS') {
-      // Gold crown aura
+      // Epic gold aura
       const aura = this.add.graphics()
       aura.fillStyle(0xFFD700, 0.25)
-      aura.fillCircle(0, 0, radius + 12)
-      aura.lineStyle(3, 0xFFD700, 0.9)
-      aura.strokeCircle(0, 0, radius + 8)
-      spriteChildren.unshift(aura) // Add behind everything
+      aura.fillEllipse(0, 0, helmetWidth + 30, helmetHeight + 28)
+      aura.lineStyle(4, 0xFFD700, 0.9)
+      aura.strokeEllipse(0, 0, helmetWidth + 22, helmetHeight + 20)
+      spriteChildren.unshift(aura)
       
-      // Pulsing aura animation
       this.tweens.add({
         targets: aura,
-        alpha: 0.5,
-        scaleX: 1.1,
-        scaleY: 1.1,
-        duration: 500,
+        alpha: 0.6,
+        scaleX: 1.12,
+        scaleY: 1.12,
+        duration: 400,
         yoyo: true,
         repeat: -1,
         ease: 'Sine.easeInOut'
       })
       
-      // Electric particles around boss
-      for (let i = 0; i < 3; i++) {
+      // Orbiting gold particles
+      for (let i = 0; i < 5; i++) {
         const particle = this.add.graphics()
-        particle.fillStyle(0xFFD700, 0.8)
-        particle.fillCircle(0, 0, 2)
-        const angle = (i / 3) * Math.PI * 2
-        particle.setPosition(Math.cos(angle) * (radius + 6), Math.sin(angle) * (radius + 6))
+        particle.fillStyle(0xFFD700, 0.95)
+        particle.fillCircle(0, 0, 5)
+        const startAngle = (i / 5) * Math.PI * 2
+        const orbitRadius = radius + 18
+        particle.setPosition(Math.cos(startAngle) * orbitRadius, Math.sin(startAngle) * orbitRadius)
         spriteChildren.push(particle)
         
-        // Orbit animation
         this.tweens.add({
           targets: particle,
-          x: Math.cos(angle + Math.PI * 2) * (radius + 6),
-          y: Math.sin(angle + Math.PI * 2) * (radius + 6),
+          angle: 360,
           duration: 1500,
           repeat: -1,
-          ease: 'Linear'
+          ease: 'Linear',
+          onUpdate: () => {
+            const currentAngle = startAngle + (particle.angle * Math.PI / 180)
+            particle.x = Math.cos(currentAngle) * orbitRadius
+            particle.y = Math.sin(currentAngle) * orbitRadius
+          }
         })
       }
     }
     
-    // Add hologram shimmer animation
+    // === ANIMATIONS ===
+    
+    // Glow ring pulse
     this.tweens.add({
-      targets: hologramRing,
-      alpha: { from: 0.2, to: 0.6 },
-      scaleX: { from: 1, to: 1.15 },
-      scaleY: { from: 1, to: 1.15 },
-      duration: 800 + Math.random() * 400,
+      targets: glowRing,
+      alpha: { from: 0.3, to: 0.7 },
+      scaleX: { from: 1, to: 1.06 },
+      scaleY: { from: 1, to: 1.06 },
+      duration: 600 + Math.random() * 200,
       yoyo: true,
       repeat: -1,
       ease: 'Sine.easeInOut'
@@ -1822,19 +2125,20 @@ export class GameScene extends Phaser.Scene {
     const sprite = this.add.container(x, y, spriteChildren)
     sprite.setData('radius', radius)
     sprite.setData('runnerType', runnerType)
+    sprite.setDepth(5) // Above field, below defenders
     
-    // Spawn animation - dramatic entrance
+    // Dramatic spawn animation
     sprite.setScale(0)
     sprite.setAlpha(0)
     this.tweens.add({
       targets: sprite,
       alpha: 1,
       scale: 1,
-      duration: 200,
+      duration: 250,
       ease: 'Back.easeOut'
     })
     
-    // Boss has 5 health, Tank has 2, others have 1
+    // Health based on type
     let health = 1
     if (runnerType === 'BOSS') health = 5
     else if (runnerType === 'TANK') health = 2
@@ -1918,18 +2222,29 @@ export class GameScene extends Phaser.Scene {
   private updateTimerBar(wave: number): void {
     const waveDuration = getWaveDuration(wave)
     const progress = Math.min(1, this.waveTimer / waveDuration)
-    const width = (GAME_WIDTH - 40) * progress
+    const barWidth = GAME_WIDTH - 40
+    const fillWidth = barWidth * progress
     
     this.timerBar.clear()
     
-    // Gradient effect
-    const color = progress < 0.7 ? COLORS.green : (progress < 0.9 ? COLORS.gold : COLORS.dlRed)
-    this.timerBar.fillStyle(color, 1)
-    this.timerBar.fillRoundedRect(20, 52, width, 8, 4)
-    
-    // Shine
-    this.timerBar.fillStyle(0xffffff, 0.2)
-    this.timerBar.fillRoundedRect(20, 52, width, 3, { tl: 4, tr: 4, bl: 0, br: 0 })
+    if (fillWidth > 0) {
+      // Dynamic color based on progress
+      const color = progress < 0.7 ? COLORS.green : (progress < 0.9 ? COLORS.gold : COLORS.dlRed)
+      
+      // Main fill with glow
+      this.timerBar.fillStyle(color, 0.9)
+      this.timerBar.fillRoundedRect(22, 56, fillWidth - 4, 6, 3)
+      
+      // Top shine
+      this.timerBar.fillStyle(0xffffff, 0.3)
+      this.timerBar.fillRoundedRect(22, 56, fillWidth - 4, 2, { tl: 3, tr: 3, bl: 0, br: 0 })
+      
+      // Glow at the end of the bar
+      if (fillWidth > 10) {
+        this.timerBar.fillStyle(color, 0.4)
+        this.timerBar.fillCircle(20 + fillWidth - 2, 59, 8)
+      }
+    }
   }
 
   private updatePlayerDefender(delta: number): void {
@@ -1952,67 +2267,153 @@ export class GameScene extends Phaser.Scene {
       player.sprite.y = Phaser.Math.Clamp(player.sprite.y, DEFENDER_MIN_Y, GAME_HEIGHT - DEFENDER_RADIUS)
     }
     
-    // Update tackle radius indicator
+    // Update tackle radius indicator at helmet position
     const tackleRadiusIndicator = player.sprite.getByName('tackleRadius') as Phaser.GameObjects.Graphics
     if (tackleRadiusIndicator) {
+      const helmetOffsetY = tackleRadiusIndicator.getData('helmetOffsetY') || 0
+      const baseRadius = tackleRadiusIndicator.getData('baseRadius') || DEFENDER_RADIUS
       tackleRadiusIndicator.clear()
-      tackleRadiusIndicator.lineStyle(1, COLORS.green, 0.15)
-      tackleRadiusIndicator.strokeCircle(0, 0, DEFENDER_RADIUS * this.stats.tackleRadiusMultiplier + RUNNER_RADIUS)
+      tackleRadiusIndicator.lineStyle(2, COLORS.green, 0.2)
+      tackleRadiusIndicator.strokeCircle(0, helmetOffsetY, baseRadius * this.stats.tackleRadiusMultiplier + RUNNER_RADIUS)
     }
   }
 
   private updateAIDefenders(delta: number): void {
     const aiDefenders = this.defenders.filter(d => !d.isPlayer)
+    if (aiDefenders.length === 0) return
     
-    // Performance optimization: Stagger AI updates across frames
-    const frameIndex = Math.floor(Date.now() / 50) % 3
+    const player = this.defenders.find(d => d.isPlayer)
+    const playerY = player?.sprite.y || GAME_HEIGHT - 200
+    
+    // ============================================================
+    // SMART AI DEFENDER SYSTEM
+    // - Stays near top (opponent's endzone) to intercept early
+    // - Comes in clutch when runners get close to player's endzone
+    // - Targets most dangerous threats intelligently
+    // - Buttery smooth movement with interpolation
+    // ============================================================
     
     aiDefenders.forEach((defender, index) => {
-      // Only update 1/3 of defenders each frame cycle for performance
-      if (index % 3 !== frameIndex) return
-      if (Math.random() > 0.8) return // Slightly reduced update frequency
-      
-      let targetRunner: Runner | undefined = undefined
+      // Determine threat level and target
+      let targetX = defender.sprite.x
+      let targetY = defender.sprite.y
+      let urgency = 0.5 // Base movement speed multiplier
       
       if (this.runners.length > 0) {
-        const runnerIndex = index % this.runners.length
-        targetRunner = this.runners[runnerIndex]
+        // Find the most dangerous runner for THIS defender
+        // Priority: Runners closest to endzone that player can't reach
         
-        if (targetRunner && targetRunner.sprite.y < GAME_HEIGHT * 0.3) {
-          targetRunner = undefined
+        let bestTarget: Runner | null = null
+        let bestScore = -Infinity
+        
+        for (const runner of this.runners) {
+          if (!runner.sprite) continue
+          
+          const runnerY = runner.sprite.y
+          const runnerX = runner.sprite.x
+          
+          // How close to scoring (endzone)
+          const dangerProgress = runnerY / GAME_HEIGHT
+          
+          // Distance from player - AI should cover what player can't
+          const playerDist = player ? Math.sqrt(
+            Math.pow(runnerX - player.sprite.x, 2) +
+            Math.pow(runnerY - player.sprite.y, 2)
+          ) : 0
+          
+          // Distance from this AI defender
+          const aiDist = Math.sqrt(
+            Math.pow(runnerX - defender.sprite.x, 2) +
+            Math.pow(runnerY - defender.sprite.y, 2)
+          )
+          
+          // Score: prioritize runners that are dangerous AND far from player
+          // AI should intercept what player can't reach
+          let score = dangerProgress * 100 // Base: closer to endzone = more dangerous
+          score += (playerDist / 100) * 30 // Bonus for being far from player
+          score -= (aiDist / 100) * 20 // Prefer runners we can actually reach
+          
+          // CLUTCH MODE: If runner is past 60% of field, massive priority boost
+          if (dangerProgress > 0.6) {
+            score += 50
+            urgency = Math.max(urgency, 0.9)
+          }
+          
+          // EMERGENCY MODE: Runner past 75% - maximum priority
+          if (dangerProgress > 0.75) {
+            score += 100
+            urgency = 1.2 // Speed boost
+          }
+          
+          // Boss/tank runners are higher priority
+          if (runner.type === 'BOSS') score += 40
+          if (runner.type === 'TANK') score += 20
+          
+          if (score > bestScore) {
+            bestScore = score
+            bestTarget = runner
+          }
         }
-      }
-      
-      if (targetRunner !== undefined) {
-        const speed = AI_DEFENDER_SPEED * this.stats.speedMultiplier * (delta / 1000)
-        const dx = targetRunner.sprite.x - defender.sprite.x
-        const dy = targetRunner.sprite.y - defender.sprite.y
-        const dist = Math.sqrt(dx * dx + dy * dy)
         
-        if (dist > 20) {
-          const wobbleX = (Math.random() - 0.5) * 0.3
-          const wobbleY = (Math.random() - 0.5) * 0.3
+        if (bestTarget) {
+          // Intercept path - predict where runner will be
+          const runnerSpeed = bestTarget.speed || 100
+          const interceptTime = 0.3 // Look ahead 0.3 seconds
+          const predictedY = bestTarget.sprite.y + (runnerSpeed * interceptTime * 0.001 * delta)
           
-          defender.sprite.x += ((dx / dist) + wobbleX) * speed
-          defender.sprite.y += ((dy / dist) + wobbleY) * speed
+          targetX = bestTarget.sprite.x
+          targetY = Math.min(predictedY, GAME_HEIGHT - 100) // Don't go below player area
           
-          defender.sprite.x = Phaser.Math.Clamp(defender.sprite.x, DEFENDER_RADIUS, GAME_WIDTH - DEFENDER_RADIUS)
-          defender.sprite.y = Phaser.Math.Clamp(defender.sprite.y, DEFENDER_MIN_Y, GAME_HEIGHT - DEFENDER_RADIUS)
+          // If no immediate threat, patrol the upper-mid field
+        } else {
+          // Patrol positions - spread across upper field
+          const patrolZoneTop = DEFENDER_MIN_Y + 50
+          const patrolZoneBottom = GAME_HEIGHT * 0.45
+          const patrolY = patrolZoneTop + (patrolZoneBottom - patrolZoneTop) * 0.5
+          
+          // Spread horizontally based on index
+          const spreadWidth = GAME_WIDTH * 0.6
+          const patrolX = (GAME_WIDTH / 2) + ((index - (aiDefenders.length - 1) / 2) * (spreadWidth / Math.max(1, aiDefenders.length - 1)))
+          
+          // Gentle swaying patrol
+          const sway = Math.sin(Date.now() * 0.0008 + index * 2) * 40
+          
+          targetX = patrolX + sway
+          targetY = patrolY + Math.sin(Date.now() * 0.001 + index) * 20
+          urgency = 0.3 // Slower patrol movement
         }
       } else {
-        const patrolY = GAME_HEIGHT - 120
-        const patrolX = GAME_WIDTH / 2 + Math.sin(Date.now() * 0.001 + index) * 100
+        // No runners - patrol upper field ready to intercept
+        const patrolY = DEFENDER_MIN_Y + 80
+        const patrolX = (GAME_WIDTH / 2) + Math.sin(Date.now() * 0.0015 + index * 1.5) * 120
         
-        const dx = patrolX - defender.sprite.x
-        const dy = patrolY - defender.sprite.y
-        const dist = Math.sqrt(dx * dx + dy * dy)
-        
-        if (dist > 30) {
-          const speed = (AI_DEFENDER_SPEED * 0.5) * (delta / 1000)
-          defender.sprite.x += (dx / dist) * speed
-          defender.sprite.y += (dy / dist) * speed
-        }
+        targetX = patrolX
+        targetY = patrolY
+        urgency = 0.25
       }
+      
+      // BUTTERY SMOOTH MOVEMENT - use interpolation
+      const speed = AI_DEFENDER_SPEED * this.stats.speedMultiplier * urgency * (delta / 1000)
+      const dx = targetX - defender.sprite.x
+      const dy = targetY - defender.sprite.y
+      const dist = Math.sqrt(dx * dx + dy * dy)
+      
+      if (dist > 5) {
+        // Smooth easing - faster when far, slower when close
+        const easeFactor = Math.min(1, dist / 100)
+        const moveSpeed = speed * (0.5 + easeFactor * 0.5)
+        
+        defender.sprite.x += (dx / dist) * moveSpeed
+        defender.sprite.y += (dy / dist) * moveSpeed
+        
+        // Clamp to valid area
+        defender.sprite.x = Phaser.Math.Clamp(defender.sprite.x, DEFENDER_RADIUS, GAME_WIDTH - DEFENDER_RADIUS)
+        defender.sprite.y = Phaser.Math.Clamp(defender.sprite.y, DEFENDER_MIN_Y, GAME_HEIGHT - DEFENDER_RADIUS - 50)
+      }
+      
+      // Store target for debugging/visualization if needed
+      defender.targetX = targetX
+      defender.targetY = targetY
     })
   }
 
@@ -2090,8 +2491,10 @@ export class GameScene extends Phaser.Scene {
     let nearestDist = Infinity
     
     for (const defender of this.defenders) {
+      // Use helmet position for distance calculation
+      const collisionOffsetY = defender.sprite.getData('collisionOffsetY') || 0
       const dx = x - defender.sprite.x
-      const dy = y - defender.sprite.y
+      const dy = y - (defender.sprite.y + collisionOffsetY)
       const dist = Math.sqrt(dx * dx + dy * dy)
       
       if (dist < nearestDist) {
@@ -2107,11 +2510,20 @@ export class GameScene extends Phaser.Scene {
     for (let i = this.runners.length - 1; i >= 0; i--) {
       const runner = this.runners[i]
       const runnerRadius = runner.sprite.getData('radius') || RUNNER_RADIUS
-      const tackleRadius = DEFENDER_RADIUS * this.stats.tackleRadiusMultiplier + runnerRadius
       
       for (const defender of this.defenders) {
-        const dx = defender.sprite.x - runner.sprite.x
-        const dy = defender.sprite.y - runner.sprite.y
+        // Get the collision offset for tall player images
+        // Collision point is at HELMET level, not feet
+        const collisionOffsetY = defender.sprite.getData('collisionOffsetY') || 0
+        const collisionRadius = defender.sprite.getData('collisionRadius') || DEFENDER_RADIUS
+        const tackleRadius = collisionRadius * this.stats.tackleRadiusMultiplier + runnerRadius
+        
+        // Calculate distance from defender's HELMET position to runner
+        const defenderHelmetX = defender.sprite.x
+        const defenderHelmetY = defender.sprite.y + collisionOffsetY // Offset moves UP (negative value)
+        
+        const dx = defenderHelmetX - runner.sprite.x
+        const dy = defenderHelmetY - runner.sprite.y
         const dist = Math.sqrt(dx * dx + dy * dy)
         
         if (dist < tackleRadius) {
@@ -2734,11 +3146,17 @@ export class GameScene extends Phaser.Scene {
   }
 
   private showUpgradeSelection(): void {
+    // Hide all defenders during upgrade selection
+    this.defenders.forEach(d => {
+      d.sprite.setVisible(false)
+    })
+    
     // Overlay
     const overlay = this.add.graphics()
     overlay.fillStyle(0x000000, 0.85)
     overlay.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT)
     overlay.setAlpha(0)
+    overlay.setDepth(100) // Above everything
     
     this.tweens.add({
       targets: overlay,
@@ -2755,6 +3173,7 @@ export class GameScene extends Phaser.Scene {
     })
     title.setOrigin(0.5)
     title.setAlpha(0)
+    title.setDepth(101)
     
     const subtitle = this.add.text(GAME_WIDTH / 2, 100, 'Power up your defense', {
       fontSize: '12px',
@@ -2763,6 +3182,7 @@ export class GameScene extends Phaser.Scene {
     })
     subtitle.setOrigin(0.5)
     subtitle.setAlpha(0)
+    subtitle.setDepth(101)
     
     this.tweens.add({
       targets: [title, subtitle],
@@ -2793,8 +3213,14 @@ export class GameScene extends Phaser.Scene {
         subtitle.destroy()
         cards.forEach(c => c.destroy())
         
+        // Show defenders again
+        this.defenders.forEach(d => {
+          d.sprite.setVisible(true)
+        })
+        
         this.startWave()
       })
+      card.setDepth(101) // Above overlay
       
       cards.push(card)
     })
@@ -3011,10 +3437,18 @@ export class GameScene extends Phaser.Scene {
     
     this.cameras.main.fadeOut(600)
     this.time.delayedCall(600, () => {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/5051b6de-b0ce-411d-bf90-110293cecd7e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'GameScene.ts:gameOver:beforeSceneStart',message:'About to start GameOverScene',data:{},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'C'})}).catch(()=>{});
-      // #endregion
-      this.scene.start('GameOverScene', { isCampaignMode: this.isCampaignMode })
+      // Pause the scene - React's GameOver overlay will handle the UI
+      // The React GameCanvas component watches zustand lives and shows overlay when lives = 0
+      this.scene.pause('GameScene')
+      
+      // Emit event for React to catch if needed
+      if (this.game.events) {
+        this.game.events.emit('gameOver', { 
+          isCampaignMode: this.isCampaignMode,
+          score: useGameStore.getState().score,
+          wave: useGameStore.getState().wave,
+        })
+      }
     })
   }
 }

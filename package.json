@@ -3,13 +3,20 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev -p 3000",
+    "dev": "next dev -p 3004",
     "build": "next build",
-    "start": "next start -p 3000",
+    "start": "next start -p 3004",
     "lint": "next lint"
   },
   "dependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
+    "@fontsource/bebas-neue": "^5.2.7",
+    "@fontsource/oswald": "^5.2.8",
+    "@mui/icons-material": "^7.3.7",
+    "@mui/material": "^7.3.7",
     "@types/howler": "^2.2.12",
+    "framer-motion": "^12.29.2",
     "howler": "^2.2.4",
     "localforage": "^1.10.0",
     "next": "^14.2.5",

@@ -1,14 +1,10 @@
 import * as Phaser from 'phaser'
 import { BootScene } from '../scenes/BootScene'
-import { MenuScene } from '../scenes/MenuScene'
-import { MapScene } from '../scenes/MapScene'
-import { StageTransitionScene } from '../scenes/StageTransitionScene'
-import { RosterScene } from '../scenes/RosterScene'
 import { GameScene } from '../scenes/GameScene'
-import { GameOverScene } from '../scenes/GameOverScene'
-import { SuperBowlScene } from '../scenes/SuperBowlScene'
-import { EngageScene } from '../scenes/EngageScene'
-import { LeaderboardScene } from '../scenes/LeaderboardScene'
+
+// NOTE: All menu/UI scenes have been migrated to React components
+// See: /components/game/ for React overlays (GameOver, Leaderboard, etc.)
+// See: /components/ui/ for shared UI components
 
 // Portrait orientation for mobile-first
 export const GAME_WIDTH = 400
@@ -84,7 +80,7 @@ export const phaserConfig: Phaser.Types.Core.GameConfig = {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
   },
-  scene: [BootScene, MenuScene, MapScene, StageTransitionScene, RosterScene, GameScene, GameOverScene, SuperBowlScene, EngageScene, LeaderboardScene],
+  scene: [BootScene, GameScene], // UI scenes migrated to React
   physics: {
     default: 'arcade',
     arcade: {
