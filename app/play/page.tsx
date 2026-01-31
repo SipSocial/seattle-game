@@ -30,7 +30,7 @@ const pageVariants = {
 
 const pageTransition = {
   duration: 0.3,
-  ease: [0.4, 0, 0.2, 1], // Smooth easing
+  ease: [0.4, 0, 0.2, 1] as const, // Smooth easing (typed as tuple)
 }
 
 export default function PlayPage() {
