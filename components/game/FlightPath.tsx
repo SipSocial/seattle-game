@@ -28,10 +28,11 @@ export function FlightPath({
   const pathRef = useRef<SVGPathElement>(null)
   const planeContainerRef = useRef<HTMLDivElement>(null)
   const planeImageRef = useRef<HTMLDivElement>(null)
+  const touchZoneRef = useRef<HTMLDivElement>(null) // Large touch zone around plane
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 })
   const [isAnimating, setIsAnimating] = useState(false)
   
-  // Touch/drag interaction refs (like PlayerSelect)
+  // Touch/drag interaction refs (exactly like PlayerSelect)
   const targetX = useRef(0)
   const targetY = useRef(0)
   const currentX = useRef(0)
@@ -97,7 +98,8 @@ export function FlightPath({
     return () => window.removeEventListener('resize', updateDimensions)
   }, [])
 
-  // Buttery smooth 3D touch tracking for plane (like PlayerSelect)
+  // Buttery smooth 3D touch tracking for plane (EXACTLY like PlayerSelect)
+  // Uses the larger touch zone for better mobile interaction
   useEffect(() => {
     if (!showAirplane) return
 
@@ -106,16 +108,16 @@ export function FlightPath({
     const lerp = (start: number, end: number, factor: number) => start + (end - start) * factor
 
     const applyTransforms = () => {
-      const lerpFactor = isTouching.current ? 0.15 : 0.08
+      // Smooth interpolation - faster when touching, slower when releasing
+      const lerpFactor = isTouching.current ? 0.12 : 0.06
       currentX.current = lerp(currentX.current, targetX.current, lerpFactor)
       currentY.current = lerp(currentY.current, targetY.current, lerpFactor)
 
-      // 3D rotation and translation based on drag
-      const rotateY = currentX.current * 25 // More dramatic rotation
-      const rotateX = -currentY.current * 15
-      const translateX = currentX.current * 30
-      const translateY = currentY.current * 20
-      const scale = 1 + Math.abs(currentX.current) * 0.1 // Slight scale on drag
+      // 3D rotation and translation based on position
+      const rotateY = currentX.current * 15
+      const rotateX = -currentY.current * 10
+      const translateX = currentX.current * 20
+      const translateY = currentY.current * 15
 
       if (planeContainerRef.current) {
         planeContainerRef.current.style.transform = `
@@ -123,13 +125,18 @@ export function FlightPath({
           rotateX(${rotateX}deg)
           translateX(${translateX}px)
           translateY(${translateY}px)
-          scale(${scale})
         `
       }
 
       if (planeImageRef.current) {
         // Parallax effect on the image
-        planeImageRef.current.style.transform = `translateZ(30px) translateX(${currentX.current * 15}px)`
+        planeImageRef.current.style.transform = `translateZ(30px) translateX(${currentX.current * 10}px)`
+      }
+
+      // Update dragging state based on movement
+      const isMoving = Math.abs(currentX.current) > 0.05 || Math.abs(currentY.current) > 0.05
+      if (isMoving !== isDragging) {
+        setIsDragging(isMoving)
       }
 
       animationRef.current = requestAnimationFrame(applyTransforms)
@@ -137,89 +144,63 @@ export function FlightPath({
 
     animationRef.current = requestAnimationFrame(applyTransforms)
 
+    // Update target position based on touch/mouse position relative to touch zone center
     const updatePosition = (clientX: number, clientY: number) => {
-      if (!cachedRect) cachedRect = planeContainerRef.current?.getBoundingClientRect() || null
+      if (!cachedRect) cachedRect = touchZoneRef.current?.getBoundingClientRect() || null
       if (!cachedRect) return
+      // Map position to -1 to 1 range based on touch zone
       targetX.current = ((clientX - cachedRect.left) / cachedRect.width - 0.5) * 2
       targetY.current = ((clientY - cachedRect.top) / cachedRect.height - 0.5) * 2
     }
 
+    // Touch handlers - passive for smooth scrolling
     const handleTouchStart = (e: TouchEvent) => {
-      e.preventDefault()
       isTouching.current = true
-      setIsDragging(true)
-      cachedRect = planeContainerRef.current?.getBoundingClientRect() || null
+      cachedRect = touchZoneRef.current?.getBoundingClientRect() || null
       if (e.touches[0]) updatePosition(e.touches[0].clientX, e.touches[0].clientY)
     }
 
     const handleTouchMove = (e: TouchEvent) => {
-      e.preventDefault()
       if (e.touches[0]) updatePosition(e.touches[0].clientX, e.touches[0].clientY)
     }
 
     const handleTouchEnd = () => {
       isTouching.current = false
-      setIsDragging(false)
       targetX.current = 0
       targetY.current = 0
       cachedRect = null
     }
 
-    const handleMouseDown = (e: MouseEvent) => {
-      isTouching.current = true
-      setIsDragging(true)
-      cachedRect = planeContainerRef.current?.getBoundingClientRect() || null
-      updatePosition(e.clientX, e.clientY)
-    }
+    // Mouse handlers - follow mouse without requiring click
+    const handleMouseMove = (e: MouseEvent) => updatePosition(e.clientX, e.clientY)
+    const handleMouseLeave = () => { targetX.current = 0; targetY.current = 0; cachedRect = null }
+    const handleResize = () => { cachedRect = null }
 
-    const handleMouseMove = (e: MouseEvent) => {
-      if (isTouching.current) {
-        updatePosition(e.clientX, e.clientY)
-      }
-    }
-
-    const handleMouseUp = () => {
-      isTouching.current = false
-      setIsDragging(false)
-      targetX.current = 0
-      targetY.current = 0
-      cachedRect = null
-    }
-
-    const handleMouseLeave = () => {
-      if (isTouching.current) {
-        isTouching.current = false
-        setIsDragging(false)
-        targetX.current = 0
-        targetY.current = 0
-        cachedRect = null
-      }
-    }
-
-    const el = planeContainerRef.current
-    if (el) {
-      el.addEventListener('touchstart', handleTouchStart, { passive: false })
-      el.addEventListener('touchmove', handleTouchMove, { passive: false })
-      el.addEventListener('touchend', handleTouchEnd)
-      el.addEventListener('mousedown', handleMouseDown)
-      window.addEventListener('mousemove', handleMouseMove)
-      window.addEventListener('mouseup', handleMouseUp)
-      el.addEventListener('mouseleave', handleMouseLeave)
+    const touchZone = touchZoneRef.current
+    if (touchZone) {
+      // Use passive: true for buttery smooth touch handling (like PlayerSelect)
+      touchZone.addEventListener('touchstart', handleTouchStart, { passive: true })
+      touchZone.addEventListener('touchmove', handleTouchMove, { passive: true })
+      touchZone.addEventListener('touchend', handleTouchEnd, { passive: true })
+      touchZone.addEventListener('touchcancel', handleTouchEnd, { passive: true })
+      touchZone.addEventListener('mousemove', handleMouseMove, { passive: true })
+      touchZone.addEventListener('mouseleave', handleMouseLeave, { passive: true })
+      window.addEventListener('resize', handleResize, { passive: true })
     }
 
     return () => {
       cancelAnimationFrame(animationRef.current)
-      if (el) {
-        el.removeEventListener('touchstart', handleTouchStart)
-        el.removeEventListener('touchmove', handleTouchMove)
-        el.removeEventListener('touchend', handleTouchEnd)
-        el.removeEventListener('mousedown', handleMouseDown)
-        el.removeEventListener('mouseleave', handleMouseLeave)
+      if (touchZone) {
+        touchZone.removeEventListener('touchstart', handleTouchStart)
+        touchZone.removeEventListener('touchmove', handleTouchMove)
+        touchZone.removeEventListener('touchend', handleTouchEnd)
+        touchZone.removeEventListener('touchcancel', handleTouchEnd)
+        touchZone.removeEventListener('mousemove', handleMouseMove)
+        touchZone.removeEventListener('mouseleave', handleMouseLeave)
+        window.removeEventListener('resize', handleResize)
       }
-      window.removeEventListener('mousemove', handleMouseMove)
-      window.removeEventListener('mouseup', handleMouseUp)
     }
-  }, [showAirplane])
+  }, [showAirplane, isDragging])
 
   // Animate airplane along path
   useEffect(() => {
@@ -362,45 +343,49 @@ export function FlightPath({
 
       {/* Interactive Airplane with 3D touch/drag */}
       {showAirplane && pathData && (
-        <motion.div
-          className="absolute pointer-events-auto"
-          style={{
-            left: constrainedPlanePos.x,
-            top: constrainedPlanePos.y,
-            x: '-50%',
-            y: '-50%',
-            rotate: constrainedPlanePos.angle,
-            perspective: '1000px',
-            zIndex: 30,
-          }}
-          initial={{ opacity: 0, scale: 0 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.3, type: 'spring', stiffness: 200 }}
-        >
-          {/* 3D Container for touch interaction */}
+        <>
+          {/* LARGE TOUCH ZONE - covers generous area around plane for easy touch */}
           <div
-            ref={planeContainerRef}
-            className="relative cursor-grab active:cursor-grabbing select-none"
+            ref={touchZoneRef}
+            className="absolute pointer-events-auto cursor-grab active:cursor-grabbing"
             style={{
-              transformStyle: 'preserve-3d',
-              touchAction: 'none',
-              WebkitTouchCallout: 'none',
-              WebkitUserSelect: 'none',
+              left: constrainedPlanePos.x,
+              top: constrainedPlanePos.y,
+              width: '280px',
+              height: '200px',
+              transform: 'translate(-50%, -50%)',
+              zIndex: 25,
+              // Debug: uncomment to see touch zone
+              // background: 'rgba(255, 0, 0, 0.2)',
             }}
-            onClick={onPlaneClick}
+          />
+          
+          {/* Visual airplane - positioned at same location */}
+          <motion.div
+            className="absolute pointer-events-none"
+            style={{
+              left: constrainedPlanePos.x,
+              top: constrainedPlanePos.y,
+              x: '-50%',
+              y: '-50%',
+              rotate: constrainedPlanePos.angle,
+              perspective: '1000px',
+              zIndex: 30,
+            }}
+            initial={{ opacity: 0, scale: 0 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.3, type: 'spring', stiffness: 200 }}
           >
-            {/* Large touch target area - invisible but increases hit area */}
-            <div 
-              className="absolute inset-0 -m-8 pointer-events-auto"
-              style={{ 
-                width: 'calc(100% + 64px)', 
-                height: 'calc(100% + 64px)',
-                marginLeft: '-32px',
-                marginTop: '-32px',
+            {/* 3D Container for visual transforms */}
+            <div
+              ref={planeContainerRef}
+              className="relative select-none"
+              style={{
+                transformStyle: 'preserve-3d',
               }}
-            />
-            
-            {/* Glow effect that intensifies when dragging */}
+              onClick={onPlaneClick}
+            >
+              {/* Glow effect that intensifies when dragging */}
             <motion.div
               className="absolute inset-0 rounded-full pointer-events-none"
               style={{
@@ -557,11 +542,12 @@ export function FlightPath({
               transition={{ delay: 2 }}
             >
               <span className="text-[10px] text-[#69BE28] uppercase tracking-wider font-bold">
-                Drag to inspect
+                Touch to move
               </span>
             </motion.div>
           </div>
         </motion.div>
+        </>
       )}
     </div>
   )
