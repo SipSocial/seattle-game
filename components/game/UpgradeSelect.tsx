@@ -73,23 +73,26 @@ function UpgradeCard({ upgrade, index, onSelect }: UpgradeCardProps) {
       className="w-full relative overflow-hidden rounded-2xl outline-none focus:outline-none active:scale-[0.98] transition-transform"
       style={{
         background: 'linear-gradient(135deg, rgba(0,0,0,0.85) 0%, rgba(15,15,15,0.9) 100%)',
-        borderWidth: 1,
-        borderStyle: 'solid',
-        borderColor: `${upgrade.color}50`,
+        border: `1px solid ${upgrade.color}50`,
       }}
     >
       {/* Left accent bar */}
       <div
-        className="absolute left-0 top-0 bottom-0 w-1.5 rounded-l-2xl"
-        style={{ backgroundColor: upgrade.color }}
+        className="absolute left-0 top-0 bottom-0 rounded-l-2xl"
+        style={{ width: '6px', backgroundColor: upgrade.color }}
       />
       
-      {/* Content row - MORE PADDING */}
-      <div className="flex items-center gap-5 py-5 pl-7 pr-5">
-        {/* Icon - larger with more breathing room */}
+      {/* Content row */}
+      <div 
+        className="flex items-center"
+        style={{ gap: '20px', padding: '20px 20px 20px 28px' }}
+      >
+        {/* Icon */}
         <div
-          className="flex-shrink-0 flex items-center justify-center w-14 h-14 rounded-full"
+          className="flex-shrink-0 flex items-center justify-center rounded-full"
           style={{
+            width: '56px',
+            height: '56px',
             backgroundColor: `${upgrade.color}20`,
             border: `2px solid ${upgrade.color}60`,
             color: upgrade.color,
@@ -98,23 +101,24 @@ function UpgradeCard({ upgrade, index, onSelect }: UpgradeCardProps) {
           <IconComponent className="w-7 h-7" />
         </div>
         
-        {/* Text - with proper spacing */}
-        <div className="flex-1 min-w-0 text-left py-1">
+        {/* Text */}
+        <div className="flex-1 min-w-0 text-left">
           <h3
-            className="text-xl font-bold uppercase tracking-wide text-white mb-1"
-            style={{ fontFamily: 'var(--font-oswald), system-ui, sans-serif' }}
+            className="text-xl font-bold uppercase tracking-wide text-white"
+            style={{ fontFamily: 'var(--font-oswald), sans-serif', marginBottom: '4px' }}
           >
             {upgrade.name}
           </h3>
-          <p className="text-sm text-white/50">
+          <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.5)' }}>
             {upgrade.description}
           </p>
         </div>
         
-        {/* Arrow - with more space from edge */}
-        <div className="flex-shrink-0 ml-2">
+        {/* Arrow */}
+        <div className="flex-shrink-0">
           <svg 
-            className="w-6 h-6" 
+            width="24"
+            height="24"
             viewBox="0 0 24 24" 
             fill="none" 
             stroke={upgrade.color}
@@ -142,79 +146,95 @@ export function UpgradeSelect() {
     <AnimatePresence>
       {isOpen && (
         <motion.div
-          className="fixed inset-0 z-50 flex flex-col"
+          className="fixed inset-0 z-50 flex items-center justify-center"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          style={{
-            paddingTop: 'env(safe-area-inset-top)',
-            paddingBottom: 'env(safe-area-inset-bottom)',
-            paddingLeft: 'env(safe-area-inset-left)',
-            paddingRight: 'env(safe-area-inset-right)',
-          }}
         >
           {/* Backdrop */}
           <motion.div
-            className="absolute inset-0 bg-gradient-to-b from-black/90 via-[#001a33]/95 to-[#002244]/95"
-            style={{ backdropFilter: 'blur(8px)' }}
+            className="absolute inset-0"
+            style={{ 
+              background: 'linear-gradient(180deg, rgba(0,0,0,0.92) 0%, rgba(0,26,51,0.95) 50%, rgba(0,34,68,0.95) 100%)',
+              backdropFilter: 'blur(8px)',
+            }}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
           />
           
-          {/* Full height flex container */}
-          <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-8">
-            
-            {/* Content wrapper with max-width */}
-            <div className="w-full max-w-[340px]">
-              
-              {/* Header - more vertical spacing */}
-              <motion.div
-                className="text-center mb-10"
-                initial={{ y: -20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.05 }}
+          {/* Content */}
+          <motion.div 
+            className="relative z-10 w-full"
+            style={{ 
+              maxWidth: '380px',
+              padding: '24px',
+            }}
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.05, type: 'spring', stiffness: 300, damping: 28 }}
+          >
+            {/* Header */}
+            <div className="text-center" style={{ marginBottom: '40px' }}>
+              {/* Decorative line */}
+              <div 
+                className="flex items-center justify-center"
+                style={{ gap: '12px', marginBottom: '16px' }}
               >
-                {/* Decorative line */}
-                <div className="flex items-center justify-center gap-3 mb-4">
-                  <div className="h-px w-14 bg-gradient-to-r from-transparent to-[#69BE28]/60" />
-                  <div className="w-2 h-2 rotate-45 bg-[#69BE28]" />
-                  <div className="h-px w-14 bg-gradient-to-l from-transparent to-[#69BE28]/60" />
-                </div>
-                
-                <h1
-                  className="text-3xl font-bold uppercase tracking-wide text-white mb-2"
-                  style={{ fontFamily: 'var(--font-oswald), system-ui, sans-serif' }}
-                >
-                  Choose Upgrade
-                </h1>
-                <p className="text-sm uppercase tracking-widest text-white/40">
-                  Power up your defense
-                </p>
-              </motion.div>
-              
-              {/* Upgrade Cards */}
-              <div className="flex flex-col" style={{ gap: '16px' }}>
-                {upgrades.map((upgrade, index) => (
-                  <UpgradeCard
-                    key={upgrade.type}
-                    upgrade={upgrade}
-                    index={index}
-                    onSelect={handleSelect}
-                  />
-                ))}
+                <div 
+                  className="bg-gradient-to-r from-transparent to-[#69BE28]/60"
+                  style={{ height: '1px', width: '56px' }}
+                />
+                <div 
+                  className="bg-[#69BE28]"
+                  style={{ width: '8px', height: '8px', transform: 'rotate(45deg)' }}
+                />
+                <div 
+                  className="bg-gradient-to-l from-transparent to-[#69BE28]/60"
+                  style={{ height: '1px', width: '56px' }}
+                />
               </div>
               
-              {/* Footer hint - more spacing above */}
-              <motion.p
-                className="text-center mt-10 text-xs uppercase tracking-widest text-white/25"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.4 }}
+              <h1
+                className="font-black uppercase tracking-wide text-white"
+                style={{ 
+                  fontFamily: 'var(--font-oswald), sans-serif',
+                  fontSize: '32px',
+                  marginBottom: '8px',
+                }}
               >
-                Tap to select
-              </motion.p>
+                Choose Upgrade
+              </h1>
+              <p 
+                className="uppercase tracking-widest"
+                style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)' }}
+              >
+                Power up your defense
+              </p>
             </div>
-          </div>
+            
+            {/* Upgrade Cards */}
+            <div className="flex flex-col" style={{ gap: '16px' }}>
+              {upgrades.map((upgrade, index) => (
+                <UpgradeCard
+                  key={upgrade.type}
+                  upgrade={upgrade}
+                  index={index}
+                  onSelect={handleSelect}
+                />
+              ))}
+            </div>
+            
+            {/* Footer hint */}
+            <motion.p
+              className="text-center uppercase tracking-widest"
+              style={{ marginTop: '40px', fontSize: '11px', color: 'rgba(255,255,255,0.25)' }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.4 }}
+            >
+              Tap to select
+            </motion.p>
+          </motion.div>
         </motion.div>
       )}
     </AnimatePresence>
