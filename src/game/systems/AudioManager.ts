@@ -1,220 +1,245 @@
 /**
  * Audio Manager for Dark Side Game
- * Robust Web Audio API implementation with proper lifecycle management
+ * Professional-grade Web Audio API implementation
  * 
- * Key features:
- * - Guaranteed audio unlock on first user interaction
- * - Sound queuing for pre-unlock plays
- * - Proper AudioContext state management
- * - Singleton pattern with React-friendly unlock hooks
+ * Features:
+ * - Robust initialization with extensive debugging
+ * - Distinctive, musically-designed sounds
+ * - ADSR envelopes for professional sound shaping
+ * - Proper gain staging and mixing
+ * - Comprehensive error handling and logging
  */
 
-// Sound types for queuing
-type SoundType = 
-  // Game sounds
-  | 'tackle' | 'bigTackle' | 'touchdown' | 'powerUp' 
-  | 'waveComplete' | 'upgrade' | 'gameOver' | 'click'
-  | 'crowdRoar' | 'fanMeterPulse' | 'crowdCheer' | 'bossWarning' | 'victoryFanfare'
-  // UI/Menu sounds
-  | 'menuClick' | 'menuHover' | 'menuBack'
-  | 'navigate' | 'navigateHeavy'
-  | 'select' | 'confirm' | 'cancel'
-  | 'swoosh' | 'transition'
-  | 'playerSwipe' | 'playerSelect'
-  | 'success' | 'error' | 'notification'
+// Debug mode - set to true to see all audio events in console
+const DEBUG_AUDIO = true
 
-// Audio state enum for clarity
+function log(...args: unknown[]) {
+  if (DEBUG_AUDIO) {
+    console.log('[Audio]', ...args)
+  }
+}
+
+function warn(...args: unknown[]) {
+  console.warn('[Audio]', ...args)
+}
+
+// Audio state
 enum AudioState {
-  UNINITIALIZED = 'UNINITIALIZED',  // No context created yet
-  SUSPENDED = 'SUSPENDED',           // Context created but suspended (needs user gesture)
-  RUNNING = 'RUNNING',               // Fully operational
-  CLOSED = 'CLOSED',                 // Context closed (cleanup)
+  UNINITIALIZED = 'UNINITIALIZED',
+  SUSPENDED = 'SUSPENDED',
+  RUNNING = 'RUNNING',
+  CLOSED = 'CLOSED',
 }
 
 class AudioManagerClass {
-  private audioContext: AudioContext | null = null
+  private ctx: AudioContext | null = null
+  private masterGain: GainNode | null = null
   private state: AudioState = AudioState.UNINITIALIZED
   private enabled = true
-  private volume = 0.7
-  private crowdIntensity = 1.0
+  private volume = 0.8
+  private initAttempts = 0
+  private maxInitAttempts = 3
   
-  // Queue for sounds played before audio is unlocked
-  private pendingQueue: SoundType[] = []
-  private maxQueueSize = 5 // Prevent queue explosion
+  // Track sounds played for debugging
+  private soundsPlayed = 0
+  private lastSoundTime = 0
   
-  // Listeners for state changes
+  // State change listeners
   private stateListeners: Set<(state: AudioState) => void> = new Set()
   
-  // Master gain for volume control
-  private masterGain: GainNode | null = null
-  
   // ============================================
-  // INITIALIZATION & STATE MANAGEMENT
+  // INITIALIZATION
   // ============================================
   
   /**
-   * Initialize AudioContext - call this early, but audio won't play until unlock()
-   * Safe to call multiple times
+   * Initialize the audio context
+   * Call this as early as possible
    */
-  public init(): void {
-    if (this.audioContext) return
-    if (typeof window === 'undefined') return
+  public init(): boolean {
+    if (this.ctx && this.state !== AudioState.CLOSED) {
+      log('Already initialized, state:', this.state)
+      return true
+    }
+    
+    if (typeof window === 'undefined') {
+      warn('No window object - SSR environment')
+      return false
+    }
+    
+    this.initAttempts++
+    log(`Initializing audio (attempt ${this.initAttempts}/${this.maxInitAttempts})...`)
     
     try {
-      const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
+      const AudioContextClass = window.AudioContext || 
+        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
+      
       if (!AudioContextClass) {
-        console.warn('[AudioManager] Web Audio API not supported')
-        return
+        warn('Web Audio API not supported in this browser')
+        return false
       }
       
-      this.audioContext = new AudioContextClass()
+      this.ctx = new AudioContextClass()
       
-      // Create master gain
-      this.masterGain = this.audioContext.createGain()
+      // Create master gain node
+      this.masterGain = this.ctx.createGain()
       this.masterGain.gain.value = this.volume
-      this.masterGain.connect(this.audioContext.destination)
+      this.masterGain.connect(this.ctx.destination)
       
-      // Update state based on context state
-      this.updateState()
+      // Update state
+      this.syncState()
       
-      // Listen for state changes (browser may suspend/resume)
-      this.audioContext.addEventListener('statechange', () => {
-        this.updateState()
+      // Listen for state changes
+      this.ctx.addEventListener('statechange', () => {
+        this.syncState()
       })
       
-      console.log('[AudioManager] Initialized, state:', this.state)
+      log('Initialized successfully!')
+      log('  Sample rate:', this.ctx.sampleRate)
+      log('  State:', this.ctx.state)
+      log('  Base latency:', this.ctx.baseLatency, 'ms')
+      
+      return true
     } catch (e) {
-      console.warn('[AudioManager] Failed to initialize:', e)
+      warn('Failed to initialize:', e)
+      return false
     }
   }
   
-  /**
-   * Update internal state from AudioContext state
-   */
-  private updateState(): void {
-    if (!this.audioContext) {
+  private syncState(): void {
+    if (!this.ctx) {
       this.setState(AudioState.UNINITIALIZED)
       return
     }
     
-    switch (this.audioContext.state) {
-      case 'suspended':
-        this.setState(AudioState.SUSPENDED)
-        break
-      case 'running':
-        this.setState(AudioState.RUNNING)
-        break
-      case 'closed':
-        this.setState(AudioState.CLOSED)
-        break
+    switch (this.ctx.state) {
+      case 'suspended': this.setState(AudioState.SUSPENDED); break
+      case 'running': this.setState(AudioState.RUNNING); break
+      case 'closed': this.setState(AudioState.CLOSED); break
     }
   }
   
-  /**
-   * Set state and notify listeners
-   */
   private setState(newState: AudioState): void {
     if (this.state === newState) return
     
     const prevState = this.state
     this.state = newState
     
-    console.log('[AudioManager] State change:', prevState, '->', newState)
+    log('State changed:', prevState, '->', newState)
     
     // Notify listeners
-    this.stateListeners.forEach(listener => listener(newState))
-    
-    // If we just became RUNNING, flush the queue
-    if (newState === AudioState.RUNNING && prevState !== AudioState.RUNNING) {
-      this.flushQueue()
-    }
-  }
-  
-  /**
-   * Unlock audio - MUST be called from a user interaction event handler
-   * Returns a promise that resolves when audio is fully ready
-   */
-  public async unlock(): Promise<boolean> {
-    // Initialize if not already
-    if (!this.audioContext) {
-      this.init()
-    }
-    
-    if (!this.audioContext) {
-      console.warn('[AudioManager] Cannot unlock - no AudioContext')
-      return false
-    }
-    
-    // Already running
-    if (this.state === AudioState.RUNNING) {
-      return true
-    }
-    
-    try {
-      // Resume the context
-      await this.audioContext.resume()
-      
-      // iOS Safari requires playing a silent buffer to fully unlock
-      await this.playSilentBuffer()
-      
-      this.updateState()
-      
-      const isRunning = this.audioContext.state === 'running'
-      console.log('[AudioManager] Unlocked successfully, running:', isRunning)
-      return isRunning
-    } catch (e) {
-      console.warn('[AudioManager] Unlock failed:', e)
-      return false
-    }
-  }
-  
-  /**
-   * Play a silent buffer to unlock iOS audio
-   */
-  private async playSilentBuffer(): Promise<void> {
-    if (!this.audioContext) return
-    
-    const buffer = this.audioContext.createBuffer(1, 1, 22050)
-    const source = this.audioContext.createBufferSource()
-    source.buffer = buffer
-    source.connect(this.audioContext.destination)
-    source.start(0)
-    
-    // Wait for it to finish
-    return new Promise(resolve => {
-      source.onended = () => resolve()
-      // Fallback timeout
-      setTimeout(resolve, 100)
+    this.stateListeners.forEach(listener => {
+      try {
+        listener(newState)
+      } catch (e) {
+        warn('State listener error:', e)
+      }
     })
   }
   
   /**
-   * Alias for unlock (backwards compatibility)
-   */
-  public async resume(): Promise<boolean> {
-    return this.unlock()
-  }
-  
-  /**
-   * Get current audio state
-   */
-  public getState(): AudioState {
-    return this.state
-  }
-  
-  /**
-   * Check if audio is ready to play
-   */
-  public isReady(): boolean {
-    return this.state === AudioState.RUNNING
-  }
-  
-  /**
    * Subscribe to state changes
+   * Returns unsubscribe function
    */
   public onStateChange(listener: (state: AudioState) => void): () => void {
     this.stateListeners.add(listener)
-    return () => this.stateListeners.delete(listener)
+    return () => {
+      this.stateListeners.delete(listener)
+    }
+  }
+  
+  /**
+   * Unlock audio - MUST be called from user interaction
+   */
+  public async unlock(): Promise<boolean> {
+    log('Unlock requested...')
+    
+    // Initialize if needed
+    if (!this.ctx) {
+      if (!this.init()) {
+        warn('Failed to init during unlock')
+        return false
+      }
+    }
+    
+    if (!this.ctx) {
+      warn('No context after init')
+      return false
+    }
+    
+    // Already running?
+    if (this.ctx.state === 'running') {
+      log('Already running!')
+      return true
+    }
+    
+    try {
+      log('Resuming context...')
+      await this.ctx.resume()
+      
+      // iOS needs a silent sound to fully unlock
+      log('Playing silent buffer for iOS...')
+      await this.playSilent()
+      
+      this.syncState()
+      
+      // Use our internal state tracking
+      const success = this.state === AudioState.RUNNING
+      log('Unlock result:', success ? 'SUCCESS' : 'FAILED', '- state:', this.state)
+      
+      if (success) {
+        // Play a test sound to confirm
+        this.playTestBeep()
+      }
+      
+      return success
+    } catch (e) {
+      warn('Unlock failed:', e)
+      return false
+    }
+  }
+  
+  private async playSilent(): Promise<void> {
+    if (!this.ctx) return
+    
+    const buffer = this.ctx.createBuffer(1, 1, 22050)
+    const source = this.ctx.createBufferSource()
+    source.buffer = buffer
+    source.connect(this.ctx.destination)
+    source.start(0)
+    
+    return new Promise(resolve => {
+      source.onended = () => resolve()
+      setTimeout(resolve, 50)
+    })
+  }
+  
+  /**
+   * Quick test beep to confirm audio is working
+   */
+  private playTestBeep(): void {
+    if (!this.ctx || !this.masterGain) return
+    
+    const osc = this.ctx.createOscillator()
+    const gain = this.ctx.createGain()
+    
+    osc.type = 'sine'
+    osc.frequency.value = 440
+    
+    gain.gain.setValueAtTime(0.1, this.ctx.currentTime)
+    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.1)
+    
+    osc.connect(gain)
+    gain.connect(this.masterGain)
+    
+    osc.start()
+    osc.stop(this.ctx.currentTime + 0.1)
+    
+    log('Test beep played')
+  }
+  
+  // Alias for backwards compatibility
+  public resume(): Promise<boolean> {
+    return this.unlock()
   }
   
   // ============================================
@@ -223,6 +248,7 @@ class AudioManagerClass {
   
   public setEnabled(enabled: boolean): void {
     this.enabled = enabled
+    log('Enabled:', enabled)
   }
   
   public isEnabled(): boolean {
@@ -231,97 +257,29 @@ class AudioManagerClass {
   
   public setVolume(vol: number): void {
     this.volume = Math.max(0, Math.min(1, vol))
-    
-    // Update master gain if available
-    if (this.masterGain && this.audioContext) {
-      this.masterGain.gain.setTargetAtTime(
-        this.volume,
-        this.audioContext.currentTime,
-        0.05 // Smooth transition
-      )
+    if (this.masterGain && this.ctx) {
+      this.masterGain.gain.setTargetAtTime(this.volume, this.ctx.currentTime, 0.05)
     }
+    log('Volume:', this.volume)
   }
   
   public getVolume(): number {
     return this.volume
   }
   
-  public setCrowdIntensity(intensity: number): void {
-    this.crowdIntensity = Math.max(0, Math.min(1, intensity))
+  public getState(): AudioState {
+    return this.state
   }
   
-  // ============================================
-  // QUEUE MANAGEMENT
-  // ============================================
-  
-  /**
-   * Add sound to queue if not ready, or play immediately
-   */
-  private queueOrPlay(soundType: SoundType, playFn: () => void): void {
-    if (!this.enabled) return
-    
-    if (this.state === AudioState.RUNNING) {
-      playFn()
-    } else {
-      // Queue for later (but limit queue size)
-      if (this.pendingQueue.length < this.maxQueueSize) {
-        this.pendingQueue.push(soundType)
-      }
-    }
+  public isReady(): boolean {
+    return this.state === AudioState.RUNNING
   }
   
-  /**
-   * Flush queued sounds
-   */
-  private flushQueue(): void {
-    console.log('[AudioManager] Flushing queue:', this.pendingQueue.length, 'sounds')
-    
-    const queue = [...this.pendingQueue]
-    this.pendingQueue = []
-    
-    // Play each queued sound with slight delay between
-    queue.forEach((soundType, index) => {
-      setTimeout(() => {
-        this.playSoundByType(soundType)
-      }, index * 50)
-    })
-  }
-  
-  /**
-   * Play a sound by its type
-   */
-  private playSoundByType(type: SoundType): void {
-    switch (type) {
-      // Game sounds
-      case 'tackle': this.playTackleImmediate(); break
-      case 'bigTackle': this.playBigTackleImmediate(); break
-      case 'touchdown': this.playTouchdownImmediate(); break
-      case 'powerUp': this.playPowerUpImmediate(); break
-      case 'waveComplete': this.playWaveCompleteImmediate(); break
-      case 'upgrade': this.playUpgradeImmediate(); break
-      case 'gameOver': this.playGameOverImmediate(); break
-      case 'click': this.playClickImmediate(); break
-      case 'crowdRoar': this.playCrowdRoarImmediate(); break
-      case 'fanMeterPulse': this.playFanMeterPulseImmediate(); break
-      case 'crowdCheer': this.playCrowdCheerImmediate(); break
-      case 'bossWarning': this.playBossWarningImmediate(); break
-      case 'victoryFanfare': this.playVictoryFanfareImmediate(); break
-      // UI/Menu sounds
-      case 'menuClick': this.playMenuClickImmediate(); break
-      case 'menuHover': this.playMenuHoverImmediate(); break
-      case 'menuBack': this.playMenuBackImmediate(); break
-      case 'navigate': this.playNavigateImmediate(); break
-      case 'navigateHeavy': this.playNavigateHeavyImmediate(); break
-      case 'select': this.playSelectImmediate(); break
-      case 'confirm': this.playConfirmImmediate(); break
-      case 'cancel': this.playCancelImmediate(); break
-      case 'swoosh': this.playSwooshImmediate(); break
-      case 'transition': this.playTransitionImmediate(); break
-      case 'playerSwipe': this.playPlayerSwipeImmediate(); break
-      case 'playerSelect': this.playPlayerSelectImmediate(); break
-      case 'success': this.playSuccessImmediate(); break
-      case 'error': this.playErrorImmediate(); break
-      case 'notification': this.playNotificationImmediate(); break
+  public getStats(): { soundsPlayed: number; lastSoundTime: number; state: string } {
+    return {
+      soundsPlayed: this.soundsPlayed,
+      lastSoundTime: this.lastSoundTime,
+      state: this.state,
     }
   }
   
@@ -329,1029 +287,800 @@ class AudioManagerClass {
   // SOUND HELPERS
   // ============================================
   
-  /**
-   * Get current time, or 0 if not ready
-   */
+  private canPlay(): boolean {
+    if (!this.enabled) {
+      log('Sound skipped - disabled')
+      return false
+    }
+    
+    if (!this.ctx || !this.masterGain) {
+      log('Sound skipped - no context')
+      return false
+    }
+    
+    if (this.state !== AudioState.RUNNING) {
+      log('Sound skipped - state:', this.state)
+      // Try to init/unlock
+      this.unlock()
+      return false
+    }
+    
+    return true
+  }
+  
+  private trackSound(name: string): void {
+    this.soundsPlayed++
+    this.lastSoundTime = Date.now()
+    log(`Playing: ${name} (#${this.soundsPlayed})`)
+  }
+  
   private now(): number {
-    return this.audioContext?.currentTime ?? 0
+    return this.ctx?.currentTime ?? 0
   }
   
   /**
-   * Create an oscillator connected to master gain
+   * Create an oscillator with gain, connected to master
    */
-  private createOsc(type: OscillatorType = 'sine'): { osc: OscillatorNode; gain: GainNode } | null {
-    if (!this.audioContext || !this.masterGain) return null
+  private osc(type: OscillatorType = 'sine'): { o: OscillatorNode; g: GainNode } | null {
+    if (!this.ctx || !this.masterGain) return null
     
-    const osc = this.audioContext.createOscillator()
-    const gain = this.audioContext.createGain()
+    const o = this.ctx.createOscillator()
+    const g = this.ctx.createGain()
     
-    osc.type = type
-    osc.connect(gain)
-    gain.connect(this.masterGain)
+    o.type = type
+    o.connect(g)
+    g.connect(this.masterGain)
     
-    return { osc, gain }
+    return { o, g }
+  }
+  
+  /**
+   * Create a noise source (white noise)
+   */
+  private noise(duration: number): { source: AudioBufferSourceNode; g: GainNode } | null {
+    if (!this.ctx || !this.masterGain) return null
+    
+    const bufferSize = this.ctx.sampleRate * duration
+    const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate)
+    const data = buffer.getChannelData(0)
+    
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = Math.random() * 2 - 1
+    }
+    
+    const source = this.ctx.createBufferSource()
+    source.buffer = buffer
+    
+    const g = this.ctx.createGain()
+    source.connect(g)
+    g.connect(this.masterGain)
+    
+    return { source, g }
   }
   
   // ============================================
-  // PUBLIC SOUND METHODS (with queueing)
+  // UI SOUNDS - Distinctive & Musical
   // ============================================
   
-  public playTackle(): void {
-    this.queueOrPlay('tackle', () => this.playTackleImmediate())
-  }
-  
-  public playBigTackle(): void {
-    this.queueOrPlay('bigTackle', () => this.playBigTackleImmediate())
-  }
-  
-  public playTouchdown(): void {
-    this.queueOrPlay('touchdown', () => this.playTouchdownImmediate())
-  }
-  
-  public playPowerUp(): void {
-    this.queueOrPlay('powerUp', () => this.playPowerUpImmediate())
-  }
-  
-  public playWaveComplete(): void {
-    this.queueOrPlay('waveComplete', () => this.playWaveCompleteImmediate())
-  }
-  
-  public playUpgrade(): void {
-    this.queueOrPlay('upgrade', () => this.playUpgradeImmediate())
-  }
-  
-  public playGameOver(): void {
-    this.queueOrPlay('gameOver', () => this.playGameOverImmediate())
-  }
-  
+  /**
+   * CLICK - Primary button press
+   * Punchy, satisfying click with sub bass
+   */
   public playClick(): void {
-    this.queueOrPlay('click', () => this.playClickImmediate())
-  }
-  
-  public playCrowdRoar(): void {
-    this.queueOrPlay('crowdRoar', () => this.playCrowdRoarImmediate())
-  }
-  
-  public playFanMeterPulse(): void {
-    this.queueOrPlay('fanMeterPulse', () => this.playFanMeterPulseImmediate())
-  }
-  
-  public playCrowdCheer(): void {
-    this.queueOrPlay('crowdCheer', () => this.playCrowdCheerImmediate())
-  }
-  
-  public playBossWarning(): void {
-    this.queueOrPlay('bossWarning', () => this.playBossWarningImmediate())
-  }
-  
-  public playVictoryFanfare(): void {
-    this.queueOrPlay('victoryFanfare', () => this.playVictoryFanfareImmediate())
-  }
-  
-  // ============================================
-  // UI/MENU SOUND METHODS
-  // ============================================
-  
-  /**
-   * Menu click - crisp, satisfying tap
-   */
-  public playMenuClick(): void {
-    this.queueOrPlay('menuClick', () => this.playMenuClickImmediate())
-  }
-  
-  /**
-   * Menu hover - subtle hint
-   */
-  public playMenuHover(): void {
-    this.queueOrPlay('menuHover', () => this.playMenuHoverImmediate())
+    if (!this.canPlay()) return
+    this.trackSound('click')
+    
+    const t = this.now()
+    
+    // Main click - sine with fast attack
+    const main = this.osc('sine')
+    if (main) {
+      main.o.frequency.setValueAtTime(800, t)
+      main.o.frequency.exponentialRampToValueAtTime(400, t + 0.05)
+      
+      main.g.gain.setValueAtTime(0.3, t)
+      main.g.gain.exponentialRampToValueAtTime(0.001, t + 0.08)
+      
+      main.o.start(t)
+      main.o.stop(t + 0.08)
+    }
+    
+    // Sub thump
+    const sub = this.osc('sine')
+    if (sub) {
+      sub.o.frequency.setValueAtTime(150, t)
+      sub.o.frequency.exponentialRampToValueAtTime(60, t + 0.06)
+      
+      sub.g.gain.setValueAtTime(0.25, t)
+      sub.g.gain.exponentialRampToValueAtTime(0.001, t + 0.1)
+      
+      sub.o.start(t)
+      sub.o.stop(t + 0.1)
+    }
   }
   
   /**
-   * Menu back - soft reverse swoosh
-   */
-  public playMenuBack(): void {
-    this.queueOrPlay('menuBack', () => this.playMenuBackImmediate())
-  }
-  
-  /**
-   * Navigate - arrow clicks, pagination
+   * NAVIGATE - Arrow/pagination click
+   * Quick, snappy tick
    */
   public playNavigate(): void {
-    this.queueOrPlay('navigate', () => this.playNavigateImmediate())
+    if (!this.canPlay()) return
+    this.trackSound('navigate')
+    
+    const t = this.now()
+    
+    // High tick
+    const tick = this.osc('triangle')
+    if (tick) {
+      tick.o.frequency.setValueAtTime(2000, t)
+      tick.o.frequency.exponentialRampToValueAtTime(1200, t + 0.02)
+      
+      tick.g.gain.setValueAtTime(0.15, t)
+      tick.g.gain.exponentialRampToValueAtTime(0.001, t + 0.04)
+      
+      tick.o.start(t)
+      tick.o.stop(t + 0.04)
+    }
+    
+    // Body
+    const body = this.osc('sine')
+    if (body) {
+      body.o.frequency.setValueAtTime(600, t)
+      body.o.frequency.exponentialRampToValueAtTime(400, t + 0.03)
+      
+      body.g.gain.setValueAtTime(0.12, t)
+      body.g.gain.exponentialRampToValueAtTime(0.001, t + 0.05)
+      
+      body.o.start(t)
+      body.o.stop(t + 0.05)
+    }
   }
   
   /**
-   * Navigate heavy - significant navigation action
-   */
-  public playNavigateHeavy(): void {
-    this.queueOrPlay('navigateHeavy', () => this.playNavigateHeavyImmediate())
-  }
-  
-  /**
-   * Select - choosing an option
-   */
-  public playSelect(): void {
-    this.queueOrPlay('select', () => this.playSelectImmediate())
-  }
-  
-  /**
-   * Confirm - finalizing a choice (stronger than select)
+   * CONFIRM - Primary action confirmation
+   * Triumphant major chord with shimmer
    */
   public playConfirm(): void {
-    this.queueOrPlay('confirm', () => this.playConfirmImmediate())
-  }
-  
-  /**
-   * Cancel - backing out of something
-   */
-  public playCancel(): void {
-    this.queueOrPlay('cancel', () => this.playCancelImmediate())
-  }
-  
-  /**
-   * Swoosh - page/screen transitions
-   */
-  public playSwoosh(): void {
-    this.queueOrPlay('swoosh', () => this.playSwooshImmediate())
-  }
-  
-  /**
-   * Transition - modal opening/closing
-   */
-  public playTransition(): void {
-    this.queueOrPlay('transition', () => this.playTransitionImmediate())
-  }
-  
-  /**
-   * Player swipe - swiping between players in carousel
-   */
-  public playPlayerSwipe(): void {
-    this.queueOrPlay('playerSwipe', () => this.playPlayerSwipeImmediate())
-  }
-  
-  /**
-   * Player select - selecting a player to play as
-   */
-  public playPlayerSelect(): void {
-    this.queueOrPlay('playerSelect', () => this.playPlayerSelectImmediate())
-  }
-  
-  /**
-   * Success - positive feedback
-   */
-  public playSuccess(): void {
-    this.queueOrPlay('success', () => this.playSuccessImmediate())
-  }
-  
-  /**
-   * Error - negative feedback
-   */
-  public playError(): void {
-    this.queueOrPlay('error', () => this.playErrorImmediate())
-  }
-  
-  /**
-   * Notification - attention getter
-   */
-  public playNotification(): void {
-    this.queueOrPlay('notification', () => this.playNotificationImmediate())
-  }
-  
-  // ============================================
-  // IMMEDIATE SOUND IMPLEMENTATIONS
-  // ============================================
-  
-  private playTackleImmediate(): void {
-    const nodes = this.createOsc('sine')
-    if (!nodes) return
+    if (!this.canPlay()) return
+    this.trackSound('confirm')
     
-    const { osc, gain } = nodes
-    const now = this.now()
+    const t = this.now()
     
-    osc.frequency.setValueAtTime(150, now)
-    osc.frequency.exponentialRampToValueAtTime(50, now + 0.1)
-    
-    gain.gain.setValueAtTime(0.5, now)
-    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15)
-    
-    osc.start(now)
-    osc.stop(now + 0.15)
-    
-    // Click layer
-    const click = this.createOsc('square')
-    if (click) {
-      click.osc.frequency.setValueAtTime(300, now)
-      click.osc.frequency.exponentialRampToValueAtTime(100, now + 0.05)
-      click.gain.gain.setValueAtTime(0.2, now)
-      click.gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08)
-      click.osc.start(now)
-      click.osc.stop(now + 0.08)
-    }
-  }
-  
-  private playBigTackleImmediate(): void {
-    const nodes = this.createOsc('sine')
-    if (!nodes) return
-    
-    const { osc, gain } = nodes
-    const now = this.now()
-    
-    osc.frequency.setValueAtTime(80, now)
-    osc.frequency.exponentialRampToValueAtTime(30, now + 0.2)
-    
-    gain.gain.setValueAtTime(0.7, now)
-    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25)
-    
-    osc.start(now)
-    osc.stop(now + 0.25)
-  }
-  
-  private playTouchdownImmediate(): void {
-    const nodes = this.createOsc('sawtooth')
-    if (!nodes) return
-    
-    const { osc, gain } = nodes
-    const now = this.now()
-    
-    osc.frequency.setValueAtTime(400, now)
-    osc.frequency.exponentialRampToValueAtTime(100, now + 0.3)
-    
-    gain.gain.setValueAtTime(0.3, now)
-    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35)
-    
-    osc.start(now)
-    osc.stop(now + 0.35)
-  }
-  
-  private playPowerUpImmediate(): void {
-    const now = this.now()
-    
-    for (let i = 0; i < 3; i++) {
-      const nodes = this.createOsc('sine')
-      if (!nodes) continue
-      
-      const { osc, gain } = nodes
-      const startTime = now + i * 0.05
-      const freq = 600 + i * 200
-      
-      osc.frequency.setValueAtTime(freq, startTime)
-      osc.frequency.exponentialRampToValueAtTime(freq * 1.5, startTime + 0.1)
-      
-      gain.gain.setValueAtTime(0.25, startTime)
-      gain.gain.exponentialRampToValueAtTime(0.01, startTime + 0.15)
-      
-      osc.start(startTime)
-      osc.stop(startTime + 0.15)
-    }
-  }
-  
-  private playWaveCompleteImmediate(): void {
-    const now = this.now()
-    const notes = [400, 500, 600, 800]
-    
-    notes.forEach((freq, i) => {
-      const nodes = this.createOsc('sine')
-      if (!nodes) return
-      
-      const { osc, gain } = nodes
-      const startTime = now + i * 0.1
-      
-      osc.frequency.setValueAtTime(freq, startTime)
-      
-      gain.gain.setValueAtTime(0.3, startTime)
-      gain.gain.exponentialRampToValueAtTime(0.01, startTime + 0.2)
-      
-      osc.start(startTime)
-      osc.stop(startTime + 0.25)
-    })
-  }
-  
-  private playUpgradeImmediate(): void {
-    const nodes = this.createOsc('square')
-    if (!nodes) return
-    
-    const { osc, gain } = nodes
-    const now = this.now()
-    
-    osc.frequency.setValueAtTime(200, now)
-    osc.frequency.setValueAtTime(300, now + 0.05)
-    osc.frequency.setValueAtTime(400, now + 0.1)
-    
-    gain.gain.setValueAtTime(0.2, now)
-    gain.gain.setValueAtTime(0.25, now + 0.05)
-    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2)
-    
-    osc.start(now)
-    osc.stop(now + 0.2)
-  }
-  
-  private playGameOverImmediate(): void {
-    const now = this.now()
-    const notes = [400, 350, 300, 200]
-    
-    notes.forEach((freq, i) => {
-      const nodes = this.createOsc('triangle')
-      if (!nodes) return
-      
-      const { osc, gain } = nodes
-      const startTime = now + i * 0.15
-      
-      osc.frequency.setValueAtTime(freq, startTime)
-      osc.frequency.exponentialRampToValueAtTime(freq * 0.8, startTime + 0.2)
-      
-      gain.gain.setValueAtTime(0.35, startTime)
-      gain.gain.exponentialRampToValueAtTime(0.01, startTime + 0.3)
-      
-      osc.start(startTime)
-      osc.stop(startTime + 0.35)
-    })
-  }
-  
-  private playClickImmediate(): void {
-    const nodes = this.createOsc('sine')
-    if (!nodes) return
-    
-    const { osc, gain } = nodes
-    const now = this.now()
-    
-    osc.frequency.setValueAtTime(800, now)
-    
-    gain.gain.setValueAtTime(0.15, now)
-    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.05)
-    
-    osc.start(now)
-    osc.stop(now + 0.05)
-  }
-  
-  private playCrowdRoarImmediate(): void {
-    const now = this.now()
-    
-    // Layer 1: Low rumble
-    const low = this.createOsc('sawtooth')
-    if (low) {
-      low.osc.frequency.setValueAtTime(60, now)
-      low.osc.frequency.linearRampToValueAtTime(80, now + 0.3)
-      low.osc.frequency.linearRampToValueAtTime(60, now + 1.0)
-      
-      low.gain.gain.setValueAtTime(0, now)
-      low.gain.gain.linearRampToValueAtTime(0.4, now + 0.15)
-      low.gain.gain.setValueAtTime(0.4, now + 0.8)
-      low.gain.gain.exponentialRampToValueAtTime(0.01, now + 1.5)
-      
-      low.osc.start(now)
-      low.osc.stop(now + 1.5)
-    }
-    
-    // Layer 2: Mid-frequency
-    const mid = this.createOsc('triangle')
-    if (mid) {
-      mid.osc.frequency.setValueAtTime(200, now)
-      mid.osc.frequency.linearRampToValueAtTime(300, now + 0.2)
-      mid.osc.frequency.linearRampToValueAtTime(250, now + 0.8)
-      
-      mid.gain.gain.setValueAtTime(0, now)
-      mid.gain.gain.linearRampToValueAtTime(0.3, now + 0.1)
-      mid.gain.gain.exponentialRampToValueAtTime(0.01, now + 1.2)
-      
-      mid.osc.start(now)
-      mid.osc.stop(now + 1.2)
-    }
-    
-    // Layer 3: High harmonics
-    for (let i = 0; i < 4; i++) {
-      const high = this.createOsc('sine')
-      if (!high) continue
-      
-      const startTime = now + i * 0.05
-      const freq = 400 + i * 100 + Math.random() * 50
-      
-      high.osc.frequency.setValueAtTime(freq, startTime)
-      high.osc.frequency.linearRampToValueAtTime(freq * 1.2, startTime + 0.3)
-      
-      high.gain.gain.setValueAtTime(0, startTime)
-      high.gain.gain.linearRampToValueAtTime(0.15, startTime + 0.1)
-      high.gain.gain.exponentialRampToValueAtTime(0.01, startTime + 0.8)
-      
-      high.osc.start(startTime)
-      high.osc.stop(startTime + 0.8)
-    }
-    
-    // Impact boom
-    const boom = this.createOsc('sine')
-    if (boom) {
-      boom.osc.frequency.setValueAtTime(100, now)
-      boom.osc.frequency.exponentialRampToValueAtTime(30, now + 0.3)
-      
-      boom.gain.gain.setValueAtTime(0.6, now)
-      boom.gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4)
-      
-      boom.osc.start(now)
-      boom.osc.stop(now + 0.4)
-    }
-  }
-  
-  private playFanMeterPulseImmediate(): void {
-    const nodes = this.createOsc('sine')
-    if (!nodes) return
-    
-    const { osc, gain } = nodes
-    const now = this.now()
-    
-    osc.frequency.setValueAtTime(150, now)
-    osc.frequency.linearRampToValueAtTime(200, now + 0.1)
-    
-    gain.gain.setValueAtTime(0.1, now)
-    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15)
-    
-    osc.start(now)
-    osc.stop(now + 0.15)
-  }
-  
-  private playCrowdCheerImmediate(): void {
-    const now = this.now()
-    const intensity = this.crowdIntensity
-    const cheerVolume = 0.3 * intensity
-    const layers = Math.ceil(intensity * 4)
-    
-    for (let i = 0; i < layers; i++) {
-      const nodes = this.createOsc('triangle')
-      if (!nodes) continue
-      
-      const { osc, gain } = nodes
-      const startTime = now + i * 0.03
-      const freq = 200 + i * 50 + Math.random() * 30
-      
-      osc.frequency.setValueAtTime(freq, startTime)
-      osc.frequency.linearRampToValueAtTime(freq * 1.2, startTime + 0.15)
-      
-      gain.gain.setValueAtTime(cheerVolume * 0.5, startTime)
-      gain.gain.exponentialRampToValueAtTime(0.01, startTime + 0.4)
-      
-      osc.start(startTime)
-      osc.stop(startTime + 0.4)
-    }
-  }
-  
-  private playBossWarningImmediate(): void {
-    const now = this.now()
-    
-    // Deep horn
-    const horn = this.createOsc('sawtooth')
-    if (horn) {
-      horn.osc.frequency.setValueAtTime(100, now)
-      horn.osc.frequency.linearRampToValueAtTime(80, now + 0.5)
-      
-      horn.gain.gain.setValueAtTime(0.5, now)
-      horn.gain.gain.setValueAtTime(0.5, now + 0.3)
-      horn.gain.gain.exponentialRampToValueAtTime(0.01, now + 0.8)
-      
-      horn.osc.start(now)
-      horn.osc.stop(now + 0.8)
-    }
-    
-    // Sub bass
-    const sub = this.createOsc('sine')
-    if (sub) {
-      sub.osc.frequency.setValueAtTime(40, now)
-      
-      sub.gain.gain.setValueAtTime(0.6, now)
-      sub.gain.gain.exponentialRampToValueAtTime(0.01, now + 1.0)
-      
-      sub.osc.start(now)
-      sub.osc.stop(now + 1.0)
-    }
-  }
-  
-  private playVictoryFanfareImmediate(): void {
-    const now = this.now()
-    
-    const notes = [
-      { freq: 523, delay: 0 },    // C5
-      { freq: 659, delay: 0 },    // E5
-      { freq: 784, delay: 0 },    // G5
-      { freq: 1047, delay: 0.3 }, // C6
-    ]
-    
-    notes.forEach(({ freq, delay }) => {
-      const nodes = this.createOsc('sine')
-      if (!nodes) return
-      
-      const { osc, gain } = nodes
-      const startTime = now + delay
-      
-      osc.frequency.setValueAtTime(freq, startTime)
-      
-      gain.gain.setValueAtTime(0.25, startTime)
-      gain.gain.setValueAtTime(0.25, startTime + 0.3)
-      gain.gain.exponentialRampToValueAtTime(0.01, startTime + 0.6)
-      
-      osc.start(startTime)
-      osc.stop(startTime + 0.6)
-    })
-  }
-  
-  // ============================================
-  // UI/MENU SOUND IMPLEMENTATIONS
-  // ============================================
-  
-  /**
-   * Menu click - crisp, tactile tap with subtle warmth
-   */
-  private playMenuClickImmediate(): void {
-    const now = this.now()
-    
-    // Primary click - warm mid tone
-    const click = this.createOsc('sine')
-    if (click) {
-      click.osc.frequency.setValueAtTime(880, now) // A5
-      click.osc.frequency.exponentialRampToValueAtTime(660, now + 0.04) // E5
-      
-      click.gain.gain.setValueAtTime(0.18, now)
-      click.gain.gain.exponentialRampToValueAtTime(0.01, now + 0.06)
-      
-      click.osc.start(now)
-      click.osc.stop(now + 0.06)
-    }
-    
-    // Subtle harmonic layer
-    const harm = this.createOsc('triangle')
-    if (harm) {
-      harm.osc.frequency.setValueAtTime(1320, now) // E6
-      
-      harm.gain.gain.setValueAtTime(0.06, now)
-      harm.gain.gain.exponentialRampToValueAtTime(0.01, now + 0.03)
-      
-      harm.osc.start(now)
-      harm.osc.stop(now + 0.03)
-    }
-  }
-  
-  /**
-   * Menu hover - very subtle hint
-   */
-  private playMenuHoverImmediate(): void {
-    const now = this.now()
-    
-    const nodes = this.createOsc('sine')
-    if (!nodes) return
-    
-    const { osc, gain } = nodes
-    
-    osc.frequency.setValueAtTime(1200, now)
-    
-    gain.gain.setValueAtTime(0.04, now)
-    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.02)
-    
-    osc.start(now)
-    osc.stop(now + 0.02)
-  }
-  
-  /**
-   * Menu back - soft descending whoosh
-   */
-  private playMenuBackImmediate(): void {
-    const now = this.now()
-    
-    // Descending tone
-    const main = this.createOsc('sine')
-    if (main) {
-      main.osc.frequency.setValueAtTime(600, now)
-      main.osc.frequency.exponentialRampToValueAtTime(300, now + 0.12)
-      
-      main.gain.gain.setValueAtTime(0.12, now)
-      main.gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15)
-      
-      main.osc.start(now)
-      main.osc.stop(now + 0.15)
-    }
-    
-    // Soft air layer
-    const air = this.createOsc('triangle')
-    if (air) {
-      air.osc.frequency.setValueAtTime(400, now)
-      air.osc.frequency.exponentialRampToValueAtTime(200, now + 0.1)
-      
-      air.gain.gain.setValueAtTime(0.06, now)
-      air.gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12)
-      
-      air.osc.start(now)
-      air.osc.stop(now + 0.12)
-    }
-  }
-  
-  /**
-   * Navigate - arrows, pagination dots
-   */
-  private playNavigateImmediate(): void {
-    const now = this.now()
-    
-    // Quick tick
-    const tick = this.createOsc('sine')
-    if (tick) {
-      tick.osc.frequency.setValueAtTime(1000, now)
-      tick.osc.frequency.exponentialRampToValueAtTime(800, now + 0.03)
-      
-      tick.gain.gain.setValueAtTime(0.12, now)
-      tick.gain.gain.exponentialRampToValueAtTime(0.01, now + 0.05)
-      
-      tick.osc.start(now)
-      tick.osc.stop(now + 0.05)
-    }
-    
-    // Soft pop
-    const pop = this.createOsc('triangle')
-    if (pop) {
-      pop.osc.frequency.setValueAtTime(500, now)
-      
-      pop.gain.gain.setValueAtTime(0.08, now)
-      pop.gain.gain.exponentialRampToValueAtTime(0.01, now + 0.04)
-      
-      pop.osc.start(now)
-      pop.osc.stop(now + 0.04)
-    }
-  }
-  
-  /**
-   * Navigate heavy - significant navigation with weight
-   */
-  private playNavigateHeavyImmediate(): void {
-    const now = this.now()
-    
-    // Chunky mid thump
-    const thump = this.createOsc('sine')
-    if (thump) {
-      thump.osc.frequency.setValueAtTime(200, now)
-      thump.osc.frequency.exponentialRampToValueAtTime(100, now + 0.08)
-      
-      thump.gain.gain.setValueAtTime(0.2, now)
-      thump.gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12)
-      
-      thump.osc.start(now)
-      thump.osc.stop(now + 0.12)
-    }
-    
-    // Click layer
-    const click = this.createOsc('square')
-    if (click) {
-      click.osc.frequency.setValueAtTime(800, now)
-      click.osc.frequency.exponentialRampToValueAtTime(400, now + 0.03)
-      
-      click.gain.gain.setValueAtTime(0.08, now)
-      click.gain.gain.exponentialRampToValueAtTime(0.01, now + 0.05)
-      
-      click.osc.start(now)
-      click.osc.stop(now + 0.05)
-    }
-  }
-  
-  /**
-   * Select - choosing an option (gentle confirmation)
-   */
-  private playSelectImmediate(): void {
-    const now = this.now()
-    
-    // Two-note rise
-    const note1 = this.createOsc('sine')
-    if (note1) {
-      note1.osc.frequency.setValueAtTime(523, now) // C5
-      
-      note1.gain.gain.setValueAtTime(0.15, now)
-      note1.gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08)
-      
-      note1.osc.start(now)
-      note1.osc.stop(now + 0.08)
-    }
-    
-    const note2 = this.createOsc('sine')
-    if (note2) {
-      note2.osc.frequency.setValueAtTime(659, now + 0.05) // E5
-      
-      note2.gain.gain.setValueAtTime(0.18, now + 0.05)
-      note2.gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15)
-      
-      note2.osc.start(now + 0.05)
-      note2.osc.stop(now + 0.15)
-    }
-  }
-  
-  /**
-   * Confirm - finalizing a choice (triumphant)
-   */
-  private playConfirmImmediate(): void {
-    const now = this.now()
-    
-    // Major chord burst
-    const freqs = [523, 659, 784] // C5, E5, G5
+    // C major chord: C4, E4, G4
+    const freqs = [261.63, 329.63, 392.00]
     
     freqs.forEach((freq, i) => {
-      const nodes = this.createOsc('sine')
-      if (!nodes) return
+      const node = this.osc('sine')
+      if (!node) return
       
-      const { osc, gain } = nodes
-      const startTime = now + i * 0.02
+      const start = t + i * 0.015
       
-      osc.frequency.setValueAtTime(freq, startTime)
-      osc.frequency.exponentialRampToValueAtTime(freq * 1.02, startTime + 0.15)
+      node.o.frequency.setValueAtTime(freq, start)
+      node.o.frequency.exponentialRampToValueAtTime(freq * 1.01, start + 0.15)
       
-      gain.gain.setValueAtTime(0.15, startTime)
-      gain.gain.linearRampToValueAtTime(0.12, startTime + 0.1)
-      gain.gain.exponentialRampToValueAtTime(0.01, startTime + 0.25)
+      node.g.gain.setValueAtTime(0.2, start)
+      node.g.gain.linearRampToValueAtTime(0.15, start + 0.1)
+      node.g.gain.exponentialRampToValueAtTime(0.001, start + 0.3)
       
-      osc.start(startTime)
-      osc.stop(startTime + 0.25)
+      node.o.start(start)
+      node.o.stop(start + 0.3)
     })
     
-    // Sparkle top
-    const sparkle = this.createOsc('triangle')
+    // High sparkle
+    const sparkle = this.osc('sine')
     if (sparkle) {
-      sparkle.osc.frequency.setValueAtTime(1568, now + 0.06) // G6
+      sparkle.o.frequency.setValueAtTime(1568, t + 0.05) // G5
       
-      sparkle.gain.gain.setValueAtTime(0.1, now + 0.06)
-      sparkle.gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2)
+      sparkle.g.gain.setValueAtTime(0.1, t + 0.05)
+      sparkle.g.gain.exponentialRampToValueAtTime(0.001, t + 0.25)
       
-      sparkle.osc.start(now + 0.06)
-      sparkle.osc.stop(now + 0.2)
+      sparkle.o.start(t + 0.05)
+      sparkle.o.stop(t + 0.25)
+    }
+    
+    // Impact
+    const impact = this.osc('sine')
+    if (impact) {
+      impact.o.frequency.setValueAtTime(130, t)
+      impact.o.frequency.exponentialRampToValueAtTime(65, t + 0.1)
+      
+      impact.g.gain.setValueAtTime(0.3, t)
+      impact.g.gain.exponentialRampToValueAtTime(0.001, t + 0.15)
+      
+      impact.o.start(t)
+      impact.o.stop(t + 0.15)
     }
   }
   
   /**
-   * Cancel - backing out (gentle negative)
+   * MENU CLICK - Secondary button
+   * Softer, warmer click
    */
-  private playCancelImmediate(): void {
-    const now = this.now()
+  public playMenuClick(): void {
+    if (!this.canPlay()) return
+    this.trackSound('menuClick')
     
-    // Descending minor feel
-    const note1 = this.createOsc('sine')
-    if (note1) {
-      note1.osc.frequency.setValueAtTime(440, now) // A4
-      note1.osc.frequency.exponentialRampToValueAtTime(392, now + 0.08) // G4
-      
-      note1.gain.gain.setValueAtTime(0.12, now)
-      note1.gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1)
-      
-      note1.osc.start(now)
-      note1.osc.stop(now + 0.1)
-    }
+    const t = this.now()
     
-    const note2 = this.createOsc('sine')
-    if (note2) {
-      note2.osc.frequency.setValueAtTime(349, now + 0.05) // F4
-      
-      note2.gain.gain.setValueAtTime(0.1, now + 0.05)
-      note2.gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15)
-      
-      note2.osc.start(now + 0.05)
-      note2.osc.stop(now + 0.15)
-    }
-  }
-  
-  /**
-   * Swoosh - page/screen transitions
-   */
-  private playSwooshImmediate(): void {
-    const now = this.now()
-    
-    // Filtered noise simulation
-    const swoosh = this.createOsc('sawtooth')
-    if (swoosh) {
-      swoosh.osc.frequency.setValueAtTime(100, now)
-      swoosh.osc.frequency.exponentialRampToValueAtTime(800, now + 0.1)
-      swoosh.osc.frequency.exponentialRampToValueAtTime(200, now + 0.2)
-      
-      swoosh.gain.gain.setValueAtTime(0.08, now)
-      swoosh.gain.gain.linearRampToValueAtTime(0.12, now + 0.08)
-      swoosh.gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25)
-      
-      swoosh.osc.start(now)
-      swoosh.osc.stop(now + 0.25)
-    }
-    
-    // Air layer
-    const air = this.createOsc('triangle')
-    if (air) {
-      air.osc.frequency.setValueAtTime(300, now)
-      air.osc.frequency.exponentialRampToValueAtTime(600, now + 0.15)
-      
-      air.gain.gain.setValueAtTime(0.05, now)
-      air.gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2)
-      
-      air.osc.start(now)
-      air.osc.stop(now + 0.2)
-    }
-  }
-  
-  /**
-   * Transition - modal opening/closing
-   */
-  private playTransitionImmediate(): void {
-    const now = this.now()
-    
-    // Soft shimmer
-    for (let i = 0; i < 3; i++) {
-      const nodes = this.createOsc('sine')
-      if (!nodes) continue
-      
-      const { osc, gain } = nodes
-      const startTime = now + i * 0.03
-      const freq = 800 + i * 200
-      
-      osc.frequency.setValueAtTime(freq, startTime)
-      osc.frequency.exponentialRampToValueAtTime(freq * 1.1, startTime + 0.1)
-      
-      gain.gain.setValueAtTime(0.08, startTime)
-      gain.gain.exponentialRampToValueAtTime(0.01, startTime + 0.12)
-      
-      osc.start(startTime)
-      osc.stop(startTime + 0.12)
-    }
-  }
-  
-  /**
-   * Player swipe - swiping between players in carousel
-   */
-  private playPlayerSwipeImmediate(): void {
-    const now = this.now()
-    
-    // Whoosh with character
-    const main = this.createOsc('sine')
+    // Warm tone
+    const main = this.osc('sine')
     if (main) {
-      main.osc.frequency.setValueAtTime(400, now)
-      main.osc.frequency.exponentialRampToValueAtTime(600, now + 0.06)
-      main.osc.frequency.exponentialRampToValueAtTime(450, now + 0.12)
+      main.o.frequency.setValueAtTime(600, t)
+      main.o.frequency.exponentialRampToValueAtTime(450, t + 0.04)
       
-      main.gain.gain.setValueAtTime(0.1, now)
-      main.gain.gain.linearRampToValueAtTime(0.14, now + 0.04)
-      main.gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15)
+      main.g.gain.setValueAtTime(0.18, t)
+      main.g.gain.exponentialRampToValueAtTime(0.001, t + 0.08)
       
-      main.osc.start(now)
-      main.osc.stop(now + 0.15)
-    }
-    
-    // Texture layer
-    const texture = this.createOsc('triangle')
-    if (texture) {
-      texture.osc.frequency.setValueAtTime(200, now)
-      texture.osc.frequency.exponentialRampToValueAtTime(350, now + 0.08)
-      
-      texture.gain.gain.setValueAtTime(0.06, now)
-      texture.gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1)
-      
-      texture.osc.start(now)
-      texture.osc.stop(now + 0.1)
-    }
-  }
-  
-  /**
-   * Player select - selecting a player (heroic moment)
-   */
-  private playPlayerSelectImmediate(): void {
-    const now = this.now()
-    
-    // Heroic chord with power
-    const baseFreqs = [196, 247, 294, 392] // G3, B3, D4, G4
-    
-    baseFreqs.forEach((freq, i) => {
-      const nodes = this.createOsc('sine')
-      if (!nodes) return
-      
-      const { osc, gain } = nodes
-      const startTime = now + i * 0.02
-      
-      osc.frequency.setValueAtTime(freq, startTime)
-      
-      gain.gain.setValueAtTime(0.12, startTime)
-      gain.gain.linearRampToValueAtTime(0.1, startTime + 0.15)
-      gain.gain.exponentialRampToValueAtTime(0.01, startTime + 0.4)
-      
-      osc.start(startTime)
-      osc.stop(startTime + 0.4)
-    })
-    
-    // Power hit
-    const hit = this.createOsc('sine')
-    if (hit) {
-      hit.osc.frequency.setValueAtTime(100, now)
-      hit.osc.frequency.exponentialRampToValueAtTime(50, now + 0.15)
-      
-      hit.gain.gain.setValueAtTime(0.25, now)
-      hit.gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2)
-      
-      hit.osc.start(now)
-      hit.osc.stop(now + 0.2)
-    }
-    
-    // Shimmer top
-    for (let i = 0; i < 4; i++) {
-      const sparkle = this.createOsc('triangle')
-      if (!sparkle) continue
-      
-      const startTime = now + 0.08 + i * 0.04
-      const freq = 1200 + i * 200
-      
-      sparkle.osc.frequency.setValueAtTime(freq, startTime)
-      
-      sparkle.gain.gain.setValueAtTime(0.06, startTime)
-      sparkle.gain.gain.exponentialRampToValueAtTime(0.01, startTime + 0.1)
-      
-      sparkle.osc.start(startTime)
-      sparkle.osc.stop(startTime + 0.1)
-    }
-  }
-  
-  /**
-   * Success - positive feedback
-   */
-  private playSuccessImmediate(): void {
-    const now = this.now()
-    
-    // Ascending major
-    const notes = [523, 659, 784, 1047] // C5, E5, G5, C6
-    
-    notes.forEach((freq, i) => {
-      const nodes = this.createOsc('sine')
-      if (!nodes) return
-      
-      const { osc, gain } = nodes
-      const startTime = now + i * 0.06
-      
-      osc.frequency.setValueAtTime(freq, startTime)
-      
-      gain.gain.setValueAtTime(0.12, startTime)
-      gain.gain.exponentialRampToValueAtTime(0.01, startTime + 0.15)
-      
-      osc.start(startTime)
-      osc.stop(startTime + 0.15)
-    })
-  }
-  
-  /**
-   * Error - negative feedback
-   */
-  private playErrorImmediate(): void {
-    const now = this.now()
-    
-    // Buzzy error tone
-    const buzz = this.createOsc('sawtooth')
-    if (buzz) {
-      buzz.osc.frequency.setValueAtTime(150, now)
-      buzz.osc.frequency.setValueAtTime(140, now + 0.08)
-      buzz.osc.frequency.setValueAtTime(150, now + 0.16)
-      
-      buzz.gain.gain.setValueAtTime(0.15, now)
-      buzz.gain.gain.setValueAtTime(0.08, now + 0.08)
-      buzz.gain.gain.setValueAtTime(0.12, now + 0.16)
-      buzz.gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25)
-      
-      buzz.osc.start(now)
-      buzz.osc.stop(now + 0.25)
-    }
-  }
-  
-  /**
-   * Notification - attention getter
-   */
-  private playNotificationImmediate(): void {
-    const now = this.now()
-    
-    // Two-tone chime
-    const tone1 = this.createOsc('sine')
-    if (tone1) {
-      tone1.osc.frequency.setValueAtTime(880, now) // A5
-      
-      tone1.gain.gain.setValueAtTime(0.15, now)
-      tone1.gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12)
-      
-      tone1.osc.start(now)
-      tone1.osc.stop(now + 0.12)
-    }
-    
-    const tone2 = this.createOsc('sine')
-    if (tone2) {
-      tone2.osc.frequency.setValueAtTime(1320, now + 0.08) // E6
-      
-      tone2.gain.gain.setValueAtTime(0.12, now + 0.08)
-      tone2.gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2)
-      
-      tone2.osc.start(now + 0.08)
-      tone2.osc.stop(now + 0.2)
+      main.o.start(t)
+      main.o.stop(t + 0.08)
     }
     
     // Soft harmonic
-    const harm = this.createOsc('triangle')
+    const harm = this.osc('triangle')
     if (harm) {
-      harm.osc.frequency.setValueAtTime(1760, now) // A6
+      harm.o.frequency.setValueAtTime(900, t)
       
-      harm.gain.gain.setValueAtTime(0.04, now)
-      harm.gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15)
+      harm.g.gain.setValueAtTime(0.06, t)
+      harm.g.gain.exponentialRampToValueAtTime(0.001, t + 0.05)
       
-      harm.osc.start(now)
-      harm.osc.stop(now + 0.15)
+      harm.o.start(t)
+      harm.o.stop(t + 0.05)
     }
+  }
+  
+  /**
+   * PLAYER SWIPE - Carousel navigation
+   * Whooshy, energetic swipe
+   */
+  public playPlayerSwipe(): void {
+    if (!this.canPlay()) return
+    this.trackSound('playerSwipe')
+    
+    const t = this.now()
+    
+    // Swoosh up
+    const swoosh = this.osc('sawtooth')
+    if (swoosh) {
+      swoosh.o.frequency.setValueAtTime(200, t)
+      swoosh.o.frequency.exponentialRampToValueAtTime(800, t + 0.08)
+      swoosh.o.frequency.exponentialRampToValueAtTime(400, t + 0.15)
+      
+      swoosh.g.gain.setValueAtTime(0.08, t)
+      swoosh.g.gain.linearRampToValueAtTime(0.12, t + 0.05)
+      swoosh.g.gain.exponentialRampToValueAtTime(0.001, t + 0.18)
+      
+      swoosh.o.start(t)
+      swoosh.o.stop(t + 0.18)
+    }
+    
+    // Air texture
+    const noise = this.noise(0.15)
+    if (noise) {
+      noise.g.gain.setValueAtTime(0.03, t)
+      noise.g.gain.linearRampToValueAtTime(0.05, t + 0.05)
+      noise.g.gain.exponentialRampToValueAtTime(0.001, t + 0.15)
+      
+      noise.source.start(t)
+      noise.source.stop(t + 0.15)
+    }
+  }
+  
+  /**
+   * PLAYER SELECT - Choosing a player
+   * Epic, heroic confirmation
+   */
+  public playPlayerSelect(): void {
+    if (!this.canPlay()) return
+    this.trackSound('playerSelect')
+    
+    const t = this.now()
+    
+    // Power chord: G2, D3, G3, B3, D4
+    const freqs = [98, 147, 196, 247, 294]
+    
+    freqs.forEach((freq, i) => {
+      const node = this.osc('sine')
+      if (!node) return
+      
+      const start = t + i * 0.01
+      
+      node.o.frequency.setValueAtTime(freq, start)
+      
+      node.g.gain.setValueAtTime(0.15, start)
+      node.g.gain.linearRampToValueAtTime(0.1, start + 0.2)
+      node.g.gain.exponentialRampToValueAtTime(0.001, start + 0.5)
+      
+      node.o.start(start)
+      node.o.stop(start + 0.5)
+    })
+    
+    // Bass drop
+    const bass = this.osc('sine')
+    if (bass) {
+      bass.o.frequency.setValueAtTime(80, t)
+      bass.o.frequency.exponentialRampToValueAtTime(40, t + 0.2)
+      
+      bass.g.gain.setValueAtTime(0.4, t)
+      bass.g.gain.exponentialRampToValueAtTime(0.001, t + 0.25)
+      
+      bass.o.start(t)
+      bass.o.stop(t + 0.25)
+    }
+    
+    // Shimmer cascade
+    for (let i = 0; i < 5; i++) {
+      const shimmer = this.osc('triangle')
+      if (!shimmer) continue
+      
+      const start = t + 0.1 + i * 0.03
+      const freq = 1000 + i * 200
+      
+      shimmer.o.frequency.setValueAtTime(freq, start)
+      
+      shimmer.g.gain.setValueAtTime(0.05, start)
+      shimmer.g.gain.exponentialRampToValueAtTime(0.001, start + 0.12)
+      
+      shimmer.o.start(start)
+      shimmer.o.stop(start + 0.12)
+    }
+  }
+  
+  /**
+   * SELECT - Generic selection (upgrade cards, etc)
+   * Two-note affirmative rise
+   */
+  public playSelect(): void {
+    if (!this.canPlay()) return
+    this.trackSound('select')
+    
+    const t = this.now()
+    
+    // Note 1: C5
+    const n1 = this.osc('sine')
+    if (n1) {
+      n1.o.frequency.setValueAtTime(523, t)
+      
+      n1.g.gain.setValueAtTime(0.2, t)
+      n1.g.gain.exponentialRampToValueAtTime(0.001, t + 0.1)
+      
+      n1.o.start(t)
+      n1.o.stop(t + 0.1)
+    }
+    
+    // Note 2: E5
+    const n2 = this.osc('sine')
+    if (n2) {
+      n2.o.frequency.setValueAtTime(659, t + 0.06)
+      
+      n2.g.gain.setValueAtTime(0.22, t + 0.06)
+      n2.g.gain.exponentialRampToValueAtTime(0.001, t + 0.18)
+      
+      n2.o.start(t + 0.06)
+      n2.o.stop(t + 0.18)
+    }
+  }
+  
+  // ============================================
+  // GAME SOUNDS
+  // ============================================
+  
+  /**
+   * TACKLE - Player tackles runner
+   * Satisfying impact thump
+   */
+  public playTackle(): void {
+    if (!this.canPlay()) return
+    this.trackSound('tackle')
+    
+    const t = this.now()
+    
+    // Main impact
+    const impact = this.osc('sine')
+    if (impact) {
+      impact.o.frequency.setValueAtTime(180, t)
+      impact.o.frequency.exponentialRampToValueAtTime(60, t + 0.08)
+      
+      impact.g.gain.setValueAtTime(0.4, t)
+      impact.g.gain.exponentialRampToValueAtTime(0.001, t + 0.12)
+      
+      impact.o.start(t)
+      impact.o.stop(t + 0.12)
+    }
+    
+    // Crunch layer
+    const crunch = this.osc('square')
+    if (crunch) {
+      crunch.o.frequency.setValueAtTime(400, t)
+      crunch.o.frequency.exponentialRampToValueAtTime(150, t + 0.04)
+      
+      crunch.g.gain.setValueAtTime(0.1, t)
+      crunch.g.gain.exponentialRampToValueAtTime(0.001, t + 0.06)
+      
+      crunch.o.start(t)
+      crunch.o.stop(t + 0.06)
+    }
+  }
+  
+  /**
+   * BIG TACKLE - Tank/Boss tackle
+   * Deeper, more powerful impact
+   */
+  public playBigTackle(): void {
+    if (!this.canPlay()) return
+    this.trackSound('bigTackle')
+    
+    const t = this.now()
+    
+    // Deep impact
+    const impact = this.osc('sine')
+    if (impact) {
+      impact.o.frequency.setValueAtTime(100, t)
+      impact.o.frequency.exponentialRampToValueAtTime(30, t + 0.15)
+      
+      impact.g.gain.setValueAtTime(0.5, t)
+      impact.g.gain.exponentialRampToValueAtTime(0.001, t + 0.2)
+      
+      impact.o.start(t)
+      impact.o.stop(t + 0.2)
+    }
+    
+    // Rumble
+    const rumble = this.osc('sawtooth')
+    if (rumble) {
+      rumble.o.frequency.setValueAtTime(60, t)
+      rumble.o.frequency.exponentialRampToValueAtTime(25, t + 0.2)
+      
+      rumble.g.gain.setValueAtTime(0.15, t)
+      rumble.g.gain.exponentialRampToValueAtTime(0.001, t + 0.25)
+      
+      rumble.o.start(t)
+      rumble.o.stop(t + 0.25)
+    }
+  }
+  
+  /**
+   * TOUCHDOWN - Enemy scores (negative)
+   * Descending disappointed tone
+   */
+  public playTouchdown(): void {
+    if (!this.canPlay()) return
+    this.trackSound('touchdown')
+    
+    const t = this.now()
+    
+    // Sad descending tone
+    const main = this.osc('sawtooth')
+    if (main) {
+      main.o.frequency.setValueAtTime(500, t)
+      main.o.frequency.exponentialRampToValueAtTime(150, t + 0.25)
+      
+      main.g.gain.setValueAtTime(0.2, t)
+      main.g.gain.exponentialRampToValueAtTime(0.001, t + 0.3)
+      
+      main.o.start(t)
+      main.o.stop(t + 0.3)
+    }
+  }
+  
+  /**
+   * POWER UP - Collect power-up
+   * Sparkly rising chime
+   */
+  public playPowerUp(): void {
+    if (!this.canPlay()) return
+    this.trackSound('powerUp')
+    
+    const t = this.now()
+    
+    // Ascending sparkle
+    for (let i = 0; i < 4; i++) {
+      const node = this.osc('sine')
+      if (!node) continue
+      
+      const start = t + i * 0.04
+      const freq = 800 + i * 200
+      
+      node.o.frequency.setValueAtTime(freq, start)
+      node.o.frequency.exponentialRampToValueAtTime(freq * 1.2, start + 0.1)
+      
+      node.g.gain.setValueAtTime(0.15, start)
+      node.g.gain.exponentialRampToValueAtTime(0.001, start + 0.15)
+      
+      node.o.start(start)
+      node.o.stop(start + 0.15)
+    }
+  }
+  
+  /**
+   * WAVE COMPLETE - Beat a wave
+   * Victorious ascending arpeggio
+   */
+  public playWaveComplete(): void {
+    if (!this.canPlay()) return
+    this.trackSound('waveComplete')
+    
+    const t = this.now()
+    
+    // C major arpeggio: C4, E4, G4, C5
+    const notes = [262, 330, 392, 523]
+    
+    notes.forEach((freq, i) => {
+      const node = this.osc('sine')
+      if (!node) return
+      
+      const start = t + i * 0.08
+      
+      node.o.frequency.setValueAtTime(freq, start)
+      
+      node.g.gain.setValueAtTime(0.2, start)
+      node.g.gain.linearRampToValueAtTime(0.15, start + 0.1)
+      node.g.gain.exponentialRampToValueAtTime(0.001, start + 0.25)
+      
+      node.o.start(start)
+      node.o.stop(start + 0.25)
+    })
+  }
+  
+  /**
+   * UPGRADE - Selected an upgrade
+   * Satisfying confirmation with power
+   */
+  public playUpgrade(): void {
+    if (!this.canPlay()) return
+    this.trackSound('upgrade')
+    
+    const t = this.now()
+    
+    // Chunky confirmation
+    const main = this.osc('square')
+    if (main) {
+      main.o.frequency.setValueAtTime(200, t)
+      main.o.frequency.setValueAtTime(300, t + 0.05)
+      main.o.frequency.setValueAtTime(400, t + 0.1)
+      
+      main.g.gain.setValueAtTime(0.15, t)
+      main.g.gain.setValueAtTime(0.18, t + 0.05)
+      main.g.gain.exponentialRampToValueAtTime(0.001, t + 0.2)
+      
+      main.o.start(t)
+      main.o.stop(t + 0.2)
+    }
+    
+    // Shine
+    const shine = this.osc('sine')
+    if (shine) {
+      shine.o.frequency.setValueAtTime(1200, t + 0.08)
+      
+      shine.g.gain.setValueAtTime(0.1, t + 0.08)
+      shine.g.gain.exponentialRampToValueAtTime(0.001, t + 0.2)
+      
+      shine.o.start(t + 0.08)
+      shine.o.stop(t + 0.2)
+    }
+  }
+  
+  /**
+   * GAME OVER - Game ended
+   * Sad descending minor
+   */
+  public playGameOver(): void {
+    if (!this.canPlay()) return
+    this.trackSound('gameOver')
+    
+    const t = this.now()
+    
+    // Descending minor: A4, F4, D4, A3
+    const notes = [440, 349, 294, 220]
+    
+    notes.forEach((freq, i) => {
+      const node = this.osc('triangle')
+      if (!node) return
+      
+      const start = t + i * 0.15
+      
+      node.o.frequency.setValueAtTime(freq, start)
+      node.o.frequency.exponentialRampToValueAtTime(freq * 0.95, start + 0.2)
+      
+      node.g.gain.setValueAtTime(0.25, start)
+      node.g.gain.exponentialRampToValueAtTime(0.001, start + 0.3)
+      
+      node.o.start(start)
+      node.o.stop(start + 0.3)
+    })
+  }
+  
+  /**
+   * CROWD ROAR - Fan meter activation
+   * Epic crowd explosion
+   */
+  public playCrowdRoar(): void {
+    if (!this.canPlay()) return
+    this.trackSound('crowdRoar')
+    
+    const t = this.now()
+    
+    // Bass rumble
+    const bass = this.osc('sawtooth')
+    if (bass) {
+      bass.o.frequency.setValueAtTime(80, t)
+      bass.o.frequency.linearRampToValueAtTime(100, t + 0.3)
+      bass.o.frequency.linearRampToValueAtTime(70, t + 1.0)
+      
+      bass.g.gain.setValueAtTime(0, t)
+      bass.g.gain.linearRampToValueAtTime(0.3, t + 0.15)
+      bass.g.gain.setValueAtTime(0.3, t + 0.7)
+      bass.g.gain.exponentialRampToValueAtTime(0.001, t + 1.2)
+      
+      bass.o.start(t)
+      bass.o.stop(t + 1.2)
+    }
+    
+    // Crowd noise simulation
+    const noise = this.noise(1.5)
+    if (noise) {
+      noise.g.gain.setValueAtTime(0, t)
+      noise.g.gain.linearRampToValueAtTime(0.08, t + 0.1)
+      noise.g.gain.setValueAtTime(0.08, t + 0.8)
+      noise.g.gain.exponentialRampToValueAtTime(0.001, t + 1.5)
+      
+      noise.source.start(t)
+      noise.source.stop(t + 1.5)
+    }
+    
+    // Impact boom
+    const boom = this.osc('sine')
+    if (boom) {
+      boom.o.frequency.setValueAtTime(120, t)
+      boom.o.frequency.exponentialRampToValueAtTime(40, t + 0.2)
+      
+      boom.g.gain.setValueAtTime(0.4, t)
+      boom.g.gain.exponentialRampToValueAtTime(0.001, t + 0.3)
+      
+      boom.o.start(t)
+      boom.o.stop(t + 0.3)
+    }
+  }
+  
+  /**
+   * FAN METER PULSE - Building anticipation
+   */
+  public playFanMeterPulse(): void {
+    if (!this.canPlay()) return
+    this.trackSound('fanMeterPulse')
+    
+    const t = this.now()
+    
+    const pulse = this.osc('sine')
+    if (pulse) {
+      pulse.o.frequency.setValueAtTime(200, t)
+      pulse.o.frequency.linearRampToValueAtTime(250, t + 0.08)
+      
+      pulse.g.gain.setValueAtTime(0.1, t)
+      pulse.g.gain.exponentialRampToValueAtTime(0.001, t + 0.12)
+      
+      pulse.o.start(t)
+      pulse.o.stop(t + 0.12)
+    }
+  }
+  
+  /**
+   * CROWD CHEER - Positive crowd reaction
+   */
+  public playCrowdCheer(): void {
+    if (!this.canPlay()) return
+    this.trackSound('crowdCheer')
+    
+    const t = this.now()
+    
+    // Layered cheer
+    for (let i = 0; i < 4; i++) {
+      const node = this.osc('triangle')
+      if (!node) continue
+      
+      const start = t + i * 0.02
+      const freq = 250 + i * 60 + Math.random() * 30
+      
+      node.o.frequency.setValueAtTime(freq, start)
+      node.o.frequency.linearRampToValueAtTime(freq * 1.15, start + 0.15)
+      
+      node.g.gain.setValueAtTime(0.12, start)
+      node.g.gain.exponentialRampToValueAtTime(0.001, start + 0.35)
+      
+      node.o.start(start)
+      node.o.stop(start + 0.35)
+    }
+  }
+  
+  /**
+   * BOSS WARNING - Boss appearing
+   * Ominous horn
+   */
+  public playBossWarning(): void {
+    if (!this.canPlay()) return
+    this.trackSound('bossWarning')
+    
+    const t = this.now()
+    
+    // Deep warning horn
+    const horn = this.osc('sawtooth')
+    if (horn) {
+      horn.o.frequency.setValueAtTime(110, t)
+      horn.o.frequency.linearRampToValueAtTime(90, t + 0.5)
+      
+      horn.g.gain.setValueAtTime(0.35, t)
+      horn.g.gain.setValueAtTime(0.35, t + 0.4)
+      horn.g.gain.exponentialRampToValueAtTime(0.001, t + 0.7)
+      
+      horn.o.start(t)
+      horn.o.stop(t + 0.7)
+    }
+    
+    // Sub bass
+    const sub = this.osc('sine')
+    if (sub) {
+      sub.o.frequency.setValueAtTime(45, t)
+      
+      sub.g.gain.setValueAtTime(0.4, t)
+      sub.g.gain.exponentialRampToValueAtTime(0.001, t + 0.8)
+      
+      sub.o.start(t)
+      sub.o.stop(t + 0.8)
+    }
+  }
+  
+  /**
+   * VICTORY FANFARE - Won the game/stage
+   * Triumphant major fanfare
+   */
+  public playVictoryFanfare(): void {
+    if (!this.canPlay()) return
+    this.trackSound('victoryFanfare')
+    
+    const t = this.now()
+    
+    // Major chord: C4, E4, G4, then C5
+    const chord = [262, 330, 392]
+    
+    chord.forEach(freq => {
+      const node = this.osc('sine')
+      if (!node) return
+      
+      node.o.frequency.setValueAtTime(freq, t)
+      
+      node.g.gain.setValueAtTime(0.2, t)
+      node.g.gain.linearRampToValueAtTime(0.15, t + 0.3)
+      node.g.gain.exponentialRampToValueAtTime(0.001, t + 0.6)
+      
+      node.o.start(t)
+      node.o.stop(t + 0.6)
+    })
+    
+    // High C5 after delay
+    const high = this.osc('sine')
+    if (high) {
+      high.o.frequency.setValueAtTime(523, t + 0.25)
+      
+      high.g.gain.setValueAtTime(0.25, t + 0.25)
+      high.g.gain.linearRampToValueAtTime(0.2, t + 0.5)
+      high.g.gain.exponentialRampToValueAtTime(0.001, t + 0.8)
+      
+      high.o.start(t + 0.25)
+      high.o.stop(t + 0.8)
+    }
+  }
+  
+  // ============================================
+  // CROWD INTENSITY (for campaign mode)
+  // ============================================
+  
+  private crowdIntensity = 1.0
+  
+  public setCrowdIntensity(intensity: number): void {
+    this.crowdIntensity = Math.max(0, Math.min(1, intensity))
+    log('Crowd intensity:', this.crowdIntensity)
   }
 }
 
-// Singleton instance
+// Singleton
 export const AudioManager = new AudioManagerClass()
-
-// Export state enum for external use
 export { AudioState }
