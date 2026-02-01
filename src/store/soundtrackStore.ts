@@ -225,7 +225,8 @@ export function useSoundtrackSync(): void {
     const unsubscribe = SoundtrackManager.subscribe((state: SoundtrackState) => {
       syncPlaybackState({
         currentTrack: state.currentTrack,
-        isPlaying: state.playbackState === 'playing',
+        // Consider both 'playing' and 'warming' as playing for UI purposes
+        isPlaying: state.playbackState === 'playing' || state.playbackState === 'warming',
         isPaused: state.playbackState === 'paused',
         isLoading: state.playbackState === 'loading',
         currentTime: state.currentTime,

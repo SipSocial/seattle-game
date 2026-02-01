@@ -1,7 +1,7 @@
 // ============================================================================
 // SOUNDTRACK MANAGER
 // Handles background music playback with crossfading between screens
-// Separate from AudioManager which handles game SFX
+// Implements a natural, non-jarring audio experience similar to Madden
 // ============================================================================
 
 import { 
@@ -16,7 +16,7 @@ import { AudioManager } from './AudioManager'
 // Types
 // ----------------------------------------------------------------------------
 
-export type PlaybackState = 'stopped' | 'playing' | 'paused' | 'loading'
+export type PlaybackState = 'stopped' | 'warming' | 'playing' | 'paused' | 'loading'
 
 export interface SoundtrackState {
   currentTrack: Track | null
@@ -25,9 +25,41 @@ export interface SoundtrackState {
   duration: number
   volume: number
   muted: boolean
+  isWarmingUp: boolean  // True when music is in warm-up phase
 }
 
 type StateListener = (state: SoundtrackState) => void
+
+// ----------------------------------------------------------------------------
+// Audio Experience Configuration
+// These values create a natural, non-jarring music experience
+// ----------------------------------------------------------------------------
+
+const AUDIO_EXPERIENCE = {
+  // Delay before music starts after user interaction (ms)
+  // Gives user time to settle into the page
+  WARMUP_DELAY: 1500,
+  
+  // Duration of the volume swell from 0 to target (ms)
+  // Slow enough to feel natural, not abrupt
+  SWELL_DURATION: 4000,
+  
+  // Starting volume ratio (0-1) during warm-up
+  // Very quiet ambient start
+  INITIAL_VOLUME: 0.05,
+  
+  // Volume at the end of warm-up before full swell
+  WARMUP_TARGET_VOLUME: 0.25,
+  
+  // Crossfade duration between screens (ms)
+  CROSSFADE_DURATION: 1500,
+  
+  // Quick fade for game start (ms)
+  QUICK_FADE_DURATION: 200,
+  
+  // How many steps in volume animations (smoothness)
+  ANIMATION_STEPS: 40,
+}
 
 // ----------------------------------------------------------------------------
 // SoundtrackManager Singleton
@@ -44,21 +76,19 @@ class SoundtrackManagerClass {
   // State
   private currentTrack: Track | null = null
   private playbackState: PlaybackState = 'stopped'
-  private volume: number = 0.7
+  private volume: number = 0.7  // Target volume when fully engaged
+  private currentVolume: number = 0  // Actual current volume
   private muted: boolean = false
   private currentScreen: ScreenType | null = null
+  private isWarmingUp: boolean = false
+  
+  // Timers
+  private warmupTimer: ReturnType<typeof setTimeout> | null = null
+  private swellAnimationId: number | null = null
   
   // Listeners
   private listeners: Set<StateListener> = new Set()
   private timeUpdateInterval: ReturnType<typeof setInterval> | null = null
-  
-  // Crossfade settings
-  private readonly CROSSFADE_DURATION = 1500 // ms
-  private readonly QUICK_FADE_DURATION = 200 // ms for game start
-  
-  // Progressive volume fade-in settings (for natural audio experience)
-  private readonly FADE_IN_DURATION = 3000 // ms - gentle 3 second fade in
-  private readonly INITIAL_VOLUME_RATIO = 0.15 // Start at 15% of target volume
   
   private constructor() {
     // Private constructor for singleton
@@ -89,20 +119,20 @@ class SoundtrackManagerClass {
     // Start time update interval
     if (!this.timeUpdateInterval) {
       this.timeUpdateInterval = setInterval(() => {
-        if (this.playbackState === 'playing') {
+        if (this.playbackState === 'playing' || this.playbackState === 'warming') {
           this.notifyListeners()
         }
       }, 250)
     }
     
-    console.log('[SoundtrackManager] Initialized')
+    console.log('[SoundtrackManager] Initialized with natural audio experience')
   }
   
   private createAudioElement(id: string): HTMLAudioElement {
     const audio = document.createElement('audio')
     audio.id = id
     audio.preload = 'auto'
-    audio.volume = this.volume
+    audio.volume = 0  // Always start at 0, we control volume manually
     
     audio.addEventListener('ended', () => this.handleTrackEnd())
     audio.addEventListener('error', (e) => this.handleError(e))
@@ -113,11 +143,183 @@ class SoundtrackManagerClass {
   }
   
   // --------------------------------------------------------------------------
-  // Playback Control
+  // Natural Music Start System
   // --------------------------------------------------------------------------
   
   /**
-   * Play a specific track
+   * Begin the natural music experience for a screen
+   * This is the main entry point - it handles the warm-up delay and swell
+   */
+  async playForScreen(screen: ScreenType, options?: { 
+    crossfade?: boolean
+    immediate?: boolean  // Skip warm-up for screen transitions
+  }): Promise<void> {
+    // Skip if already playing for this screen
+    if (this.currentScreen === screen && 
+        (this.playbackState === 'playing' || this.playbackState === 'warming')) {
+      return
+    }
+    
+    this.currentScreen = screen
+    const tracks = getTracksForScreen(screen)
+    
+    if (tracks.length === 0) {
+      console.warn(`[SoundtrackManager] No tracks configured for screen: ${screen}`)
+      return
+    }
+    
+    const track = tracks[0]
+    const shouldCrossfade = options?.crossfade ?? (this.playbackState === 'playing')
+    const isImmediate = options?.immediate ?? false
+    
+    // If already playing, crossfade to new track
+    if (shouldCrossfade && this.playbackState === 'playing') {
+      await this.crossfadeTo(track, track.analysis?.recommendedStart ?? 0)
+      return
+    }
+    
+    // For fresh start, use natural warm-up
+    if (!isImmediate && this.playbackState === 'stopped') {
+      await this.startWithWarmup(track)
+    } else {
+      // Immediate start for screen transitions when music was already playing
+      await this.play(track.id, { crossfade: shouldCrossfade })
+    }
+  }
+  
+  /**
+   * Start music with the natural warm-up experience
+   * Delay -> Quiet start -> Progressive swell
+   */
+  private async startWithWarmup(track: Track): Promise<void> {
+    // Clear any existing warmup
+    this.cancelWarmup()
+    
+    this.isWarmingUp = true
+    this.playbackState = 'warming'
+    this.currentTrack = track
+    this.notifyListeners()
+    
+    console.log(`[SoundtrackManager] Starting warm-up for: ${track.title}`)
+    
+    // Wait for the warm-up delay
+    await this.delay(AUDIO_EXPERIENCE.WARMUP_DELAY)
+    
+    // Check if we were cancelled during delay
+    if (!this.isWarmingUp) return
+    
+    const player = this.getActivePlayer()
+    if (!player) return
+    
+    try {
+      // Set up the track
+      const startTime = track.analysis?.recommendedStart ?? 0
+      player.src = track.src
+      player.currentTime = startTime
+      
+      // Start at whisper volume
+      const initialVolume = this.muted ? 0 : this.volume * AUDIO_EXPERIENCE.INITIAL_VOLUME
+      player.volume = initialVolume
+      this.currentVolume = initialVolume
+      
+      await player.play()
+      
+      console.log(`[SoundtrackManager] Playing at whisper volume: ${(initialVolume * 100).toFixed(0)}%`)
+      
+      // Now do the progressive swell
+      await this.progressiveSwell(player)
+      
+      this.isWarmingUp = false
+      this.playbackState = 'playing'
+      this.notifyListeners()
+      
+      console.log(`[SoundtrackManager] Music fully engaged: ${track.title}`)
+      
+    } catch (error) {
+      console.error('[SoundtrackManager] Warm-up playback failed:', error)
+      this.isWarmingUp = false
+      this.playbackState = 'stopped'
+      this.notifyListeners()
+    }
+  }
+  
+  /**
+   * Progressive volume swell using easeInOut curve
+   * Creates the natural "music coming in" feeling
+   */
+  private progressiveSwell(audio: HTMLAudioElement): Promise<void> {
+    return new Promise((resolve) => {
+      if (this.muted) {
+        resolve()
+        return
+      }
+      
+      const startVolume = audio.volume
+      const targetVolume = this.volume
+      const duration = AUDIO_EXPERIENCE.SWELL_DURATION
+      const steps = AUDIO_EXPERIENCE.ANIMATION_STEPS
+      const stepDuration = duration / steps
+      let currentStep = 0
+      
+      const animate = () => {
+        currentStep++
+        
+        // Check if cancelled
+        if (!this.isWarmingUp && this.playbackState !== 'playing') {
+          resolve()
+          return
+        }
+        
+        // EaseInOut curve: slow start, fast middle, slow end
+        // Using sine easing for natural perception
+        const t = currentStep / steps
+        const easedT = -(Math.cos(Math.PI * t) - 1) / 2
+        
+        const volumeDelta = targetVolume - startVolume
+        const newVolume = startVolume + (volumeDelta * easedT)
+        
+        audio.volume = Math.min(Math.max(newVolume, 0), 1)
+        this.currentVolume = audio.volume
+        
+        if (currentStep >= steps) {
+          audio.volume = targetVolume
+          this.currentVolume = targetVolume
+          resolve()
+        } else {
+          this.swellAnimationId = requestAnimationFrame(() => {
+            setTimeout(animate, stepDuration)
+          })
+        }
+      }
+      
+      animate()
+    })
+  }
+  
+  private cancelWarmup(): void {
+    if (this.warmupTimer) {
+      clearTimeout(this.warmupTimer)
+      this.warmupTimer = null
+    }
+    if (this.swellAnimationId) {
+      cancelAnimationFrame(this.swellAnimationId)
+      this.swellAnimationId = null
+    }
+    this.isWarmingUp = false
+  }
+  
+  private delay(ms: number): Promise<void> {
+    return new Promise(resolve => {
+      this.warmupTimer = setTimeout(resolve, ms)
+    })
+  }
+  
+  // --------------------------------------------------------------------------
+  // Direct Playback Control
+  // --------------------------------------------------------------------------
+  
+  /**
+   * Play a specific track directly (no warm-up)
    */
   async play(trackId: string, options?: { 
     crossfade?: boolean
@@ -135,35 +337,13 @@ class SoundtrackManagerClass {
     if (shouldCrossfade && this.playbackState === 'playing') {
       await this.crossfadeTo(track, startTime)
     } else {
-      await this.playTrack(track, startTime)
+      await this.playTrackDirect(track, startTime)
     }
   }
   
-  /**
-   * Play music for a specific screen
-   */
-  async playForScreen(screen: ScreenType, options?: { crossfade?: boolean }): Promise<void> {
-    // Skip if already playing for this screen
-    if (this.currentScreen === screen && this.playbackState === 'playing') {
-      return
-    }
+  private async playTrackDirect(track: Track, startTime: number = 0): Promise<void> {
+    this.cancelWarmup()
     
-    this.currentScreen = screen
-    const tracks = getTracksForScreen(screen)
-    
-    if (tracks.length === 0) {
-      console.warn(`[SoundtrackManager] No tracks configured for screen: ${screen}`)
-      return
-    }
-    
-    // For now, play the first track. Later we can add shuffle/rotation
-    const track = tracks[0]
-    const shouldCrossfade = options?.crossfade ?? (this.playbackState === 'playing')
-    
-    await this.play(track.id, { crossfade: shouldCrossfade })
-  }
-  
-  private async playTrack(track: Track, startTime: number = 0, options?: { skipFadeIn?: boolean }): Promise<void> {
     const player = this.getActivePlayer()
     if (!player) return
     
@@ -175,25 +355,13 @@ class SoundtrackManagerClass {
       player.src = track.src
       player.currentTime = startTime
       
-      // Determine target volume
       const targetVolume = this.muted ? 0 : this.volume
-      
-      // Start at low volume for natural fade-in (unless skipped)
-      const shouldFadeIn = !options?.skipFadeIn && targetVolume > 0
-      const initialVolume = shouldFadeIn 
-        ? targetVolume * this.INITIAL_VOLUME_RATIO 
-        : targetVolume
-      
-      player.volume = initialVolume
+      player.volume = targetVolume
+      this.currentVolume = targetVolume
       
       await player.play()
       this.playbackState = 'playing'
       this.notifyListeners()
-      
-      // Progressive fade-in to target volume for natural experience
-      if (shouldFadeIn) {
-        await this.progressiveFadeIn(player, this.FADE_IN_DURATION, initialVolume, targetVolume)
-      }
       
       console.log(`[SoundtrackManager] Playing: ${track.title}`)
     } catch (error) {
@@ -204,48 +372,13 @@ class SoundtrackManagerClass {
   }
   
   /**
-   * Progressive fade-in with ease-out curve for natural perception
-   * Volume increases faster at the start, slower at the end
-   */
-  private progressiveFadeIn(
-    audio: HTMLAudioElement, 
-    duration: number, 
-    startVolume: number, 
-    targetVolume: number
-  ): Promise<void> {
-    return new Promise((resolve) => {
-      const steps = 30 // Smooth animation
-      const stepDuration = duration / steps
-      let currentStep = 0
-      
-      const interval = setInterval(() => {
-        currentStep++
-        
-        // Ease-out curve: faster at start, slower at end
-        // Using cubic ease-out: 1 - (1 - t)^3
-        const t = currentStep / steps
-        const easedT = 1 - Math.pow(1 - t, 3)
-        
-        const volumeDelta = targetVolume - startVolume
-        const newVolume = startVolume + (volumeDelta * easedT)
-        
-        audio.volume = Math.min(newVolume, targetVolume)
-        
-        if (currentStep >= steps) {
-          clearInterval(interval)
-          audio.volume = targetVolume
-          resolve()
-        }
-      }, stepDuration)
-    })
-  }
-  
-  /**
    * Pause playback
    */
   pause(): void {
+    this.cancelWarmup()
+    
     const player = this.getActivePlayer()
-    if (player && this.playbackState === 'playing') {
+    if (player && (this.playbackState === 'playing' || this.playbackState === 'warming')) {
       player.pause()
       this.playbackState = 'paused'
       this.notifyListeners()
@@ -272,7 +405,7 @@ class SoundtrackManagerClass {
    * Toggle play/pause
    */
   async togglePlayPause(): Promise<void> {
-    if (this.playbackState === 'playing') {
+    if (this.playbackState === 'playing' || this.playbackState === 'warming') {
       this.pause()
     } else if (this.playbackState === 'paused') {
       await this.resume()
@@ -283,6 +416,8 @@ class SoundtrackManagerClass {
    * Stop playback completely
    */
   stop(options?: { fadeOut?: number }): void {
+    this.cancelWarmup()
+    
     const player = this.getActivePlayer()
     if (!player) return
     
@@ -300,11 +435,13 @@ class SoundtrackManagerClass {
     if (player) {
       player.pause()
       player.currentTime = 0
+      player.volume = 0
     }
     
     this.playbackState = 'stopped'
     this.currentTrack = null
     this.currentScreen = null
+    this.currentVolume = 0
     this.notifyListeners()
   }
   
@@ -313,11 +450,13 @@ class SoundtrackManagerClass {
    * Quick fade out -> brief silence -> whistle plays
    */
   async stopWithWhistle(): Promise<void> {
+    this.cancelWarmup()
+    
     const player = this.getActivePlayer()
     if (!player) return
     
     // Quick fade out
-    await this.fadeOut(player, this.QUICK_FADE_DURATION)
+    await this.fadeOut(player, AUDIO_EXPERIENCE.QUICK_FADE_DURATION)
     
     // Stop playback
     this.stopImmediate()
@@ -352,8 +491,8 @@ class SoundtrackManagerClass {
       
       // Crossfade
       await Promise.all([
-        this.fadeOut(outgoingPlayer, this.CROSSFADE_DURATION),
-        this.fadeIn(incomingPlayer, this.CROSSFADE_DURATION),
+        this.fadeOut(outgoingPlayer, AUDIO_EXPERIENCE.CROSSFADE_DURATION),
+        this.fadeIn(incomingPlayer, AUDIO_EXPERIENCE.CROSSFADE_DURATION),
       ])
       
       // Stop outgoing player
@@ -377,10 +516,12 @@ class SoundtrackManagerClass {
       const interval = setInterval(() => {
         currentStep++
         audio.volume = Math.min(volumeStep * currentStep, targetVolume)
+        this.currentVolume = audio.volume
         
         if (currentStep >= steps) {
           clearInterval(interval)
           audio.volume = targetVolume
+          this.currentVolume = targetVolume
           resolve()
         }
       }, stepDuration)
@@ -398,10 +539,12 @@ class SoundtrackManagerClass {
       const interval = setInterval(() => {
         currentStep++
         audio.volume = Math.max(startVolume - (volumeStep * currentStep), 0)
+        this.currentVolume = audio.volume
         
         if (currentStep >= steps) {
           clearInterval(interval)
           audio.volume = 0
+          this.currentVolume = 0
           resolve()
         }
       }, stepDuration)
@@ -416,8 +559,9 @@ class SoundtrackManagerClass {
     this.volume = Math.max(0, Math.min(1, volume))
     
     const player = this.getActivePlayer()
-    if (player && !this.muted) {
+    if (player && !this.muted && this.playbackState === 'playing') {
       player.volume = this.volume
+      this.currentVolume = this.volume
     }
     
     this.notifyListeners()
@@ -432,7 +576,13 @@ class SoundtrackManagerClass {
     
     const player = this.getActivePlayer()
     if (player) {
-      player.volume = muted ? 0 : this.volume
+      if (muted) {
+        player.volume = 0
+        this.currentVolume = 0
+      } else if (this.playbackState === 'playing') {
+        player.volume = this.volume
+        this.currentVolume = this.volume
+      }
     }
     
     this.notifyListeners()
@@ -480,6 +630,7 @@ class SoundtrackManagerClass {
       duration: player?.duration || this.currentTrack?.duration || 0,
       volume: this.volume,
       muted: this.muted,
+      isWarmingUp: this.isWarmingUp,
     }
   }
   
@@ -500,13 +651,16 @@ class SoundtrackManagerClass {
     return player?.duration || this.currentTrack?.duration || 0
   }
   
+  isPlaying(): boolean {
+    return this.playbackState === 'playing' || this.playbackState === 'warming'
+  }
+  
   // --------------------------------------------------------------------------
   // Event Handlers
   // --------------------------------------------------------------------------
   
   private handleTrackEnd(): void {
-    // For now, loop the current track
-    // Later we can add playlist support
+    // Loop the current track
     const player = this.getActivePlayer()
     if (player && this.currentTrack) {
       const loopStart = this.currentTrack.analysis?.loopPoints?.start ?? 0
@@ -562,6 +716,8 @@ class SoundtrackManagerClass {
   // --------------------------------------------------------------------------
   
   destroy(): void {
+    this.cancelWarmup()
+    
     if (this.timeUpdateInterval) {
       clearInterval(this.timeUpdateInterval)
       this.timeUpdateInterval = null
