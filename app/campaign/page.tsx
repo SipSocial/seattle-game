@@ -87,8 +87,8 @@ export default function CampaignPage() {
         airplaneUrl={GENERATED_ASSETS.airplaneUrl}
       />
       
-      {/* Soundtrack Player - positioned at bottom with offset for game panel */}
-      <SoundtrackPlayer position="bottom" offset={100} />
+      {/* Soundtrack Player - positioned at bottom with large offset to clear modals */}
+      <SoundtrackPlayer position="bottom" offset={160} />
     </motion.div>
   )
 }

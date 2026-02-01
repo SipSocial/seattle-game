@@ -18,6 +18,8 @@ export interface MiniPlayerProps {
   position?: 'top' | 'bottom'
   /** Additional offset from the edge (in pixels) */
   offset?: number
+  /** Variant style - 'default' is the full player, 'slim' is just text bar */
+  variant?: 'default' | 'slim'
 }
 
 // ----------------------------------------------------------------------------
@@ -103,7 +105,7 @@ function MarqueeText({ text, className }: { text: string; className?: string }) 
 // MiniPlayer Component
 // ----------------------------------------------------------------------------
 
-export function MiniPlayer({ position = 'bottom', offset = 0 }: MiniPlayerProps) {
+export function MiniPlayer({ position = 'bottom', offset = 0, variant = 'default' }: MiniPlayerProps) {
   const playerView = useSoundtrackStore((state) => state.playerView)
   const currentTrack = useSoundtrackStore((state) => state.currentTrack)
   const isPlaying = useSoundtrackStore((state) => state.isPlaying)
@@ -131,6 +133,147 @@ export function MiniPlayer({ position = 'bottom', offset = 0 }: MiniPlayerProps)
   const animationVariants = isTop ? slideDown : slideUp
   const ExpandIcon = isTop ? ChevronDownIcon : ChevronUpIcon
   
+  // Slim variant - just a thin scrolling text bar
+  if (variant === 'slim') {
+    return (
+      <AnimatePresence>
+        {shouldShow && (
+          <motion.div
+            className="fixed left-0 right-0 z-40"
+            style={{ bottom: `calc(env(safe-area-inset-bottom, 0px) + ${offset}px)` }}
+            variants={slideUp}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            transition={spring}
+          >
+            {/* Slim glass bar */}
+            <div
+              style={{
+                background: 'linear-gradient(180deg, rgba(0, 34, 68, 0.95) 0%, rgba(0, 20, 40, 0.98) 100%)',
+                backdropFilter: 'blur(16px)',
+                WebkitBackdropFilter: 'blur(16px)',
+                borderTop: '1px solid rgba(105, 190, 40, 0.3)',
+                boxShadow: '0 -4px 20px rgba(0, 0, 0, 0.4)',
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  padding: '10px 16px',
+                  gap: '12px',
+                }}
+              >
+                {/* Music icon with glow when playing */}
+                <motion.div
+                  animate={isPlaying ? { 
+                    scale: [1, 1.1, 1],
+                    opacity: [0.8, 1, 0.8],
+                  } : { scale: 1, opacity: 0.6 }}
+                  transition={isPlaying ? { repeat: Infinity, duration: 1.5, ease: 'easeInOut' } : {}}
+                  style={{
+                    width: '24px',
+                    height: '24px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#69BE28',
+                    flexShrink: 0,
+                  }}
+                >
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
+                  </svg>
+                </motion.div>
+                
+                {/* Scrolling Text - takes full width */}
+                <button
+                  onClick={expandPlayer}
+                  style={{
+                    flex: 1,
+                    minWidth: 0,
+                    textAlign: 'left',
+                    background: 'none',
+                    border: 'none',
+                    padding: 0,
+                    cursor: 'pointer',
+                  }}
+                >
+                  <MarqueeText
+                    text={displayText}
+                    className="text-[12px] font-medium text-white/80"
+                  />
+                </button>
+                
+                {/* Compact Play/Pause */}
+                <button
+                  onClick={() => controls.togglePlayPause()}
+                  disabled={isLoading}
+                  style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '50%',
+                    background: isPlaying 
+                      ? 'linear-gradient(135deg, #69BE28 0%, #4A9A1C 100%)'
+                      : 'rgba(105, 190, 40, 0.2)',
+                    border: 'none',
+                    color: isPlaying ? '#001428' : '#69BE28',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    flexShrink: 0,
+                    transition: 'all 0.2s ease',
+                  }}
+                >
+                  {isLoading ? (
+                    <motion.div
+                      animate={{ rotate: 360 }}
+                      transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
+                    >
+                      <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                        <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83" />
+                      </svg>
+                    </motion.div>
+                  ) : isPlaying ? (
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
+                    </svg>
+                  ) : (
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M8 5v14l11-7z" />
+                    </svg>
+                  )}
+                </button>
+                
+                {/* Expand chevron */}
+                <button
+                  onClick={expandPlayer}
+                  style={{
+                    width: '24px',
+                    height: '24px',
+                    background: 'transparent',
+                    border: 'none',
+                    color: 'rgba(255, 255, 255, 0.4)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    flexShrink: 0,
+                  }}
+                >
+                  <ChevronUpIcon />
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    )
+  }
+  
+  // Default variant - full floating pill player
   return (
     <AnimatePresence>
       {shouldShow && (
