@@ -6,6 +6,7 @@ import { motion } from 'framer-motion'
 import { CampaignMapV2 } from '@/components/game/CampaignMapV2'
 import { useGameStore } from '@/src/store/gameStore'
 import { GENERATED_ASSETS } from '@/src/game/data/campaignAssets'
+import { AudioManager } from '@/src/game/systems/AudioManager'
 
 export default function CampaignPage() {
   const router = useRouter()
@@ -15,6 +16,26 @@ export default function CampaignPage() {
 
   useEffect(() => {
     setMounted(true)
+    
+    // Initialize audio system
+    AudioManager.init()
+    
+    // Set up global audio unlock on first user interaction
+    const handleInteraction = () => {
+      AudioManager.unlock()
+      document.removeEventListener('click', handleInteraction)
+      document.removeEventListener('touchstart', handleInteraction)
+    }
+    
+    if (!AudioManager.isReady()) {
+      document.addEventListener('click', handleInteraction, { once: true })
+      document.addEventListener('touchstart', handleInteraction, { once: true })
+    }
+    
+    return () => {
+      document.removeEventListener('click', handleInteraction)
+      document.removeEventListener('touchstart', handleInteraction)
+    }
   }, [])
 
   const handleSelectStage = useCallback((stageId: number) => {

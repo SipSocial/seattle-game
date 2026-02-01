@@ -1,7 +1,8 @@
 'use client'
 
-import { ReactNode, forwardRef } from 'react'
+import { ReactNode, forwardRef, useCallback } from 'react'
 import { motion, HTMLMotionProps } from 'framer-motion'
+import { AudioManager } from '@/src/game/systems/AudioManager'
 
 export interface ButtonSize {
   height: string
@@ -65,9 +66,18 @@ export const GradientButton = forwardRef<HTMLButtonElement, GradientButtonProps>
     className = '',
     disabled,
     style,
+    onClick,
     ...props 
   }, ref) => {
     const s = BUTTON_SIZES[size]
+    
+    // Wrap onClick to add audio feedback
+    const handleClick = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
+      if (!disabled && !loading) {
+        AudioManager.playClick()
+      }
+      onClick?.(e)
+    }, [onClick, disabled, loading])
     
     const radiusMap = {
       sm: 'var(--btn-radius-sm)',
@@ -112,6 +122,7 @@ export const GradientButton = forwardRef<HTMLButtonElement, GradientButtonProps>
         whileTap={!disabled && !loading ? { scale: 0.97 } : undefined}
         transition={{ type: 'spring', stiffness: 400, damping: 25 }}
         disabled={disabled || loading}
+        onClick={handleClick}
         {...props}
       >
         {/* Shine effect on hover */}

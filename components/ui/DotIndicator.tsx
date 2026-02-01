@@ -1,6 +1,8 @@
 'use client'
 
+import { useCallback } from 'react'
 import { motion } from 'framer-motion'
+import { AudioManager } from '@/src/game/systems/AudioManager'
 
 interface DotIndicatorProps {
   total: number
@@ -25,12 +27,20 @@ export function DotIndicator({
 }: DotIndicatorProps) {
   const s = sizeStyles[size]
   
+  // Wrap onSelect to add audio feedback
+  const handleSelect = useCallback((index: number) => {
+    if (onSelect && index !== current) {
+      AudioManager.playClick()
+      onSelect(index)
+    }
+  }, [onSelect, current])
+  
   return (
     <div className={`flex items-center justify-center ${className}`} style={{ gap: s.gap }}>
       {Array.from({ length: total }).map((_, i) => (
         <motion.button
           key={i}
-          onClick={() => onSelect?.(i)}
+          onClick={() => handleSelect(i)}
           className="rounded-full transition-all"
           style={{
             height: s.dot,

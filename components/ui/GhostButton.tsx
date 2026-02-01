@@ -1,7 +1,8 @@
 'use client'
 
-import { ReactNode, forwardRef } from 'react'
+import { ReactNode, forwardRef, useCallback } from 'react'
 import { motion, HTMLMotionProps } from 'framer-motion'
+import { AudioManager } from '@/src/game/systems/AudioManager'
 
 export interface ButtonSize {
   height: string
@@ -89,10 +90,19 @@ export const GhostButton = forwardRef<HTMLButtonElement, GhostButtonProps>(
     className = '',
     disabled,
     style,
+    onClick,
     ...props 
   }, ref) => {
     const s = BUTTON_SIZES[size]
     const v = VARIANTS[variant]
+    
+    // Wrap onClick to add audio feedback
+    const handleClick = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
+      if (!disabled) {
+        AudioManager.playClick()
+      }
+      onClick?.(e)
+    }, [onClick, disabled])
     
     const radiusMap = {
       sm: 'var(--btn-radius-sm)',
@@ -138,6 +148,7 @@ export const GhostButton = forwardRef<HTMLButtonElement, GhostButtonProps>(
         whileTap={!disabled ? { scale: 0.97 } : undefined}
         transition={{ type: 'spring', stiffness: 400, damping: 25 }}
         disabled={disabled}
+        onClick={handleClick}
         {...props}
       >
         {icon && iconPosition === 'left' && (

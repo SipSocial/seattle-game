@@ -1,7 +1,8 @@
 'use client'
 
-import { forwardRef } from 'react'
+import { forwardRef, useCallback } from 'react'
 import { motion, HTMLMotionProps } from 'framer-motion'
+import { AudioManager } from '@/src/game/systems/AudioManager'
 
 interface NavigationArrowProps extends Omit<HTMLMotionProps<'button'>, 'children'> {
   direction: 'left' | 'right'
@@ -15,8 +16,16 @@ const sizeStyles = {
 }
 
 export const NavigationArrow = forwardRef<HTMLButtonElement, NavigationArrowProps>(
-  ({ direction, size = 'md', className = '', disabled, ...props }, ref) => {
+  ({ direction, size = 'md', className = '', disabled, onClick, ...props }, ref) => {
     const s = sizeStyles[size]
+    
+    // Wrap onClick to add audio feedback
+    const handleClick = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
+      if (!disabled) {
+        AudioManager.playClick()
+      }
+      onClick?.(e)
+    }, [onClick, disabled])
     
     return (
       <motion.button
@@ -42,6 +51,7 @@ export const NavigationArrow = forwardRef<HTMLButtonElement, NavigationArrowProp
         } : undefined}
         whileTap={!disabled ? { scale: 0.9 } : undefined}
         disabled={disabled}
+        onClick={handleClick}
         {...props}
       >
         <svg

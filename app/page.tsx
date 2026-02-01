@@ -6,6 +6,7 @@ import { motion } from 'framer-motion'
 import { VideoBackground } from '@/components/ui/VideoBackground'
 import { GradientButton } from '@/components/ui/GradientButton'
 import { GhostButton } from '@/components/ui/GhostButton'
+import { AudioManager } from '@/src/game/systems/AudioManager'
 
 const BACKGROUND_VIDEO = 'https://cdn.leonardo.ai/users/eb9a23b8-36c0-4667-b97f-64fdee85d14b/generations/4b5f0ad3-9f4e-413f-b44a-053e9af6240c/4b5f0ad3-9f4e-413f-b44a-053e9af6240c.mp4'
 const BACKGROUND_POSTER = 'https://cdn.leonardo.ai/users/eb9a23b8-36c0-4667-b97f-64fdee85d14b/generations/16412705-ca65-400e-bb78-80ff29be860a/segments/2:2:1/Phoenix_Empty_NFL_football_field_at_night_dramatic_billowing_s_0.jpg'
@@ -37,6 +38,26 @@ export default function Home() {
 
   useEffect(() => {
     setMounted(true)
+    
+    // Initialize audio system early
+    AudioManager.init()
+    
+    // Set up global audio unlock on first user interaction
+    const handleInteraction = () => {
+      AudioManager.unlock()
+      document.removeEventListener('click', handleInteraction)
+      document.removeEventListener('touchstart', handleInteraction)
+    }
+    
+    if (!AudioManager.isReady()) {
+      document.addEventListener('click', handleInteraction, { once: true })
+      document.addEventListener('touchstart', handleInteraction, { once: true })
+    }
+    
+    return () => {
+      document.removeEventListener('click', handleInteraction)
+      document.removeEventListener('touchstart', handleInteraction)
+    }
   }, [])
 
   return (
