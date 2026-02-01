@@ -6,6 +6,11 @@ import { FULL_ROSTER } from '../data/roster'
 import { getStageByGame, CampaignStage, GAMES_PER_STAGE } from '../data/campaign'
 import { DEFENDER_SPRITES, getDefenderSprite } from '../systems/PremiumVisuals'
 
+// Helper to check AR mode from store instead of main.ts to avoid circular dependency
+function isArModeActive(): boolean {
+  return useGameStore.getState().arMode.enabled
+}
+
 // ============================================
 // SEAHAWKS DEFENSE - PREMIUM GAME EXPERIENCE
 // ============================================
@@ -134,9 +139,7 @@ export class GameScene extends Phaser.Scene {
   private fanMeterLabel!: Phaser.GameObjects.Text
   private fanMeterGlow!: Phaser.GameObjects.Graphics
   
-  // Pause Button
-  private pauseButton!: Phaser.GameObjects.Container
-  private pauseOverlay!: Phaser.GameObjects.Container | null
+  // REMOVED: pauseButton and pauseOverlay - now handled by React
   
   // Game state
   private isGameOver = false
@@ -179,6 +182,8 @@ export class GameScene extends Phaser.Scene {
   private stageAtmosphere: Phaser.GameObjects.Graphics[] = []
   private backgroundVideo: Phaser.GameObjects.Video | null = null
   private premiumOverlays: Phaser.GameObjects.Graphics[] = []
+  private backgroundElements: Phaser.GameObjects.GameObject[] = [] // All bg elements for AR toggle
+  private arModeUnsubscribe: (() => void) | null = null // Zustand subscription cleanup
   
   // Premium visual constants
   private static readonly STADIUM_VIDEO = 'https://cdn.leonardo.ai/users/eb9a23b8-36c0-4667-b97f-64fdee85d14b/generations/4b5f0ad3-9f4e-413f-b44a-053e9af6240c/4b5f0ad3-9f4e-413f-b44a-053e9af6240c.mp4'
@@ -244,8 +249,11 @@ export class GameScene extends Phaser.Scene {
     this.createDefenders()
     this.createPremiumUI()
     this.createFanMeterUI()
-    this.createPauseButton()
+    // REMOVED: createPauseButton() - now handled by React GameHUD
     this.setupInput()
+    
+    // Subscribe to AR mode changes to toggle background visibility
+    this.subscribeToArMode()
     
     // Show stage info banner for campaign mode
     if (this.isCampaignMode && this.currentStage) {
@@ -255,59 +263,60 @@ export class GameScene extends Phaser.Scene {
     this.startWave()
   }
   
+  // Subscribe to AR mode changes from Zustand store
+  private subscribeToArMode(): void {
+    // Initial check
+    this.setBackgroundVisibility(!isArModeActive())
+    
+    // Subscribe to changes - Zustand v4 style
+    let prevEnabled = isArModeActive()
+    this.arModeUnsubscribe = useGameStore.subscribe((state) => {
+      const enabled = state.arMode.enabled
+      if (enabled !== prevEnabled) {
+        prevEnabled = enabled
+        this.setBackgroundVisibility(!enabled)
+      }
+    })
+  }
+  
+  // Toggle visibility of all background elements
+  private setBackgroundVisibility(visible: boolean): void {
+    this.backgroundElements.forEach(element => {
+      if (element && 'setVisible' in element) {
+        (element as Phaser.GameObjects.GameObject & { setVisible: (v: boolean) => void }).setVisible(visible)
+      }
+    })
+    
+    // Also toggle premium overlays
+    this.premiumOverlays.forEach(overlay => {
+      overlay.setVisible(visible)
+    })
+    
+    // Toggle field particles
+    this.fieldParticles.forEach(particle => {
+      particle.setVisible(visible)
+    })
+    
+    // Toggle stage atmosphere (weather effects, crowd energy)
+    this.stageAtmosphere.forEach(particle => {
+      particle.setVisible(visible)
+    })
+  }
+  
   private showCampaignBanner(): void {
     if (!this.currentStage) return
     
     const { campaign } = useGameStore.getState()
     const gameInStage = ((campaign.currentGame - 1) % GAMES_PER_STAGE) + 1
     
-    // Stage banner at top
-    const banner = this.add.container(GAME_WIDTH / 2, 100)
-    
-    const bg = this.add.graphics()
-    bg.fillStyle(COLORS.navy, 0.9)
-    bg.fillRoundedRect(-150, -40, 300, 80, 12)
-    bg.lineStyle(2, COLORS.green, 0.5)
-    bg.strokeRoundedRect(-150, -40, 300, 80, 12)
-    banner.add(bg)
-    
-    const stageName = this.add.text(0, -15, this.currentStage.location.city.toUpperCase(), {
-      fontSize: '22px',
-      color: hexToCSS(COLORS.green),
-      fontFamily: FONTS.display,
-    })
-    stageName.setOrigin(0.5)
-    banner.add(stageName)
-    
-    const gameInfo = this.add.text(0, 12, `Stage ${this.currentStage.id} • Game ${gameInStage}/${GAMES_PER_STAGE}`, {
-      fontSize: '12px',
-      color: hexToCSS(COLORS.grey),
-      fontFamily: FONTS.body,
-    })
-    gameInfo.setOrigin(0.5)
-    banner.add(gameInfo)
-    
-    banner.setAlpha(0)
-    banner.setScale(0.8)
-    
-    // Animate in then out
-    this.tweens.add({
-      targets: banner,
-      alpha: 1,
-      scale: 1,
-      duration: 400,
-      ease: 'Back.easeOut',
-      onComplete: () => {
-        this.tweens.add({
-          targets: banner,
-          alpha: 0,
-          y: banner.y - 30,
-          duration: 400,
-          delay: 1500,
-          onComplete: () => banner.destroy()
-        })
-      }
-    })
+    // Show React stage banner via Zustand store
+    const store = useGameStore.getState()
+    store.showStageBanner(
+      this.currentStage.location.city,
+      this.currentStage.id,
+      gameInStage,
+      GAMES_PER_STAGE
+    )
   }
 
   private resetState(): void {
@@ -321,8 +330,11 @@ export class GameScene extends Phaser.Scene {
     this.runnersThisWave = 0
     this.comboCount = 0
     this.lastTackleTime = 0
-    this.pauseOverlay = null
+    // REMOVED: this.pauseOverlay = null - now handled by React
     this.stageAtmosphere = []
+    this.backgroundElements = [] // Reset for AR mode toggle
+    this.premiumOverlays = []
+    this.fieldParticles = []
     
     // 12th Man reset
     this.fanMeter = 0
@@ -355,7 +367,9 @@ export class GameScene extends Phaser.Scene {
     // PREMIUM PHOTO-REALISTIC STADIUM BACKGROUND
     // ============================================================
     
-    // Layer 1: Base dark gradient (always visible)
+    // Always create all elements - visibility will be toggled by AR mode subscription
+    
+    // Layer 1: Base dark gradient
     const baseGradient = this.add.graphics()
     baseGradient.setDepth(-100)
     for (let y = 0; y < GAME_HEIGHT; y++) {
@@ -367,6 +381,7 @@ export class GameScene extends Phaser.Scene {
       baseGradient.fillStyle(Phaser.Display.Color.GetColor(r, g, b), 1)
       baseGradient.fillRect(0, y, GAME_WIDTH, 1)
     }
+    this.backgroundElements.push(baseGradient)
     
     // Layer 2: Stadium background image
     if (this.textures.exists('stadium_bg')) {
@@ -374,12 +389,13 @@ export class GameScene extends Phaser.Scene {
       bgImage.setDisplaySize(GAME_WIDTH * 1.3, GAME_HEIGHT * 1.3)
       bgImage.setDepth(-99)
       bgImage.setAlpha(0.6)
+      this.backgroundElements.push(bgImage)
     }
     
     // Layer 3: Dramatic lighting overlays
     this.createPremiumLighting()
     
-    // Layer 4: Subtle field markings (floating above background)
+    // Layer 4: Subtle field markings (these should stay visible in AR)
     this.createMinimalFieldMarkings()
     
     // Layer 5: Atmospheric particles
@@ -429,7 +445,7 @@ export class GameScene extends Phaser.Scene {
     fieldGlow.fillEllipse(GAME_WIDTH / 2, GAME_HEIGHT + 100, GAME_WIDTH * 1.5, 400)
     this.premiumOverlays.push(fieldGlow)
     
-    // Vignette effect (dark edges)
+    // Vignette effect
     const vignette = this.add.graphics()
     vignette.setDepth(-85)
     // Left edge
@@ -472,12 +488,16 @@ export class GameScene extends Phaser.Scene {
       lines.lineStyle(2, 0xffffff, 0.2)
       lines.lineBetween(40, y, GAME_WIDTH - 40, y)
     })
+    // Yard lines are background elements - hidden in AR mode
+    this.backgroundElements.push(lines)
     
     // Endzone with premium styling
     const endzone = this.add.graphics()
     endzone.setDepth(-79)
     endzone.fillStyle(COLORS.navy, 0.5)
     endzone.fillRect(0, GAME_HEIGHT - 70, GAME_WIDTH, 70)
+    // Endzone is background element
+    this.backgroundElements.push(endzone)
     
     // Endzone glow line
     endzone.lineStyle(3, COLORS.green, 0.4)
@@ -492,12 +512,16 @@ export class GameScene extends Phaser.Scene {
     endzoneText.setOrigin(0.5)
     endzoneText.setAlpha(0.25)
     endzoneText.setDepth(-78)
+    // Endzone text is background element
+    this.backgroundElements.push(endzoneText)
     
     // Danger zone at top (where runners spawn)
     const dangerZone = this.add.graphics()
     dangerZone.setDepth(-77)
     dangerZone.fillStyle(0xff0000, 0.08)
     dangerZone.fillRect(0, 0, GAME_WIDTH, 70)
+    // Danger zone is background element
+    this.backgroundElements.push(dangerZone)
     
     // Subtle red glow line
     dangerZone.lineStyle(2, 0xff3333, 0.3)
@@ -550,6 +574,8 @@ export class GameScene extends Phaser.Scene {
     const lightsGlow = this.add.graphics()
     lightsGlow.fillStyle(0xffffff, 0.02)
     lightsGlow.fillEllipse(GAME_WIDTH / 2, -50, GAME_WIDTH, 200)
+    // Add to background elements for AR mode toggle
+    this.backgroundElements.push(lightsGlow)
     
     this.tweens.add({
       targets: lightsGlow,
@@ -571,6 +597,8 @@ export class GameScene extends Phaser.Scene {
     const stageGlow = this.add.graphics()
     stageGlow.fillStyle(atmoColorNum, 0.05 * crowdIntensity)
     stageGlow.fillEllipse(GAME_WIDTH / 2, -30, GAME_WIDTH * 1.2, 150)
+    // Add to background elements for AR mode toggle
+    this.backgroundElements.push(stageGlow)
     
     this.tweens.add({
       targets: stageGlow,
@@ -780,10 +808,14 @@ export class GameScene extends Phaser.Scene {
     const leftEnergy = this.add.graphics()
     leftEnergy.fillStyle(color, 0.05)
     leftEnergy.fillRect(0, 0, 30, GAME_HEIGHT)
+    // Add to background elements for AR mode toggle
+    this.backgroundElements.push(leftEnergy)
     
     const rightEnergy = this.add.graphics()
     rightEnergy.fillStyle(color, 0.05)
     rightEnergy.fillRect(GAME_WIDTH - 30, 0, 30, GAME_HEIGHT)
+    // Add to background elements for AR mode toggle
+    this.backgroundElements.push(rightEnergy)
     
     // Pulse animation
     this.tweens.add({
@@ -1029,245 +1061,52 @@ export class GameScene extends Phaser.Scene {
     this.waveText = this.add.text(-1000, -1000, '', { fontSize: '1px' })
     this.livesContainer = this.add.container(-1000, -1000)
     
-    // === TIMER BAR - Positioned below React HUD ===
+    // REMOVED: Timer bar - now handled by React GameHUD
+    // Create invisible graphics to prevent null errors
     this.timerBg = this.add.graphics()
-    this.timerBg.setDepth(uiDepth)
-    this.timerBg.fillStyle(0x000000, 0.5)
-    this.timerBg.fillRoundedRect(20, 85, GAME_WIDTH - 40, 8, 4)
-    this.timerBg.lineStyle(1, COLORS.green, 0.3)
-    this.timerBg.strokeRoundedRect(20, 85, GAME_WIDTH - 40, 8, 4)
-    
+    this.timerBg.setVisible(false)
     this.timerBar = this.add.graphics()
-    this.timerBar.setDepth(uiDepth + 1)
+    this.timerBar.setVisible(false)
     
     // Bottom HUD removed - React handles all HUD now
     // Tackles text hidden (moved off-screen)
     this.killsText = this.add.text(-1000, -1000, '', { fontSize: '1px' })
     
-    // === COMBO TEXT ===
-    this.comboText = this.add.text(GAME_WIDTH / 2, 130, '', {
-      fontSize: '28px',
-      color: hexToCSS(COLORS.gold),
-      fontFamily: FONTS.display,
-    })
-    this.comboText.setOrigin(0.5)
-    this.comboText.setAlpha(0)
-    this.comboText.setDepth(uiDepth + 5)
-    this.comboText.setShadow(0, 0, hexToCSS(COLORS.gold), 20, true, true)
+    // REMOVED: Combo text - now handled by React GameHUD
+    // Create invisible text to prevent null errors
+    this.comboText = this.add.text(-1000, -1000, '', { fontSize: '1px' })
     
-    // === STATS PANEL - Glass card style ===
-    this.statsText = this.add.text(GAME_WIDTH - 15, GAME_HEIGHT - 80, '', {
-      fontSize: '11px',
-      color: hexToCSS(COLORS.grey),
-      fontFamily: FONTS.body,
-      lineSpacing: 6,
-      align: 'right',
-    })
-    this.statsText.setOrigin(1, 0)
-    this.statsText.setDepth(uiDepth + 1)
-    this.updateStatsDisplay()
+    // REMOVED: Stats panel - now handled by React GameHUD
+    // Create invisible text to prevent null errors
+    this.statsText = this.add.text(-1000, -1000, '', { fontSize: '1px' })
   }
   
   private updateStatsDisplay(): void {
-    const lines = []
-    if (this.stats.defenderCount > 1) lines.push(`🏈 ${this.stats.defenderCount} Defenders`)
-    if (this.stats.speedMultiplier > 1) lines.push(`⚡ +${Math.round((this.stats.speedMultiplier - 1) * 100)}% Speed`)
-    if (this.stats.tackleRadiusMultiplier > 1) lines.push(`💪 +${Math.round((this.stats.tackleRadiusMultiplier - 1) * 100)}% Reach`)
-    if (this.stats.enemySpeedMultiplier < 1) lines.push(`🍺 -${Math.round((1 - this.stats.enemySpeedMultiplier) * 100)}% Enemy`)
-    
-    this.statsText.setText(lines.join('\n'))
+    // REMOVED: Stats display updates - now handled by React GameHUD
+    // Stats are synced via Zustand store
   }
 
   private createFanMeterUI(): void {
-    const { wave } = useGameStore.getState()
-    const meterWidth = 120
-    const meterHeight = 16
-    const meterX = GAME_WIDTH - meterWidth - 15
-    const meterY = GAME_HEIGHT - 30
-    
-    // Background glow (hidden initially, shown when meter is full)
+    // REMOVED: Fan meter UI - now handled by React GameHUD
+    // Create invisible graphics to prevent null errors
     this.fanMeterGlow = this.add.graphics()
-    this.fanMeterGlow.fillStyle(COLORS.green, 0.3)
-    this.fanMeterGlow.fillRoundedRect(meterX - 4, meterY - 4, meterWidth + 8, meterHeight + 8, 10)
-    this.fanMeterGlow.setAlpha(0)
-    
-    // Background
+    this.fanMeterGlow.setVisible(false)
     this.fanMeterBg = this.add.graphics()
-    this.fanMeterBg.fillStyle(COLORS.navyLight, 0.8)
-    this.fanMeterBg.fillRoundedRect(meterX, meterY, meterWidth, meterHeight, 6)
-    this.fanMeterBg.lineStyle(1, COLORS.grey, 0.4)
-    this.fanMeterBg.strokeRoundedRect(meterX, meterY, meterWidth, meterHeight, 6)
-    
-    // Fill bar
+    this.fanMeterBg.setVisible(false)
     this.fanMeterBar = this.add.graphics()
-    
-    // Label with 12 icon
-    this.fanMeterLabel = this.add.text(meterX - 5, meterY + meterHeight / 2, '12', {
-      fontSize: '12px',
-      color: hexToCSS(COLORS.green),
-      fontFamily: FONTS.display,
-    })
-    this.fanMeterLabel.setOrigin(1, 0.5)
-    
-    // Initially hidden until wave 3
-    const isVisible = wave >= 3
-    this.fanMeterGlow.setAlpha(0)
-    this.fanMeterBg.setAlpha(isVisible ? 1 : 0)
-    this.fanMeterBar.setAlpha(isVisible ? 1 : 0)
-    this.fanMeterLabel.setAlpha(isVisible ? 0.7 : 0)
+    this.fanMeterBar.setVisible(false)
+    this.fanMeterLabel = this.add.text(-1000, -1000, '', { fontSize: '1px' })
   }
 
   private updateFanMeterDisplay(): void {
-    const { wave } = useGameStore.getState()
-    const meterWidth = 120
-    const meterHeight = 16
-    const meterX = GAME_WIDTH - meterWidth - 15
-    const meterY = GAME_HEIGHT - 30
-    
-    // Show/hide based on wave
-    const isVisible = wave >= 3
-    if (!isVisible) {
-      this.fanMeterBg.setAlpha(0)
-      this.fanMeterBar.setAlpha(0)
-      this.fanMeterLabel.setAlpha(0)
-      return
-    }
-    
-    this.fanMeterBg.setAlpha(1)
-    this.fanMeterBar.setAlpha(1)
-    this.fanMeterLabel.setAlpha(0.7)
-    
-    this.fanMeterBar.clear()
-    
-    // Calculate fill width
-    const fillWidth = (meterWidth - 4) * (this.fanMeter / 100)
-    
-    // Color changes based on meter level
-    let barColor = COLORS.grey
-    if (this.fanMeter >= 100) {
-      barColor = COLORS.green
-    } else if (this.fanMeter >= 75) {
-      barColor = COLORS.gold
-    } else if (this.fanMeter >= 50) {
-      barColor = COLORS.greenLight
-    }
-    
-    if (fillWidth > 0) {
-      this.fanMeterBar.fillStyle(barColor, 1)
-      this.fanMeterBar.fillRoundedRect(meterX + 2, meterY + 2, fillWidth, meterHeight - 4, 4)
-    }
-    
-    // Pulsing glow when megaphone is on screen
-    if (this.megaphone) {
-      this.fanMeterGlow.setAlpha(0.6 + Math.sin(Date.now() * 0.015) * 0.4)
-      this.fanMeterLabel.setColor(hexToCSS(COLORS.green))
-      this.fanMeterLabel.setText('📣 GET IT!')
-    } else if (this.fanMeter >= 100 && this.fanMeterReady) {
-      this.fanMeterGlow.setAlpha(0.6 + Math.sin(Date.now() * 0.01) * 0.4)
-      this.fanMeterLabel.setColor(hexToCSS(COLORS.gold))
-      this.fanMeterLabel.setText('12 READY!')
-    } else {
-      this.fanMeterGlow.setAlpha(0)
-      this.fanMeterLabel.setColor(hexToCSS(COLORS.grey))
-      this.fanMeterLabel.setText('12')
-    }
+    // REMOVED: Fan meter display updates - now handled by React GameHUD
+    // Just sync to Zustand store
+    useGameStore.getState().setFanMeter(this.fanMeter)
   }
+  
 
-  private createPauseButton(): void {
-    const buttonSize = 36
-    const x = GAME_WIDTH - buttonSize / 2 - 10
-    const y = 85
-    
-    const bg = this.add.graphics()
-    bg.fillStyle(COLORS.navyLight, 0.8)
-    bg.fillRoundedRect(-buttonSize / 2, -buttonSize / 2, buttonSize, buttonSize, 8)
-    
-    const icon = this.add.text(0, 0, '⏸', { fontSize: '18px' })
-    icon.setOrigin(0.5)
-    icon.setName('pauseIcon')
-    
-    this.pauseButton = this.add.container(x, y, [bg, icon])
-    this.pauseButton.setSize(buttonSize, buttonSize)
-    this.pauseButton.setInteractive({ useHandCursor: true })
-    this.pauseButton.setDepth(100)
-    
-    this.pauseButton.on('pointerdown', () => {
-      AudioManager.playClick()
-      this.togglePause()
-    })
-    
-    this.pauseButton.on('pointerover', () => {
-      this.tweens.add({ targets: this.pauseButton, scale: 1.1, duration: 100 })
-    })
-    
-    this.pauseButton.on('pointerout', () => {
-      this.tweens.add({ targets: this.pauseButton, scale: 1, duration: 100 })
-    })
-  }
-
-  private togglePause(): void {
-    if (this.isGameOver) return
-    
-    this.isPaused = !this.isPaused
-    
-    const icon = this.pauseButton.getByName('pauseIcon') as Phaser.GameObjects.Text
-    
-    if (this.isPaused) {
-      icon.setText('▶')
-      this.showPauseOverlay()
-    } else {
-      icon.setText('⏸')
-      this.hidePauseOverlay()
-    }
-  }
-
-  private showPauseOverlay(): void {
-    if (this.pauseOverlay) return
-    
-    const overlay = this.add.graphics()
-    overlay.fillStyle(0x000000, 0.7)
-    overlay.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT)
-    
-    const pausedText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 30, 'PAUSED', {
-      fontSize: '42px',
-      color: hexToCSS(COLORS.white),
-      fontFamily: FONTS.display,
-    })
-    pausedText.setOrigin(0.5)
-    
-    const resumeHint = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 20, 'Tap pause button to resume', {
-      fontSize: '14px',
-      color: hexToCSS(COLORS.grey),
-      fontFamily: FONTS.body,
-    })
-    resumeHint.setOrigin(0.5)
-    
-    this.pauseOverlay = this.add.container(0, 0, [overlay, pausedText, resumeHint])
-    this.pauseOverlay.setDepth(99)
-    this.pauseOverlay.setAlpha(0)
-    
-    this.tweens.add({
-      targets: this.pauseOverlay,
-      alpha: 1,
-      duration: 200
-    })
-  }
-
-  private hidePauseOverlay(): void {
-    if (!this.pauseOverlay) return
-    
-    this.tweens.add({
-      targets: this.pauseOverlay,
-      alpha: 0,
-      duration: 200,
-      onComplete: () => {
-        if (this.pauseOverlay) {
-          this.pauseOverlay.destroy()
-          this.pauseOverlay = null
-        }
-      }
-    })
-  }
+  // REMOVED: Phaser pause button - now handled by React GameHUD
+  // REMOVED: togglePause, showPauseOverlay, hidePauseOverlay - now handled by React PauseMenu
 
   private show12thManText(): void {
     const text = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 50, '12th MAN!', {
@@ -2775,111 +2614,32 @@ export class GameScene extends Phaser.Scene {
   private showCampaignVictory(): void {
     const store = useGameStore.getState()
     
-    // Overlay
-    const overlay = this.add.graphics()
-    overlay.fillStyle(0x000000, 0.85)
-    overlay.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT)
-    overlay.setAlpha(0)
-    
-    this.tweens.add({
-      targets: overlay,
-      alpha: 1,
-      duration: 400
-    })
-    
-    // Victory container
-    const container = this.add.container(GAME_WIDTH / 2, GAME_HEIGHT / 2)
-    
     // Check if this was the Super Bowl
     const isSuperBowlVictory = store.campaign.superBowlWon
     
     // Check if we just completed a stage (games won is divisible by 3)
     const isStageComplete = store.campaign.gamesWon % GAMES_PER_STAGE === 0
-    const nextStage = isStageComplete ? getStageByGame(store.campaign.currentGame) : null
     
-    // Big text - different for stage complete
-    let mainLabel = 'VICTORY!'
-    let mainColor = COLORS.green
-    let mainSize = '42px'
-    
+    // Determine victory type
+    let victoryType: 'victory' | 'stage_complete' | 'super_bowl' = 'victory'
     if (isSuperBowlVictory) {
-      mainLabel = '🏆 SUPER BOWL\nCHAMPION! 🏆'
-      mainColor = COLORS.gold
-      mainSize = '32px'
+      victoryType = 'super_bowl'
     } else if (isStageComplete) {
-      mainLabel = '🎉 STAGE\nCOMPLETE! 🎉'
-      mainColor = COLORS.gold
-      mainSize = '32px'
+      victoryType = 'stage_complete'
     }
     
-    const mainText = this.add.text(0, -80, mainLabel, {
-      fontSize: mainSize,
-      color: hexToCSS(mainColor),
-      fontFamily: FONTS.display,
-      align: 'center',
-      lineSpacing: 10,
-    })
-    mainText.setOrigin(0.5)
-    container.add(mainText)
-    
-    // Score
-    const scoreText = this.add.text(0, 0, `SCORE: ${store.score.toLocaleString()}`, {
-      fontSize: '24px',
-      color: hexToCSS(COLORS.white),
-      fontFamily: FONTS.display,
-    })
-    scoreText.setOrigin(0.5)
-    container.add(scoreText)
-    
-    // Stage progress / next destination
-    if (!isSuperBowlVictory && this.currentStage) {
-      let progressLabel = ''
-      let progressColor = COLORS.grey
-      
-      if (isStageComplete && nextStage) {
-        progressLabel = `Next: ${nextStage.location.city.toUpperCase()}`
-        progressColor = COLORS.green
-        
-        // Show stage completion bonus
-        const bonusText = this.add.text(0, 70, '+500 STAGE BONUS!', {
-          fontSize: '18px',
-          color: hexToCSS(COLORS.gold),
-          fontFamily: FONTS.display,
-        })
-        bonusText.setOrigin(0.5)
-        bonusText.setScale(0)
-        container.add(bonusText)
-        
-        this.tweens.add({
-          targets: bonusText,
-          scale: 1.2,
-          duration: 300,
-          delay: 500,
-          ease: 'Back.easeOut',
-          onComplete: () => {
-            this.tweens.add({
-              targets: bonusText,
-              scale: 1,
-              duration: 200
-            })
-          }
-        })
-        
-        // Add bonus score
-        store.addScore(500)
-      } else {
-        const gamesRemaining = GAMES_PER_STAGE - (store.campaign.gamesWon % GAMES_PER_STAGE)
-        progressLabel = `${gamesRemaining} game${gamesRemaining > 1 ? 's' : ''} to next stage`
-      }
-      
-      const progressText = this.add.text(0, 40, progressLabel, {
-        fontSize: '14px',
-        color: hexToCSS(progressColor),
-        fontFamily: FONTS.body,
-      })
-      progressText.setOrigin(0.5)
-      container.add(progressText)
+    // Calculate bonus
+    const bonusPoints = isStageComplete ? 500 : 0
+    if (bonusPoints > 0) {
+      store.addScore(bonusPoints)
     }
+    
+    // Get stage name
+    const stageName = this.currentStage?.location.city || ''
+    const stageId = this.currentStage?.id || store.campaign.currentStageId
+    
+    // Show React victory modal via Zustand store
+    store.showVictoryModal(victoryType, stageId, stageName, bonusPoints)
     
     // Add celebration effects for stage complete
     if (isStageComplete && !isSuperBowlVictory) {
@@ -2893,64 +2653,31 @@ export class GameScene extends Phaser.Scene {
       AudioManager.playCrowdRoar()
     }
     
-    // Continue button
-    const continueBtn = this.add.container(0, 120)
-    
-    const btnBg = this.add.graphics()
-    btnBg.fillStyle(COLORS.green, 1)
-    btnBg.fillRoundedRect(-80, -22, 160, 44, 12)
-    continueBtn.add(btnBg)
-    
-    const btnText = this.add.text(0, 0, isSuperBowlVictory ? 'CELEBRATE!' : 'CONTINUE', {
-      fontSize: '18px',
-      color: hexToCSS(COLORS.navy),
-      fontFamily: FONTS.display,
+    // Listen for modal close to transition scenes
+    const unsubscribe = useGameStore.subscribe((state) => {
+      if (!state.victoryModal.isOpen && victoryType !== 'victory') {
+        unsubscribe()
+        
+        AudioManager.playClick()
+        this.cameras.main.fadeOut(400)
+        this.time.delayedCall(400, () => {
+          if (isSuperBowlVictory) {
+            this.scene.start('SuperBowlScene')
+          } else {
+            this.scene.start('MapScene')
+          }
+        })
+      } else if (!state.victoryModal.isOpen) {
+        unsubscribe()
+        // Regular victory - start next wave upgrade selection
+        this.showUpgradeSelection()
+      }
     })
-    btnText.setOrigin(0.5)
-    continueBtn.add(btnText)
-    
-    continueBtn.setSize(160, 44)
-    continueBtn.setInteractive({ useHandCursor: true })
-    
-    continueBtn.on('pointerup', () => {
-      AudioManager.playClick()
-      this.cameras.main.fadeOut(400)
-      this.time.delayedCall(400, () => {
-        if (isSuperBowlVictory) {
-          // Go to the ultimate Super Bowl celebration scene!
-          this.scene.start('SuperBowlScene')
-        } else {
-          // Back to map to continue journey
-          this.scene.start('MapScene')
-        }
-      })
-    })
-    
-    container.add(continueBtn)
-    
-    // Animate in
-    container.setScale(0)
-    this.tweens.add({
-      targets: container,
-      scale: 1,
-      duration: 500,
-      delay: 300,
-      ease: 'Back.easeOut'
-    })
-    
-    // Confetti effect for Super Bowl
-    if (isSuperBowlVictory) {
-      this.createConfettiEffect()
-    }
   }
   
   private showBossIntro(): void {
     if (this.bossSpawned) return
     this.bossSpawned = true
-    
-    // Dramatic boss intro
-    const centerX = GAME_WIDTH / 2
-    const centerY = GAME_HEIGHT / 2
     
     // Play boss warning sound
     AudioManager.playBossWarning()
@@ -2961,69 +2688,27 @@ export class GameScene extends Phaser.Scene {
     // Flash to red
     this.cameras.main.flash(200, 150, 50, 50)
     
-    // Warning container
-    const warningContainer = this.add.container(centerX, centerY - 50)
-    
-    const warningBg = this.add.graphics()
-    warningBg.fillStyle(0x800000, 0.9)
-    warningBg.fillRoundedRect(-150, -40, 300, 80, 12)
-    warningBg.lineStyle(3, 0xFFD700, 1)
-    warningBg.strokeRoundedRect(-150, -40, 300, 80, 12)
-    
-    const warningText = this.add.text(0, -10, '👑 BOSS WAVE 👑', {
-      fontSize: '28px',
-      color: '#FFD700',
-      fontFamily: FONTS.display,
-    })
-    warningText.setOrigin(0.5)
-    
+    // Get boss info
     const bossName = this.currentStage?.visuals.opponent.name || 'ELITE RUNNER'
-    const bossSubtext = this.add.text(0, 20, bossName.toUpperCase(), {
-      fontSize: '14px',
-      color: '#FFFFFF',
-      fontFamily: FONTS.body,
-    })
-    bossSubtext.setOrigin(0.5)
+    const bossType = this.currentStage?.isSuperBowl ? 'Super Bowl Champion' : 'Playoff Boss'
     
-    warningContainer.add([warningBg, warningText, bossSubtext])
-    warningContainer.setScale(0)
-    warningContainer.setDepth(1000)
+    // Show React boss intro modal via Zustand store
+    const store = useGameStore.getState()
+    store.showBossIntro(bossName.toUpperCase(), bossType)
     
-    // Animate warning
-    this.tweens.add({
-      targets: warningContainer,
-      scale: 1,
-      duration: 300,
-      ease: 'Back.easeOut',
-      onComplete: () => {
-        // Pulse
-        this.tweens.add({
-          targets: warningContainer,
-          scale: 1.05,
-          duration: 200,
-          yoyo: true,
-          repeat: 2,
-          onComplete: () => {
-            this.tweens.add({
-              targets: warningContainer,
-              alpha: 0,
-              y: warningContainer.y - 30,
-              duration: 400,
-              delay: 200,
-              onComplete: () => {
-                warningContainer.destroy()
-                // Spawn the boss
-                this.spawnRunner(true)
-                this.bossCount++
-                
-                // Maybe spawn additional bosses for super bowl
-                if (this.currentStage?.isSuperBowl && this.bossCount < 2) {
-                  this.time.delayedCall(3000, () => this.spawnRunner(true))
-                }
-              }
-            })
-          }
-        })
+    // Listen for modal close to spawn boss
+    const unsubscribe = useGameStore.subscribe((state) => {
+      if (!state.bossIntro.isOpen) {
+        unsubscribe()
+        
+        // Spawn the boss
+        this.spawnRunner(true)
+        this.bossCount++
+        
+        // Maybe spawn additional bosses for super bowl
+        if (this.currentStage?.isSuperBowl && this.bossCount < 2) {
+          this.time.delayedCall(3000, () => this.spawnRunner(true))
+        }
       }
     })
     
@@ -3112,78 +2797,56 @@ export class GameScene extends Phaser.Scene {
       d.sprite.setVisible(false)
     })
     
-    // Overlay
-    const overlay = this.add.graphics()
-    overlay.fillStyle(0x000000, 0.85)
-    overlay.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT)
-    overlay.setAlpha(0)
-    overlay.setDepth(100) // Above everything
-    
-    this.tweens.add({
-      targets: overlay,
-      alpha: 1,
-      duration: 300
-    })
-    
-    // Title
-    const title = this.add.text(GAME_WIDTH / 2, 70, 'CHOOSE UPGRADE', {
-      fontSize: '26px',
-      color: hexToCSS(COLORS.white),
-      fontFamily: FONTS.display,
-      letterSpacing: 2,
-    })
-    title.setOrigin(0.5)
-    title.setAlpha(0)
-    title.setDepth(101)
-    
-    const subtitle = this.add.text(GAME_WIDTH / 2, 100, 'Power up your defense', {
-      fontSize: '12px',
-      color: hexToCSS(COLORS.grey),
-      fontFamily: FONTS.body,
-    })
-    subtitle.setOrigin(0.5)
-    subtitle.setAlpha(0)
-    subtitle.setDepth(101)
-    
-    this.tweens.add({
-      targets: [title, subtitle],
-      alpha: 1,
-      y: '-=10',
-      duration: 400,
-      delay: 200
-    })
-    
-    // Get 3 random upgrades
+    // Convert Phaser UPGRADES to React-compatible format and trigger React modal
     const upgradeTypes = Object.keys(UPGRADES) as UpgradeType[]
     const shuffled = upgradeTypes.sort(() => Math.random() - 0.5)
     const choices = shuffled.slice(0, 3)
     
-    const cards: Phaser.GameObjects.Container[] = []
+    // Map upgrade types to icons for React component
+    const iconMap: Record<UpgradeType, 'teammate' | 'speed' | 'reach' | 'life' | 'slow' | 'health' | 'boost' | 'power'> = {
+      ADD_DEFENDER: 'teammate',
+      SPEED_BOOST: 'speed',
+      TACKLE_RADIUS: 'reach',
+      EXTRA_LIFE: 'life',
+      HAZY_IPA: 'slow',
+      WATERMELON: 'health',
+      LEMON_LIME: 'boost',
+      BLOOD_ORANGE: 'power',
+    }
     
-    choices.forEach((type, index) => {
+    const reactUpgrades = choices.map(type => {
       const upgrade = UPGRADES[type]
-      const y = 180 + index * 160
-      
-      const card = this.createPremiumUpgradeCard(GAME_WIDTH / 2, y, upgrade, index, () => {
-        AudioManager.playUpgrade()
-        this.applyUpgrade(upgrade.type)
+      return {
+        type: type,
+        name: upgrade.name,
+        description: upgrade.description,
+        color: `#${upgrade.color.toString(16).padStart(6, '0')}`,
+        icon: iconMap[type],
+      }
+    })
+    
+    // Show React modal via Zustand store
+    const store = useGameStore.getState()
+    store.showUpgradeModal(reactUpgrades)
+    
+    // Listen for selection via store subscription
+    const unsubscribe = useGameStore.subscribe((state) => {
+      if (state.upgradeModal.selectedUpgrade && !state.upgradeModal.isOpen) {
+        const selectedType = state.upgradeModal.selectedUpgrade
+        unsubscribe()
         
-        // Clean up
-        overlay.destroy()
-        title.destroy()
-        subtitle.destroy()
-        cards.forEach(c => c.destroy())
+        // Apply the upgrade
+        AudioManager.playUpgrade()
+        this.applyUpgrade(selectedType)
         
         // Show defenders again
         this.defenders.forEach(d => {
           d.sprite.setVisible(true)
         })
         
+        // Start next wave
         this.startWave()
-      })
-      card.setDepth(101) // Above overlay
-      
-      cards.push(card)
+      }
     })
   }
 
@@ -3308,9 +2971,8 @@ export class GameScene extends Phaser.Scene {
   }
 
   private applyUpgrade(type: UpgradeType): void {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/5051b6de-b0ce-411d-bf90-110293cecd7e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'GameScene.ts:applyUpgrade',message:'Applying upgrade',data:{type,statsBefore:{...this.stats},wave:useGameStore.getState().wave},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'E'})}).catch(()=>{});
-    // #endregion
+    const store = useGameStore.getState()
+    
     switch (type) {
       case 'ADD_DEFENDER':
         this.stats.defenderCount++
@@ -3340,9 +3002,14 @@ export class GameScene extends Phaser.Scene {
         this.stats.tackleRadiusMultiplier *= 1.25
         break
     }
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/5051b6de-b0ce-411d-bf90-110293cecd7e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'GameScene.ts:applyUpgrade:after',message:'After upgrade applied',data:{type,statsAfter:{...this.stats}},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'E'})}).catch(()=>{});
-    // #endregion
+    
+    // Update React HUD stats via Zustand store
+    store.updateStats({
+      defenderCount: this.stats.defenderCount,
+      speedBoost: Math.round((this.stats.speedMultiplier - 1) * 100),
+      tackleRadius: Math.round((this.stats.tackleRadiusMultiplier - 1) * 100),
+      enemySlowdown: Math.round((1 - this.stats.enemySpeedMultiplier) * 100),
+    })
     
     this.updateStatsDisplay()
     
@@ -3411,5 +3078,13 @@ export class GameScene extends Phaser.Scene {
         })
       }
     })
+  }
+
+  // Clean up subscriptions when scene is stopped/destroyed
+  shutdown(): void {
+    if (this.arModeUnsubscribe) {
+      this.arModeUnsubscribe()
+      this.arModeUnsubscribe = null
+    }
   }
 }

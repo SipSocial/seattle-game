@@ -364,16 +364,20 @@ export default function PlayerSelect({ onSelect }: PlayerSelectProps) {
             exit={{ opacity: 0, y: -20 }}
             transition={smoothSpring}
           >
-            <div className="mb-8">
+            <div style={{ marginBottom: '24px' }}>
               <PositionChip position={player.position} />
             </div>
 
-            <h1 className="text-white text-3xl font-black uppercase leading-none tracking-tight">
+            <h1 
+              className="text-white text-3xl font-black uppercase leading-none tracking-tight"
+              style={{ fontFamily: 'var(--font-oswald), sans-serif' }}
+            >
               {firstName}
             </h1>
             <h1 
               className="text-5xl font-black uppercase leading-none tracking-tight"
               style={{
+                marginTop: '4px',
                 background: 'linear-gradient(135deg, #69BE28 0%, #7ed957 50%, #69BE28 100%)',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
@@ -382,7 +386,7 @@ export default function PlayerSelect({ onSelect }: PlayerSelectProps) {
               {lastName}
             </h1>
 
-            <div className="flex justify-center gap-8 mt-5">
+            <div className="flex justify-center" style={{ gap: '40px', marginTop: '24px' }}>
               {Object.entries(player.stats).slice(0, 3).map(([key, val]) => (
                 <StatDisplay key={key} value={val} label={key} />
               ))}
@@ -395,8 +399,8 @@ export default function PlayerSelect({ onSelect }: PlayerSelectProps) {
 
         {/* Bottom Controls */}
         <motion.div 
-          className="flex flex-col items-center gap-5 pb-6" 
-          style={{ paddingBottom: 'max(24px, env(safe-area-inset-bottom))' }}
+          className="flex flex-col items-center" 
+          style={{ gap: '20px', paddingBottom: 'max(24px, env(safe-area-inset-bottom))' }}
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ ...smoothSpring, delay: 0.2 }}

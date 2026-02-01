@@ -4,288 +4,236 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { VideoBackground } from '@/components/ui/VideoBackground'
-import { GlassCard } from '@/components/ui/GlassCard'
 import { GradientButton } from '@/components/ui/GradientButton'
 import { GhostButton } from '@/components/ui/GhostButton'
 
-// Video background - billowing smoke, stadium lights
 const BACKGROUND_VIDEO = 'https://cdn.leonardo.ai/users/eb9a23b8-36c0-4667-b97f-64fdee85d14b/generations/4b5f0ad3-9f4e-413f-b44a-053e9af6240c/4b5f0ad3-9f4e-413f-b44a-053e9af6240c.mp4'
 const BACKGROUND_POSTER = 'https://cdn.leonardo.ai/users/eb9a23b8-36c0-4667-b97f-64fdee85d14b/generations/16412705-ca65-400e-bb78-80ff29be860a/segments/2:2:1/Phoenix_Empty_NFL_football_field_at_night_dramatic_billowing_s_0.jpg'
 
-// Buttery smooth spring config
-const smoothSpring = {
-  type: 'spring' as const,
-  stiffness: 300,
-  damping: 30,
-  mass: 1,
-}
+const spring = { type: 'spring' as const, stiffness: 300, damping: 28 }
+
+const CampaignIcon = () => (
+  <svg className="w-full h-full" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+  </svg>
+)
+
+const PlayIcon = () => (
+  <svg className="w-full h-full" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+  </svg>
+)
+
+const SettingsIcon = () => (
+  <svg className="w-full h-full" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+  </svg>
+)
 
 export default function Home() {
   const [mounted, setMounted] = useState(false)
 
-  // Trigger animations after mount to prevent hydration jitter
   useEffect(() => {
     setMounted(true)
   }, [])
 
   return (
-    <motion.main
-      initial={{ opacity: 0 }}
-      animate={{ opacity: mounted ? 1 : 0 }}
-      transition={{ duration: 0.3 }} 
-      className="h-[100dvh] flex flex-col overflow-hidden relative"
-      style={{ touchAction: 'pan-y' }}
-    >
-      {/* Video Background */}
+    <div className="fixed inset-0 bg-[#002244]">
+      {/* Background Layer */}
       <VideoBackground 
         src={BACKGROUND_VIDEO}
         poster={BACKGROUND_POSTER}
         overlay={true}
-        overlayOpacity={0.4}
+        overlayOpacity={0.55}
       />
 
-      {/* Content Layer */}
-      <div className="relative z-10 h-full flex flex-col">
-        
-        {/* Top Gradient Overlay */}
-        <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-b from-black/70 to-transparent pointer-events-none" />
-        
-        {/* Bottom Gradient Overlay */}
-        <div className="absolute bottom-0 left-0 right-0 h-48 bg-gradient-to-t from-black/90 via-black/50 to-transparent pointer-events-none" />
+      {/* Gradient Overlays */}
+      <div className="absolute inset-0 z-[1] pointer-events-none">
+        <div 
+          className="absolute top-0 left-0 right-0 h-[200px]"
+          style={{ background: 'linear-gradient(180deg, rgba(0,0,0,0.7) 0%, transparent 100%)' }}
+        />
+        <div 
+          className="absolute bottom-0 left-0 right-0 h-[400px]"
+          style={{ background: 'linear-gradient(0deg, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.6) 60%, transparent 100%)' }}
+        />
+      </div>
 
-        {/* ===== HEADER ===== */}
-        <header className="relative z-10 px-6 pt-[max(env(safe-area-inset-top),24px)] text-center">
-          {/* 12 Badge */}
-          <motion.div
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: mounted ? 1 : 0, opacity: mounted ? 1 : 0 }}
-            transition={{ ...smoothSpring, delay: 0.1 }}
-            className="inline-block mb-4"
+      {/* Content - Simple flexbox, vertically distributed */}
+      <motion.div 
+        className="relative z-10 h-full w-full flex flex-col justify-between"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: mounted ? 1 : 0 }}
+        transition={{ duration: 0.4 }}
+        style={{
+          paddingTop: 'calc(env(safe-area-inset-top, 0px) + 48px)',
+          paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 24px)',
+          paddingLeft: '24px',
+          paddingRight: '24px',
+        }}
+      >
+        {/* ============ TOP: Branding ============ */}
+        <motion.div 
+          className="text-center"
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: mounted ? 1 : 0, y: mounted ? 0 : -20 }}
+          transition={{ ...spring, delay: 0.1 }}
+        >
+          {/* Logo */}
+          <div 
+            className="inline-flex items-center justify-center w-[80px] h-[80px] rounded-[20px]"
+            style={{ 
+              background: 'linear-gradient(135deg, #69BE28 0%, #4A9A1C 100%)',
+              boxShadow: '0 12px 40px rgba(105,190,40,0.4)',
+            }}
           >
             <div 
-              className="w-20 h-20 rounded-full flex items-center justify-center relative"
-              style={{ 
-                background: 'linear-gradient(135deg, #69BE28 0%, #4A9A1C 100%)',
-                boxShadow: '0 0 60px rgba(105,190,40,0.6), 0 4px 20px rgba(0,0,0,0.3)',
-              }}
-            >
-              <div 
-                className="absolute inset-[3px] rounded-full flex items-center justify-center"
-                style={{ background: 'linear-gradient(135deg, #002244 0%, #001a33 100%)' }}
-              >
-                <span 
-                  className="text-4xl text-white font-black"
-                  style={{ 
-                    fontFamily: 'var(--font-bebas), var(--font-oswald), sans-serif',
-                    textShadow: '0 2px 10px rgba(105,190,40,0.5)',
-                  }}
-                >
-                  12
-                </span>
-              </div>
-              {/* Pulse ring */}
-              <div 
-                className="absolute inset-0 rounded-full animate-ping"
-                style={{ 
-                  border: '2px solid rgba(105,190,40,0.4)',
-                  animationDuration: '2s',
-                }}
-              />
-            </div>
-          </motion.div>
-
-          {/* Title */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: mounted ? 1 : 0, y: mounted ? 0 : 20 }}
-            transition={{ ...smoothSpring, delay: 0.15 }}
-          >
-            <h1 
-              className="leading-[0.85] tracking-tight"
-              style={{ fontFamily: 'var(--font-bebas), var(--font-oswald), sans-serif' }}
+              className="w-[72px] h-[72px] rounded-[16px] flex items-center justify-center"
+              style={{ background: 'linear-gradient(135deg, #002244 0%, #001428 100%)' }}
             >
               <span 
-                className="block text-[clamp(4rem,18vw,6rem)]"
+                className="text-[44px] font-black text-white leading-none"
                 style={{ 
-                  background: 'linear-gradient(135deg, #69BE28 0%, #8BD44A 40%, #FFFFFF 100%)',
+                  fontFamily: 'var(--font-bebas), var(--font-oswald), sans-serif',
+                  textShadow: '0 2px 16px rgba(105,190,40,0.6)',
+                }}
+              >
+                12
+              </span>
+            </div>
+          </div>
+
+          {/* Title - 32px below logo */}
+          <div style={{ marginTop: '32px' }}>
+            <h1 style={{ fontFamily: 'var(--font-bebas), var(--font-oswald), sans-serif' }}>
+              <span 
+                className="block text-[56px] leading-[0.9] tracking-tight"
+                style={{ 
+                  background: 'linear-gradient(135deg, #69BE28 0%, #8BD44A 50%, #FFFFFF 100%)',
                   WebkitBackgroundClip: 'text',
                   WebkitTextFillColor: 'transparent',
-                  filter: 'drop-shadow(0 4px 20px rgba(105,190,40,0.4))',
+                  filter: 'drop-shadow(0 4px 24px rgba(105,190,40,0.35))',
                 }}
               >
-                SEAHAWKS
+                DARK SIDE
               </span>
               <span 
-                className="block text-[clamp(2.8rem,12vw,4rem)] text-white"
-                style={{ letterSpacing: '0.15em' }}
+                className="block text-[36px] text-white leading-none tracking-[0.2em]"
+                style={{ marginTop: '8px' }}
               >
-                DEFENSE
+                GAME
               </span>
             </h1>
-            <motion.p 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: mounted ? 1 : 0 }}
-              transition={{ ...smoothSpring, delay: 0.25 }}
-              className="text-sm mt-3 italic tracking-widest"
-              style={{ color: 'rgba(165,172,175,0.7)' }}
+
+            {/* Tagline - 16px below title */}
+            <p 
+              className="text-[13px] italic tracking-[0.2em] uppercase"
+              style={{ color: 'rgba(165,172,175,0.5)', marginTop: '16px' }}
             >
-              The Legion Lives On
-            </motion.p>
-          </motion.div>
-        </header>
+              &ldquo;Turn the lights off on them&rdquo;
+            </p>
+          </div>
+        </motion.div>
 
-        {/* ===== SPACER ===== */}
-        <div className="flex-1" />
+        {/* ============ MIDDLE: Actions ============ */}
+        <motion.div 
+          className="w-full"
+          style={{ maxWidth: '340px', margin: '0 auto' }}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: mounted ? 1 : 0, y: mounted ? 0 : 20 }}
+          transition={{ ...spring, delay: 0.25 }}
+        >
+          {/* Primary Game Buttons */}
+          <Link href="/campaign" style={{ display: 'block' }}>
+            <GradientButton size="lg" fullWidth radius="lg" icon={<CampaignIcon />} iconPosition="left">
+              Road to Super Bowl
+            </GradientButton>
+          </Link>
 
-        {/* ===== MAIN CONTENT ===== */}
-        <section className="relative z-10 px-6 pb-6">
-          {/* Stats Card */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: mounted ? 1 : 0, y: mounted ? 0 : 20 }}
-            transition={{ ...smoothSpring, delay: 0.3 }}
-          >
-            <GlassCard className="mb-6" padding="md">
-              <div className="flex justify-around">
-                {[
-                  { value: '24', label: 'DEFENDERS', icon: '🛡️' },
-                  { value: '17', label: 'OPPONENTS', icon: '🏈' },
-                  { value: '∞', label: 'WAVES', icon: '🌊' },
-                ].map((stat, i) => (
-                  <div key={i} className="text-center">
-                    <div className="text-2xl mb-1">{stat.icon}</div>
-                    <div 
-                      className="text-2xl font-black"
-                      style={{ 
-                        color: '#69BE28', 
-                        fontFamily: 'var(--font-oswald), sans-serif',
-                        textShadow: '0 0 20px rgba(105,190,40,0.5)',
-                      }}
-                    >
-                      {stat.value}
-                    </div>
-                    <div 
-                      className="text-[9px] tracking-wider font-medium"
-                      style={{ color: 'rgba(165,172,175,0.5)' }}
-                    >
-                      {stat.label}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </GlassCard>
-          </motion.div>
+          <div style={{ height: '16px' }} />
 
-          {/* Game Mode Buttons */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: mounted ? 1 : 0, scale: mounted ? 1 : 0.95 }}
-            transition={{ ...smoothSpring, delay: 0.35 }}
-            className="space-y-3"
-          >
-            {/* Campaign Mode */}
-            <Link href="/campaign" className="block">
-              <GradientButton 
-                size="lg" 
-                fullWidth
-                icon={
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-                  </svg>
-                }
-                iconPosition="left"
-              >
-                Road to Super Bowl
-              </GradientButton>
-            </Link>
+          <Link href="/play" style={{ display: 'block' }}>
+            <GhostButton size="lg" fullWidth radius="lg" variant="green" icon={<PlayIcon />} iconPosition="left">
+              Endless Mode
+            </GhostButton>
+          </Link>
 
-            {/* Endless Mode */}
-            <Link href="/play" className="block">
-              <GhostButton 
-                size="lg" 
-                fullWidth
-                variant="green"
-                icon={
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                }
-                iconPosition="left"
-              >
-                Endless Mode
-              </GhostButton>
-            </Link>
-          </motion.div>
+          {/* Settings - separated by 24px */}
+          <div style={{ height: '24px' }} />
 
-          {/* Quick Instructions */}
-          <motion.div 
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: mounted ? 1 : 0, y: mounted ? 0 : 10 }}
-            transition={{ ...smoothSpring, delay: 0.4 }}
-            className="flex justify-center gap-8 mt-5"
+          <Link href="/settings" style={{ display: 'block' }}>
+            <GhostButton size="md" fullWidth radius="lg" variant="subtle" icon={<SettingsIcon />} iconPosition="left">
+              Settings
+            </GhostButton>
+          </Link>
+
+          {/* How to Play - 40px below buttons */}
+          <div 
+            className="flex justify-center items-start"
+            style={{ marginTop: '40px', gap: '48px' }}
           >
             {[
-              { step: '1', text: 'Pick Defender' },
-              { step: '2', text: 'Drag to Tackle' },
-              { step: '3', text: 'Survive Waves' },
-            ].map((item, i) => (
-              <div key={i} className="flex flex-col items-center gap-1.5">
+              { num: '1', label: 'Pick' },
+              { num: '2', label: 'Drag' },
+              { num: '3', label: 'Defend' },
+            ].map((step, i) => (
+              <div key={i} className="flex flex-col items-center">
                 <div 
-                  className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold"
+                  className="w-[44px] h-[44px] rounded-full flex items-center justify-center text-[14px] font-bold"
                   style={{ 
-                    background: 'rgba(105,190,40,0.2)',
+                    background: 'rgba(105,190,40,0.12)',
+                    border: '1.5px solid rgba(105,190,40,0.3)',
                     color: '#69BE28',
-                    border: '1px solid rgba(105,190,40,0.3)',
+                    fontFamily: 'var(--font-oswald), sans-serif',
                   }}
                 >
-                  {item.step}
+                  {step.num}
                 </div>
-                <span className="text-[10px] font-medium" style={{ color: 'rgba(165,172,175,0.5)' }}>
-                  {item.text}
+                <span 
+                  className="text-[10px] font-medium tracking-widest uppercase"
+                  style={{ color: 'rgba(165,172,175,0.45)', marginTop: '8px' }}
+                >
+                  {step.label}
                 </span>
               </div>
             ))}
-          </motion.div>
-        </section>
+          </div>
+        </motion.div>
 
-        {/* ===== FOOTER ===== */}
-        <footer 
-          className="relative z-10 px-6 py-4 text-center"
-          style={{ paddingBottom: 'max(16px, env(safe-area-inset-bottom))' }}
+        {/* ============ BOTTOM: Sponsor & Legal ============ */}
+        <motion.div 
+          className="text-center"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: mounted ? 1 : 0 }}
+          transition={{ ...spring, delay: 0.4 }}
         >
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: mounted ? 1 : 0 }}
-            transition={{ ...smoothSpring, delay: 0.5 }}
-          >
-            <div className="flex items-center justify-center gap-2 mb-2">
-              <span className="text-[9px] tracking-wider" style={{ color: 'rgba(165,172,175,0.3)' }}>
-                POWERED BY
-              </span>
-              <span 
-                className="text-xs font-bold"
-                style={{ 
-                  fontFamily: 'var(--font-oswald), sans-serif',
-                  color: 'rgba(255,255,255,0.5)',
-                }}
-              >
-                DrinkSip
-              </span>
-              <div className="flex gap-1">
-                <span className="text-[10px]">🍺</span>
-                <span className="text-[10px]">🍉</span>
-                <span className="text-[10px]">🍋</span>
-                <span className="text-[10px]">🍊</span>
-              </div>
-            </div>
-            <p className="text-[8px]" style={{ color: 'rgba(165,172,175,0.2)' }}>
-              Not affiliated with Seattle Seahawks or NFL • A fan tribute to the Legion of Boom
-            </p>
-          </motion.div>
-        </footer>
+          {/* Sponsor */}
+          <div>
+            <span 
+              className="block text-[10px] tracking-[0.3em] uppercase"
+              style={{ color: 'rgba(255,215,0,0.4)' }}
+            >
+              Powered by
+            </span>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img 
+              src="https://cdn.shopify.com/s/files/1/0407/8580/5468/files/DrinkSip_Logo_SVG.svg?v=1759624477"
+              alt="DrinkSip"
+              style={{ height: '48px', width: 'auto', margin: '12px auto 0', opacity: 0.85 }}
+            />
+          </div>
 
-      </div>
-    </motion.main>
+          {/* Legal - 32px below sponsor */}
+          <p 
+            className="text-[8px] tracking-widest uppercase"
+            style={{ color: 'rgba(165,172,175,0.2)', marginTop: '32px' }}
+          >
+            Not affiliated with Seattle Seahawks or NFL
+          </p>
+        </motion.div>
+      </motion.div>
+    </div>
   )
 }

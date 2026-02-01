@@ -62,7 +62,8 @@ export function GameOver({ isOpen, onPlayAgain, onChangePlayer, onViewLeaderboar
 
         {/* Content */}
         <motion.div
-          className="relative z-10 w-full max-w-md px-6"
+          className="relative z-10 w-full px-6"
+          style={{ maxWidth: '400px' }}
           initial={{ scale: 0.9, opacity: 0, y: 20 }}
           animate={{ scale: 1, opacity: 1, y: 0 }}
           transition={{ type: 'spring', damping: 25, stiffness: 300 }}
@@ -73,16 +74,18 @@ export function GameOver({ isOpen, onPlayAgain, onChangePlayer, onViewLeaderboar
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ delay: 0.2, type: 'spring' }}
+              style={{ marginBottom: '24px' }}
             >
               {isNewHighScore ? (
                 <>
-                  <div className="text-4xl mb-2">🏆</div>
+                  <div className="text-5xl" style={{ marginBottom: '12px' }}>🏆</div>
                   <h2 
-                    className="text-3xl font-black uppercase mb-1"
+                    className="text-3xl font-black uppercase"
                     style={{
                       background: 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)',
                       WebkitBackgroundClip: 'text',
                       WebkitTextFillColor: 'transparent',
+                      fontFamily: 'var(--font-oswald), sans-serif',
                     }}
                   >
                     New High Score!
@@ -90,8 +93,11 @@ export function GameOver({ isOpen, onPlayAgain, onChangePlayer, onViewLeaderboar
                 </>
               ) : (
                 <>
-                  <div className="text-4xl mb-2">🏈</div>
-                  <h2 className="text-2xl font-black text-white uppercase mb-1">
+                  <div className="text-5xl" style={{ marginBottom: '12px' }}>🏈</div>
+                  <h2 
+                    className="text-3xl font-black text-white uppercase"
+                    style={{ fontFamily: 'var(--font-oswald), sans-serif' }}
+                  >
                     Game Over
                   </h2>
                 </>
@@ -103,7 +109,7 @@ export function GameOver({ isOpen, onPlayAgain, onChangePlayer, onViewLeaderboar
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
-              className="my-6"
+              style={{ marginBottom: '32px' }}
             >
               <div 
                 className="text-6xl font-black"
@@ -115,7 +121,10 @@ export function GameOver({ isOpen, onPlayAgain, onChangePlayer, onViewLeaderboar
               >
                 {score.toLocaleString()}
               </div>
-              <div className="text-white/50 text-sm uppercase tracking-wider">
+              <div 
+                className="text-sm uppercase tracking-widest"
+                style={{ color: 'rgba(255,255,255,0.5)', marginTop: '8px' }}
+              >
                 Final Score
               </div>
             </motion.div>
@@ -125,7 +134,8 @@ export function GameOver({ isOpen, onPlayAgain, onChangePlayer, onViewLeaderboar
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4 }}
-              className="flex justify-center gap-10 mb-6"
+              className="flex justify-center"
+              style={{ gap: '56px', marginBottom: '32px' }}
             >
               <StatDisplay value={wave} label="Wave" size="md" />
               <StatDisplay value={tackles} label="Tackles" size="md" />
@@ -136,9 +146,12 @@ export function GameOver({ isOpen, onPlayAgain, onChangePlayer, onViewLeaderboar
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.5 }}
-              className="mb-6"
+              style={{ marginBottom: '32px' }}
             >
-              <label className="block text-white/50 text-xs uppercase tracking-wider mb-2">
+              <label 
+                className="block text-xs uppercase tracking-widest"
+                style={{ color: 'rgba(255,255,255,0.5)', marginBottom: '12px' }}
+              >
                 Enter Your Initials
               </label>
               <input
@@ -164,7 +177,8 @@ export function GameOver({ isOpen, onPlayAgain, onChangePlayer, onViewLeaderboar
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.6 }}
-              className="space-y-3"
+              className="flex flex-col"
+              style={{ gap: '16px' }}
             >
               <GradientButton 
                 size="lg" 
@@ -179,8 +193,9 @@ export function GameOver({ isOpen, onPlayAgain, onChangePlayer, onViewLeaderboar
                 Play Again
               </GradientButton>
 
-              <div className="flex gap-3">
+              <div className="flex" style={{ gap: '12px' }}>
                 <GhostButton 
+                  size="md"
                   fullWidth 
                   variant="green"
                   onClick={onChangePlayer}
@@ -188,7 +203,9 @@ export function GameOver({ isOpen, onPlayAgain, onChangePlayer, onViewLeaderboar
                   Change Player
                 </GhostButton>
                 <GhostButton 
+                  size="md"
                   fullWidth
+                  variant="subtle"
                   onClick={onViewLeaderboard}
                 >
                   Leaderboard

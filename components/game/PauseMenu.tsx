@@ -37,7 +37,8 @@ export function PauseMenu({ isOpen, onResume, onRestart, onQuit }: PauseMenuProp
 
           {/* Content */}
           <motion.div
-            className="relative z-10 w-full max-w-sm px-6"
+            className="relative z-10 w-full px-6"
+            style={{ maxWidth: '360px' }}
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.9, opacity: 0 }}
@@ -45,37 +46,53 @@ export function PauseMenu({ isOpen, onResume, onRestart, onQuit }: PauseMenuProp
           >
             <GlassCard padding="lg" className="text-center">
               {/* Header */}
-              <div className="mb-6">
-                <div className="text-3xl mb-2">⏸️</div>
-                <h2 className="text-2xl font-black text-white uppercase tracking-wide">
+              <div style={{ marginBottom: '32px' }}>
+                <div className="text-4xl" style={{ marginBottom: '12px' }}>⏸️</div>
+                <h2 
+                  className="text-3xl font-black text-white uppercase tracking-wide"
+                  style={{ fontFamily: 'var(--font-oswald), sans-serif' }}
+                >
                   Paused
                 </h2>
               </div>
 
               {/* Current Stats */}
-              <div className="flex justify-center gap-8 mb-6">
+              <div 
+                className="flex justify-center"
+                style={{ gap: '48px', marginBottom: '32px' }}
+              >
                 <div className="text-center">
                   <div 
-                    className="text-2xl font-black"
+                    className="text-3xl font-black"
                     style={{ color: '#69BE28', fontFamily: 'var(--font-oswald), sans-serif' }}
                   >
                     {score.toLocaleString()}
                   </div>
-                  <div className="text-[10px] text-white/50 uppercase tracking-wider">Score</div>
+                  <div 
+                    className="text-[11px] uppercase tracking-widest"
+                    style={{ color: 'rgba(255,255,255,0.5)', marginTop: '4px' }}
+                  >
+                    Score
+                  </div>
                 </div>
                 <div className="text-center">
                   <div 
-                    className="text-2xl font-black"
+                    className="text-3xl font-black"
                     style={{ color: '#69BE28', fontFamily: 'var(--font-oswald), sans-serif' }}
                   >
                     {wave}
                   </div>
-                  <div className="text-[10px] text-white/50 uppercase tracking-wider">Wave</div>
+                  <div 
+                    className="text-[11px] uppercase tracking-widest"
+                    style={{ color: 'rgba(255,255,255,0.5)', marginTop: '4px' }}
+                  >
+                    Wave
+                  </div>
                 </div>
               </div>
 
               {/* Buttons */}
-              <div className="space-y-3">
+              <div className="flex flex-col" style={{ gap: '16px' }}>
                 <GradientButton 
                   size="lg" 
                   fullWidth 
@@ -90,6 +107,7 @@ export function PauseMenu({ isOpen, onResume, onRestart, onQuit }: PauseMenuProp
                 </GradientButton>
 
                 <GhostButton 
+                  size="lg"
                   fullWidth 
                   variant="green"
                   onClick={onRestart}
@@ -97,8 +115,12 @@ export function PauseMenu({ isOpen, onResume, onRestart, onQuit }: PauseMenuProp
                   Restart Game
                 </GhostButton>
 
+                <div style={{ height: '8px' }} />
+
                 <GhostButton 
+                  size="md"
                   fullWidth
+                  variant="subtle"
                   onClick={onQuit}
                 >
                   Quit to Menu

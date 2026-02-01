@@ -119,7 +119,7 @@ export function StageTransition({
       <AnimatePresence>
         {showContent && (
           <motion.div 
-            className="relative z-20 text-center px-6"
+            className="relative z-20 text-center px-8"
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, ease: 'easeOut' }}
@@ -129,11 +129,12 @@ export function StageTransition({
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
-              className="mb-2"
+              style={{ marginBottom: '12px' }}
             >
               <span 
-                className="inline-block px-4 py-1 rounded-full text-xs font-bold uppercase tracking-widest"
+                className="inline-block rounded-full text-xs font-bold uppercase tracking-widest"
                 style={{
+                  padding: '8px 20px',
                   background: stage.isPlayoff || stage.isSuperBowl 
                     ? 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)' 
                     : 'rgba(105, 190, 40, 0.2)',
@@ -150,10 +151,11 @@ export function StageTransition({
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.2, type: 'spring' }}
-              className="text-4xl font-black uppercase text-white mb-2"
+              className="text-4xl font-black uppercase text-white"
               style={{
                 textShadow: `0 0 40px ${stage.visuals.atmosphereColor}`,
                 fontFamily: 'var(--font-bebas), var(--font-oswald), sans-serif',
+                marginBottom: '12px',
               }}
             >
               {stage.name}
@@ -164,21 +166,23 @@ export function StageTransition({
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
-              className="flex items-center justify-center gap-4 mb-8"
+              className="flex items-center justify-center"
+              style={{ gap: '24px', marginBottom: '32px' }}
             >
               {/* Seahawks */}
               <div className="text-center">
                 <div 
-                  className="w-16 h-16 rounded-xl flex items-center justify-center mb-1"
+                  className="w-16 h-16 rounded-xl flex items-center justify-center"
                   style={{
                     background: 'linear-gradient(135deg, #002244 0%, #001a33 100%)',
                     border: '2px solid #69BE28',
                     boxShadow: '0 0 20px rgba(105, 190, 40, 0.4)',
+                    marginBottom: '8px',
                   }}
                 >
                   <span className="text-2xl font-black text-[#69BE28]">SEA</span>
                 </div>
-                <span className="text-[10px] text-white/60">Dark Side</span>
+                <span className="text-[10px]" style={{ color: 'rgba(255,255,255,0.6)' }}>Dark Side</span>
               </div>
 
               {/* VS */}
@@ -192,17 +196,18 @@ export function StageTransition({
               {/* Opponent */}
               <div className="text-center">
                 <div 
-                  className="w-16 h-16 rounded-xl flex items-center justify-center mb-1"
+                  className="w-16 h-16 rounded-xl flex items-center justify-center"
                   style={{
                     background: `linear-gradient(135deg, #${stage.visuals.opponent.primary.toString(16).padStart(6, '0')} 0%, #${stage.visuals.opponent.accent.toString(16).padStart(6, '0')} 100%)`,
                     border: '2px solid rgba(255, 255, 255, 0.2)',
+                    marginBottom: '8px',
                   }}
                 >
                   <span className="text-2xl font-black text-white">
                     {stage.location.abbreviation !== 'SEA' ? stage.location.abbreviation : opponentShort.substring(0, 3).toUpperCase()}
                   </span>
                 </div>
-                <span className="text-[10px] text-white/60">{opponentShort}</span>
+                <span className="text-[10px]" style={{ color: 'rgba(255,255,255,0.6)' }}>{opponentShort}</span>
               </div>
             </motion.div>
 
@@ -211,14 +216,15 @@ export function StageTransition({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.4 }}
-              className="text-sm text-white/50 mb-8"
+              className="text-sm"
+              style={{ color: 'rgba(255,255,255,0.5)', marginBottom: '32px' }}
             >
               <span>{stage.location.isHome ? '🏠' : '✈️'}</span>
-              <span className="ml-1">
+              <span style={{ marginLeft: '4px' }}>
                 {stage.location.city}, {stage.location.state}
               </span>
               {stage.visuals.weather.type !== 'clear' && (
-                <span className="ml-2">
+                <span style={{ marginLeft: '8px' }}>
                   {stage.visuals.weather.type === 'rain' && '🌧️'}
                   {stage.visuals.weather.type === 'snow' && '❄️'}
                   {stage.visuals.weather.type === 'fog' && '🌫️'}
@@ -233,7 +239,8 @@ export function StageTransition({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.5 }}
-              className="flex justify-center gap-1 mb-8"
+              className="flex justify-center"
+              style={{ gap: '4px', marginBottom: '32px' }}
             >
               {Array.from({ length: 10 }).map((_, i) => (
                 <motion.div
@@ -283,7 +290,8 @@ export function StageTransition({
             transition={{ duration: 0.5 }}
           >
             <motion.div
-              className="flex flex-col items-center gap-4"
+              className="flex flex-col items-center"
+              style={{ gap: '16px' }}
               initial={{ scale: 0.8 }}
               animate={{ scale: 1 }}
               transition={{ type: 'spring' }}
@@ -324,7 +332,10 @@ export function StageTransition({
                   </circle>
                 </svg>
               </motion.div>
-              <span className="text-[#69BE28] text-sm font-bold uppercase tracking-widest">
+              <span 
+                className="text-sm font-bold uppercase tracking-widest"
+                style={{ color: '#69BE28' }}
+              >
                 Dark Side Arriving...
               </span>
             </motion.div>

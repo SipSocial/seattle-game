@@ -31,7 +31,8 @@ export function Leaderboard({ isOpen, onClose }: LeaderboardProps) {
 
           {/* Content */}
           <motion.div
-            className="relative z-10 w-full max-w-md px-4 max-h-[80vh]"
+            className="relative z-10 w-full px-6"
+            style={{ maxWidth: '420px', maxHeight: '80vh' }}
             initial={{ scale: 0.9, opacity: 0, y: 20 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.9, opacity: 0, y: 20 }}
@@ -39,26 +40,39 @@ export function Leaderboard({ isOpen, onClose }: LeaderboardProps) {
           >
             <GlassCard padding="lg">
               {/* Header */}
-              <div className="flex items-center justify-between mb-6">
+              <div 
+                className="flex items-center justify-between"
+                style={{ marginBottom: '24px' }}
+              >
                 <div>
-                  <h2 className="text-2xl font-black text-white uppercase tracking-wide">
+                  <h2 
+                    className="text-2xl font-black text-white uppercase tracking-wide"
+                    style={{ fontFamily: 'var(--font-oswald), sans-serif' }}
+                  >
                     Leaderboard
                   </h2>
-                  <p className="text-[10px] text-white/40 uppercase tracking-wider">
+                  <p 
+                    className="text-[11px] uppercase tracking-widest"
+                    style={{ color: 'rgba(255,255,255,0.4)', marginTop: '4px' }}
+                  >
                     Top 10 Defenders
                   </p>
                 </div>
                 <button
                   onClick={onClose}
-                  className="w-8 h-8 rounded-full flex items-center justify-center bg-white/10"
+                  className="w-10 h-10 rounded-full flex items-center justify-center transition-colors"
+                  style={{ background: 'rgba(255,255,255,0.1)' }}
                 >
-                  <span className="text-white/60">✕</span>
+                  <span className="text-white/60 text-lg">✕</span>
                 </button>
               </div>
 
               {/* Leaderboard List */}
               {leaderboard.length > 0 ? (
-                <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                <div 
+                  className="flex flex-col overflow-y-auto"
+                  style={{ gap: '12px', maxHeight: '400px' }}
+                >
                   {leaderboard.map((entry, index) => (
                     <LeaderboardRow
                       key={entry.id}
@@ -69,17 +83,17 @@ export function Leaderboard({ isOpen, onClose }: LeaderboardProps) {
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-12">
-                  <div className="text-4xl mb-4">🏈</div>
-                  <p className="text-white/50 text-sm">
+                <div className="text-center" style={{ padding: '48px 0' }}>
+                  <div className="text-5xl" style={{ marginBottom: '16px' }}>🏈</div>
+                  <p style={{ color: 'rgba(255,255,255,0.5)' }}>
                     No scores yet. Be the first!
                   </p>
                 </div>
               )}
 
               {/* Close Button */}
-              <div className="mt-6">
-                <GhostButton fullWidth onClick={onClose}>
+              <div style={{ marginTop: '24px' }}>
+                <GhostButton size="lg" fullWidth onClick={onClose}>
                   Close
                 </GhostButton>
               </div>
@@ -118,25 +132,27 @@ function LeaderboardRow({ entry, rank, isCurrentPlayer }: LeaderboardRowProps) {
       initial={{ opacity: 0, x: -20 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ delay: rank * 0.05 }}
-      className={`
-        flex items-center gap-3 px-4 py-3 rounded-xl
-        ${isCurrentPlayer ? 'ring-2 ring-[#69BE28]/50' : ''}
-      `}
+      className="flex items-center rounded-xl"
       style={{
+        gap: '16px',
+        padding: '16px',
         background: isCurrentPlayer 
           ? 'rgba(105, 190, 40, 0.15)'
           : 'rgba(255, 255, 255, 0.05)',
-        border: '1px solid rgba(255, 255, 255, 0.1)',
+        border: isCurrentPlayer
+          ? '2px solid rgba(105, 190, 40, 0.4)'
+          : '1px solid rgba(255, 255, 255, 0.1)',
       }}
     >
       {/* Rank */}
       <div 
-        className="w-8 h-8 rounded-lg flex items-center justify-center font-black text-sm"
+        className="w-10 h-10 rounded-lg flex items-center justify-center font-black"
         style={{
           background: rank <= 3 
             ? 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)'
             : 'rgba(255, 255, 255, 0.1)',
           color: rank <= 3 ? '#000' : '#fff',
+          fontSize: '14px',
         }}
       >
         {rankEmoji || rank}
@@ -144,25 +160,31 @@ function LeaderboardRow({ entry, rank, isCurrentPlayer }: LeaderboardRowProps) {
 
       {/* Name & Jersey */}
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center" style={{ gap: '8px' }}>
           <span 
             className="font-bold text-white uppercase"
-            style={{ fontFamily: 'var(--font-oswald), sans-serif' }}
+            style={{ fontFamily: 'var(--font-oswald), sans-serif', fontSize: '16px' }}
           >
             {entry.playerName}
           </span>
-          <span className="text-[10px] text-white/40">
+          <span 
+            className="text-[11px]"
+            style={{ color: 'rgba(255,255,255,0.4)' }}
+          >
             #{entry.jerseyNumber}
           </span>
         </div>
-        <div className="text-[10px] text-white/40">
+        <div 
+          className="text-[11px]"
+          style={{ color: 'rgba(255,255,255,0.4)', marginTop: '4px' }}
+        >
           Wave {entry.wave} • {entry.tackles} tackles
         </div>
       </div>
 
       {/* Score */}
       <div 
-        className="text-right font-black text-lg"
+        className="text-right font-black text-xl"
         style={{
           color: '#69BE28',
           fontFamily: 'var(--font-oswald), sans-serif',

@@ -3,7 +3,6 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import { CampaignStage } from '@/src/game/data/campaign'
 import { getCityAsset } from '@/src/game/data/campaignAssets'
-import { GlassCard } from '@/components/ui/GlassCard'
 import { GradientButton } from '@/components/ui/GradientButton'
 import { GhostButton } from '@/components/ui/GhostButton'
 
@@ -60,6 +59,7 @@ export function CityPreview({
             transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
           >
             {hasBackground ? (
+              // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={backgroundImage}
                 alt={stage.location.city}
@@ -82,7 +82,8 @@ export function CityPreview({
 
           {/* Content */}
           <motion.div
-            className="relative z-10 w-full max-w-lg px-6"
+            className="relative z-10 w-full px-6"
+            style={{ maxWidth: '480px' }}
             initial={{ y: 50, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 50, opacity: 0 }}
@@ -113,14 +114,16 @@ export function CityPreview({
 
             {/* Stage Badge */}
             <motion.div
-              className="flex justify-center mb-6"
+              className="flex justify-center"
+              style={{ marginBottom: '24px' }}
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ delay: 0.2, type: 'spring', stiffness: 300 }}
             >
               <div
-                className="px-4 py-1.5 rounded-full text-sm font-black uppercase tracking-wider"
+                className="rounded-full text-sm font-black uppercase tracking-wider"
                 style={{
+                  padding: '8px 20px',
                   background:
                     stage.isPlayoff || stage.isSuperBowl
                       ? 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)'
@@ -137,7 +140,10 @@ export function CityPreview({
             </motion.div>
 
             {/* Matchup */}
-            <div className="flex items-center justify-center gap-6 mb-6">
+            <div 
+              className="flex items-center justify-center"
+              style={{ gap: '32px', marginBottom: '24px' }}
+            >
               {/* Seahawks */}
               <motion.div
                 className="text-center"
@@ -146,16 +152,19 @@ export function CityPreview({
                 transition={{ delay: 0.25 }}
               >
                 <div
-                  className="w-20 h-20 rounded-2xl flex items-center justify-center mb-2 mx-auto"
+                  className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto"
                   style={{
                     background: 'linear-gradient(135deg, #002244 0%, #001a33 100%)',
                     border: '3px solid #69BE28',
                     boxShadow: '0 0 30px rgba(105, 190, 40, 0.4)',
+                    marginBottom: '8px',
                   }}
                 >
                   <span className="text-2xl font-black text-[#69BE28]">SEA</span>
                 </div>
-                <span className="text-xs text-white/60 uppercase tracking-wider">Seahawks</span>
+                <span className="text-xs uppercase tracking-wider" style={{ color: 'rgba(255,255,255,0.6)' }}>
+                  Seahawks
+                </span>
               </motion.div>
 
               {/* VS */}
@@ -165,7 +174,7 @@ export function CityPreview({
                 animate={{ scale: 1 }}
                 transition={{ delay: 0.3, type: 'spring' }}
               >
-                <div className="text-3xl font-black text-white/20">VS</div>
+                <div className="text-3xl font-black" style={{ color: 'rgba(255,255,255,0.2)' }}>VS</div>
               </motion.div>
 
               {/* Opponent */}
@@ -176,48 +185,66 @@ export function CityPreview({
                 transition={{ delay: 0.25 }}
               >
                 <div
-                  className="w-20 h-20 rounded-2xl flex items-center justify-center mb-2 mx-auto"
+                  className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto"
                   style={{
                     background: `linear-gradient(135deg, ${primaryColor} 0%, ${accentColor} 100%)`,
                     border: '3px solid rgba(255, 255, 255, 0.2)',
+                    marginBottom: '8px',
                   }}
                 >
                   <span className="text-2xl font-black text-white">
                     {opponentShort.substring(0, 3).toUpperCase()}
                   </span>
                 </div>
-                <span className="text-xs text-white/60 uppercase tracking-wider">{opponentShort}</span>
+                <span className="text-xs uppercase tracking-wider" style={{ color: 'rgba(255,255,255,0.6)' }}>
+                  {opponentShort}
+                </span>
               </motion.div>
             </div>
 
             {/* Stage Info */}
             <motion.div
-              className="text-center mb-6"
+              className="text-center"
+              style={{ marginBottom: '24px' }}
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.35 }}
             >
-              <h2 className="text-3xl font-black text-white uppercase mb-2">{stage.name}</h2>
-              <p className="text-white/50 text-sm">
+              <h2 
+                className="text-3xl font-black text-white uppercase"
+                style={{ fontFamily: 'var(--font-oswald), sans-serif', marginBottom: '8px' }}
+              >
+                {stage.name}
+              </h2>
+              <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '14px' }}>
                 {stage.location.isHome ? '🏠 Home Game' : '✈️ Away Game'} • {stage.location.city},{' '}
                 {stage.location.state}
               </p>
-              <p className="text-white/30 text-xs mt-1 italic">{stage.description}</p>
+              <p 
+                className="text-xs italic"
+                style={{ color: 'rgba(255,255,255,0.3)', marginTop: '4px' }}
+              >
+                {stage.description}
+              </p>
             </motion.div>
 
             {/* Stats Row */}
             <motion.div
-              className="flex justify-center gap-8 mb-8"
+              className="flex justify-center"
+              style={{ gap: '40px', marginBottom: '32px' }}
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.4 }}
             >
               {/* Difficulty */}
               <div className="text-center">
-                <div className="text-[9px] text-white/40 uppercase tracking-wider mb-1">
+                <div 
+                  className="text-[10px] uppercase tracking-widest"
+                  style={{ color: 'rgba(255,255,255,0.4)', marginBottom: '8px' }}
+                >
                   Difficulty
                 </div>
-                <div className="flex gap-1 justify-center">
+                <div className="flex justify-center" style={{ gap: '4px' }}>
                   {Array.from({ length: 10 }).map((_, i) => (
                     <div
                       key={i}
@@ -239,7 +266,10 @@ export function CityPreview({
 
               {/* Weather */}
               <div className="text-center">
-                <div className="text-[9px] text-white/40 uppercase tracking-wider mb-1">
+                <div 
+                  className="text-[10px] uppercase tracking-widest"
+                  style={{ color: 'rgba(255,255,255,0.4)', marginBottom: '8px' }}
+                >
                   Conditions
                 </div>
                 <div className="text-lg">
@@ -251,13 +281,21 @@ export function CityPreview({
                   {stage.visuals.weather.type === 'night' && '🌙'}
                   {stage.visuals.weather.type === 'clear' && '⛅'}
                 </div>
-                <div className="text-[10px] text-white/50 capitalize">{stage.visuals.weather.type}</div>
+                <div 
+                  className="text-[10px] capitalize"
+                  style={{ color: 'rgba(255,255,255,0.5)', marginTop: '4px' }}
+                >
+                  {stage.visuals.weather.type}
+                </div>
               </div>
 
               {/* High Score */}
               {highScore !== undefined && (
                 <div className="text-center">
-                  <div className="text-[9px] text-white/40 uppercase tracking-wider mb-1">
+                  <div 
+                    className="text-[10px] uppercase tracking-widest"
+                    style={{ color: 'rgba(255,255,255,0.4)', marginBottom: '8px' }}
+                  >
                     High Score
                   </div>
                   <div
@@ -272,7 +310,8 @@ export function CityPreview({
 
             {/* Action Buttons */}
             <motion.div
-              className="space-y-3"
+              className="flex flex-col"
+              style={{ gap: '16px' }}
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.45 }}
@@ -280,8 +319,10 @@ export function CityPreview({
               {isLocked ? (
                 <>
                   <div
-                    className="w-full py-3 px-6 rounded-xl text-center font-bold uppercase tracking-wider flex items-center justify-center gap-2"
+                    className="w-full rounded-xl text-center font-bold uppercase tracking-wider flex items-center justify-center"
                     style={{
+                      padding: '16px 24px',
+                      gap: '12px',
                       background: 'rgba(255, 255, 255, 0.1)',
                       color: 'rgba(255, 255, 255, 0.4)',
                       border: '1px solid rgba(255, 255, 255, 0.1)',
@@ -292,7 +333,10 @@ export function CityPreview({
                     </svg>
                     Stage Locked
                   </div>
-                  <p className="text-center text-xs text-white/40">
+                  <p 
+                    className="text-center text-xs"
+                    style={{ color: 'rgba(255,255,255,0.4)' }}
+                  >
                     Complete previous stages to unlock
                   </p>
                 </>
@@ -311,14 +355,15 @@ export function CityPreview({
                 </GradientButton>
               )}
 
-              <GhostButton fullWidth onClick={onClose}>
+              <GhostButton size="lg" fullWidth onClick={onClose}>
                 Back to Map
               </GhostButton>
             </motion.div>
 
             {/* Landmarks */}
             <motion.div
-              className="flex flex-wrap justify-center gap-2 mt-6"
+              className="flex flex-wrap justify-center"
+              style={{ gap: '8px', marginTop: '24px' }}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.5 }}
@@ -326,8 +371,12 @@ export function CityPreview({
               {stage.visuals.landmarks.map((landmark, i) => (
                 <span
                   key={i}
-                  className="px-2 py-1 rounded-full text-[10px] text-white/40"
-                  style={{ background: 'rgba(255, 255, 255, 0.05)' }}
+                  className="rounded-full text-[10px]"
+                  style={{ 
+                    padding: '6px 12px',
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    color: 'rgba(255,255,255,0.4)',
+                  }}
                 >
                   {landmark}
                 </span>

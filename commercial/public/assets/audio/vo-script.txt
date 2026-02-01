@@ -1,0 +1,49 @@
+DARK SIDE GAME — VO SCRIPT
+Voice ID: YOq2y2Up4RgXP2HyXjE5
+Tone: Calm, low, confident, rap-adjacent cadence. No yelling, no announcer tone.
+
+================================================================================
+
+[LINE 1] starts ~0:02.4 / frame 72
+No football this week?
+
+[LINE 2] frame 102
+Just kidding.
+
+[LINE 3] frame 120
+The Dark Side Game.
+
+[LINE 4] frame 210
+Choose your defender.
+
+[LINE 5] frame 312
+Command the Dark Side Defense.
+
+[LINE 6] frame 428
+Tackle.
+
+[LINE 7] frame 468
+Defend.
+
+[LINE 8] frame 508
+Dominate.
+
+[LINE 9] frame 556
+Win two Super Bowl tickets.
+
+[LINE 10] frame 600
+To watch it live.
+
+[LINE 11] frame 708
+Play now.
+
+[LINE 12] frame 732
+Game dot DrinkSip dot com.
+
+================================================================================
+DELIVERY NOTES:
+- Clean studio presence
+- Small pauses between lines
+- Keep it tight; total VO should fit comfortably within 30s
+- Each line should be punchy and deliberate
+================================================================================

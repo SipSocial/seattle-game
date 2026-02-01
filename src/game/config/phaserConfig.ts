@@ -71,36 +71,42 @@ export const EASINGS = {
   elastic: 'Elastic.easeOut',
 }
 
-export const phaserConfig: Phaser.Types.Core.GameConfig = {
-  type: Phaser.AUTO,
-  width: GAME_WIDTH,
-  height: GAME_HEIGHT,
-  parent: 'game-container',
-  backgroundColor: '#002244', // Seahawks Navy
-  scale: {
-    mode: Phaser.Scale.FIT,
-    autoCenter: Phaser.Scale.CENTER_BOTH,
-  },
-  scene: [BootScene, GameScene], // UI scenes migrated to React
-  physics: {
-    default: 'arcade',
-    arcade: {
-      gravity: { x: 0, y: 0 },
-      debug: false,
+// Create Phaser config - ALWAYS transparent so AR can be toggled dynamically
+export function createPhaserConfig(): Phaser.Types.Core.GameConfig {
+  return {
+    type: Phaser.AUTO,
+    width: GAME_WIDTH,
+    height: GAME_HEIGHT,
+    parent: 'game-container',
+    backgroundColor: undefined, // Always transparent - background controlled by React/GameScene
+    scale: {
+      mode: Phaser.Scale.FIT,
+      autoCenter: Phaser.Scale.CENTER_BOTH,
     },
-  },
-  render: {
-    pixelArt: false,
-    antialias: true,
-    roundPixels: false, // Allow sub-pixel positioning for smoother movement
-    transparent: false,
-    clearBeforeRender: true,
-    powerPreference: 'high-performance', // Request high-perf GPU for smooth rendering
-  },
-  input: {
-    activePointers: 2, // Support multi-touch
-  },
+    scene: [BootScene, GameScene], // UI scenes migrated to React
+    physics: {
+      default: 'arcade',
+      arcade: {
+        gravity: { x: 0, y: 0 },
+        debug: false,
+      },
+    },
+    render: {
+      pixelArt: false,
+      antialias: true,
+      roundPixels: false, // Allow sub-pixel positioning for smoother movement
+      transparent: true, // Always transparent canvas - background drawn by scene
+      clearBeforeRender: true,
+      powerPreference: 'high-performance', // Request high-perf GPU for smooth rendering
+    },
+    input: {
+      activePointers: 2, // Support multi-touch
+    },
+  }
 }
+
+// Default config - for backward compatibility
+export const phaserConfig: Phaser.Types.Core.GameConfig = createPhaserConfig()
 
 // Utility: Convert hex color to CSS string
 export function hexToCSS(hex: number): string {

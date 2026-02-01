@@ -31,6 +31,72 @@ export interface ActivePowerUp {
   remainingTime: number
 }
 
+// Upgrade types for between-wave selection
+export type UpgradeType = 
+  | 'ADD_DEFENDER' 
+  | 'SPEED_BOOST' 
+  | 'TACKLE_RADIUS' 
+  | 'EXTRA_LIFE'
+  | 'HAZY_IPA' 
+  | 'WATERMELON' 
+  | 'LEMON_LIME' 
+  | 'BLOOD_ORANGE'
+
+export interface Upgrade {
+  type: UpgradeType
+  name: string
+  description: string
+  color: string // hex color string for React
+  icon: 'teammate' | 'speed' | 'reach' | 'life' | 'slow' | 'health' | 'boost' | 'power'
+}
+
+// Modal state interfaces
+export interface UpgradeModalState {
+  isOpen: boolean
+  upgrades: Upgrade[]
+  selectedUpgrade: UpgradeType | null
+}
+
+export interface VictoryModalState {
+  isOpen: boolean
+  type: 'victory' | 'stage_complete' | 'super_bowl'
+  stageId: number
+  stageName: string
+  bonusPoints: number
+}
+
+export interface BossIntroState {
+  isOpen: boolean
+  bossName: string
+  bossType: string
+}
+
+export interface StageBannerState {
+  isOpen: boolean
+  cityName: string
+  stageId: number
+  gameInStage: number
+  totalGamesInStage: number
+}
+
+export interface LoadingState {
+  isOpen: boolean
+  progress: number // 0-100
+  message: string
+}
+
+export interface BrandingState {
+  isOpen: boolean
+}
+
+// AR Mode state
+export type CameraPermission = 'prompt' | 'granted' | 'denied'
+
+export interface ARModeState {
+  enabled: boolean
+  cameraPermission: CameraPermission
+}
+
 // Campaign progress tracking
 export interface CampaignProgress {
   currentGame: number // 1-51
@@ -78,6 +144,23 @@ interface GameState {
   hasEntered: boolean
   hasShared: boolean
   
+  // UI Modal States (React overlays)
+  upgradeModal: UpgradeModalState
+  victoryModal: VictoryModalState
+  bossIntro: BossIntroState
+  stageBanner: StageBannerState
+  loadingScreen: LoadingState
+  brandingScreen: BrandingState
+  arMode: ARModeState
+  
+  // Stats panel (shown in HUD)
+  stats: {
+    defenderCount: number
+    speedBoost: number
+    tackleRadius: number
+    enemySlowdown: number
+  }
+  
   // Actions
   setSelectedDefender: (jersey: number) => void
   setPlayerName: (name: string) => void
@@ -94,6 +177,7 @@ interface GameState {
   
   // 12th Man actions
   addFanMeter: (amount: number) => void
+  setFanMeter: (value: number) => void
   triggerFanMeter: () => void
   resetFanMeter: () => void
   
@@ -117,6 +201,33 @@ interface GameState {
   // Leaderboard actions
   addLeaderboardEntry: (entry: Omit<LeaderboardEntry, 'id' | 'date'>) => void
   
+  // UI Modal actions
+  showUpgradeModal: (upgrades: Upgrade[]) => void
+  hideUpgradeModal: () => void
+  selectUpgrade: (type: UpgradeType) => void
+  
+  showVictoryModal: (type: 'victory' | 'stage_complete' | 'super_bowl', stageId: number, stageName: string, bonusPoints: number) => void
+  hideVictoryModal: () => void
+  
+  showBossIntro: (bossName: string, bossType: string) => void
+  hideBossIntro: () => void
+  
+  showStageBanner: (cityName: string, stageId: number, gameInStage: number, totalGamesInStage: number) => void
+  hideStageBanner: () => void
+  
+  showLoadingScreen: (message?: string) => void
+  updateLoadingProgress: (progress: number) => void
+  hideLoadingScreen: () => void
+  
+  showBrandingScreen: () => void
+  hideBrandingScreen: () => void
+  
+  // AR Mode actions
+  setArMode: (enabled: boolean) => void
+  setCameraPermission: (permission: CameraPermission) => void
+  
+  updateStats: (stats: Partial<GameState['stats']>) => void
+  
   // Reset
   resetGame: () => void
 }
@@ -131,6 +242,51 @@ const INITIAL_GAME_STATE = {
   fanMeter: 0,
   fanMeterActive: false,
   activePowerUp: null,
+}
+
+const INITIAL_MODAL_STATES = {
+  upgradeModal: {
+    isOpen: false,
+    upgrades: [] as Upgrade[],
+    selectedUpgrade: null as UpgradeType | null,
+  },
+  victoryModal: {
+    isOpen: false,
+    type: 'victory' as const,
+    stageId: 0,
+    stageName: '',
+    bonusPoints: 0,
+  },
+  bossIntro: {
+    isOpen: false,
+    bossName: '',
+    bossType: '',
+  },
+  stageBanner: {
+    isOpen: false,
+    cityName: '',
+    stageId: 0,
+    gameInStage: 0,
+    totalGamesInStage: 0,
+  },
+  loadingScreen: {
+    isOpen: false,
+    progress: 0,
+    message: 'Loading...',
+  },
+  brandingScreen: {
+    isOpen: false,
+  },
+  arMode: {
+    enabled: false,
+    cameraPermission: 'prompt' as CameraPermission,
+  },
+  stats: {
+    defenderCount: 1,
+    speedBoost: 0,
+    tackleRadius: 0,
+    enemySlowdown: 0,
+  },
 }
 
 const INITIAL_CAMPAIGN_STATE: CampaignProgress = {
@@ -151,6 +307,7 @@ export const useGameStore = create<GameState>()(
       selectedDefender: DEFAULT_DEFENDER,
       playerName: '',
       ...INITIAL_GAME_STATE,
+      ...INITIAL_MODAL_STATES,
       campaign: INITIAL_CAMPAIGN_STATE,
       gameMode: 'campaign' as const,
       leaderboard: [],
@@ -215,6 +372,10 @@ export const useGameStore = create<GameState>()(
         if (wave < 3) return
         const newMeter = Math.min(100, fanMeter + amount)
         set({ fanMeter: newMeter })
+      },
+      
+      setFanMeter: (value) => {
+        set({ fanMeter: Math.min(100, Math.max(0, value)) })
       },
       
       triggerFanMeter: () => {
@@ -334,8 +495,163 @@ export const useGameStore = create<GameState>()(
         set({ leaderboard: updated })
       },
 
+      // UI Modal actions
+      showUpgradeModal: (upgrades) => {
+        set({
+          upgradeModal: {
+            isOpen: true,
+            upgrades,
+            selectedUpgrade: null,
+          }
+        })
+      },
+      
+      hideUpgradeModal: () => {
+        set({
+          upgradeModal: {
+            ...get().upgradeModal,
+            isOpen: false,
+          }
+        })
+      },
+      
+      selectUpgrade: (type) => {
+        set({
+          upgradeModal: {
+            ...get().upgradeModal,
+            selectedUpgrade: type,
+            isOpen: false,
+          }
+        })
+      },
+      
+      showVictoryModal: (type, stageId, stageName, bonusPoints) => {
+        set({
+          victoryModal: {
+            isOpen: true,
+            type,
+            stageId,
+            stageName,
+            bonusPoints,
+          }
+        })
+      },
+      
+      hideVictoryModal: () => {
+        set({
+          victoryModal: {
+            ...get().victoryModal,
+            isOpen: false,
+          }
+        })
+      },
+      
+      showBossIntro: (bossName, bossType) => {
+        set({
+          bossIntro: {
+            isOpen: true,
+            bossName,
+            bossType,
+          }
+        })
+      },
+      
+      hideBossIntro: () => {
+        set({
+          bossIntro: {
+            ...get().bossIntro,
+            isOpen: false,
+          }
+        })
+      },
+      
+      showStageBanner: (cityName, stageId, gameInStage, totalGamesInStage) => {
+        set({
+          stageBanner: {
+            isOpen: true,
+            cityName,
+            stageId,
+            gameInStage,
+            totalGamesInStage,
+          }
+        })
+      },
+      
+      hideStageBanner: () => {
+        set({
+          stageBanner: {
+            ...get().stageBanner,
+            isOpen: false,
+          }
+        })
+      },
+      
+      showLoadingScreen: (message = 'Loading...') => {
+        set({
+          loadingScreen: {
+            isOpen: true,
+            progress: 0,
+            message,
+          }
+        })
+      },
+      
+      updateLoadingProgress: (progress) => {
+        set({
+          loadingScreen: {
+            ...get().loadingScreen,
+            progress,
+          }
+        })
+      },
+      
+      hideLoadingScreen: () => {
+        set({
+          loadingScreen: {
+            ...get().loadingScreen,
+            isOpen: false,
+          }
+        })
+      },
+      
+      showBrandingScreen: () => {
+        set({ brandingScreen: { isOpen: true } })
+      },
+      
+      hideBrandingScreen: () => {
+        set({ brandingScreen: { isOpen: false } })
+      },
+      
+      // AR Mode actions
+      setArMode: (enabled) => {
+        set({
+          arMode: {
+            ...get().arMode,
+            enabled,
+          }
+        })
+      },
+      
+      setCameraPermission: (permission) => {
+        set({
+          arMode: {
+            ...get().arMode,
+            cameraPermission: permission,
+          }
+        })
+      },
+      
+      updateStats: (newStats) => {
+        set({
+          stats: {
+            ...get().stats,
+            ...newStats,
+          }
+        })
+      },
+
       // Reset
-      resetGame: () => set({ ...INITIAL_GAME_STATE }),
+      resetGame: () => set({ ...INITIAL_GAME_STATE, ...INITIAL_MODAL_STATES }),
     }),
     {
       name: 'darkside-defense-storage',
@@ -349,6 +665,7 @@ export const useGameStore = create<GameState>()(
         hasFollowed: state.hasFollowed,
         hasEntered: state.hasEntered,
         hasShared: state.hasShared,
+        arMode: state.arMode,
       }),
     }
   )
@@ -381,3 +698,16 @@ export const useCampaignProgress = () => useGameStore((state) => ({
   isComplete: state.campaign.isCampaignComplete,
   superBowlWon: state.campaign.superBowlWon,
 }))
+
+// UI Modal selector hooks
+export const useUpgradeModal = () => useGameStore((state) => state.upgradeModal)
+export const useVictoryModal = () => useGameStore((state) => state.victoryModal)
+export const useBossIntro = () => useGameStore((state) => state.bossIntro)
+export const useStageBanner = () => useGameStore((state) => state.stageBanner)
+export const useLoadingScreen = () => useGameStore((state) => state.loadingScreen)
+export const useBrandingScreen = () => useGameStore((state) => state.brandingScreen)
+export const usePlayerStats = () => useGameStore((state) => state.stats)
+
+// AR Mode selector hooks
+export const useArMode = () => useGameStore((state) => state.arMode)
+export const useIsArEnabled = () => useGameStore((state) => state.arMode.enabled)

@@ -1,5 +1,5 @@
 import * as Phaser from 'phaser'
-import { phaserConfig } from './config/phaserConfig'
+import { createPhaserConfig } from './config/phaserConfig'
 import { useGameStore } from '../store/gameStore'
 
 let gameInstance: Phaser.Game | null = null
@@ -8,6 +8,9 @@ export function createGame(): Phaser.Game {
   if (gameInstance) {
     return gameInstance
   }
+  
+  // Always use transparent config - AR mode is handled dynamically in GameScene
+  const config = createPhaserConfig()
 
   // Check if we're coming from React player selection
   // If so, read the selected defender and skip to GameScene
@@ -26,8 +29,8 @@ export function createGame(): Phaser.Game {
     
     // Create game config that starts at GameScene directly
     const quickStartConfig: Phaser.Types.Core.GameConfig = {
-      ...phaserConfig,
-      scene: phaserConfig.scene, // Keep all scenes registered
+      ...config,
+      scene: config.scene, // Keep all scenes registered
     }
     
     gameInstance = new Phaser.Game(quickStartConfig)
@@ -43,11 +46,12 @@ export function createGame(): Phaser.Game {
     })
   } else {
     // Normal game start with boot screen
-    gameInstance = new Phaser.Game(phaserConfig)
+    gameInstance = new Phaser.Game(config)
   }
   
   return gameInstance
 }
+
 
 export function destroyGame(): void {
   if (gameInstance) {

@@ -1,0 +1,9 @@
+# Ignore entire commercial folder (separate Remotion project)
+commercial/
+
+# Ignore development files
+.cursor/
+scripts/
+
+# Ignore test/debug files
+.cursor/debug.log

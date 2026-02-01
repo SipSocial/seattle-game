@@ -37,27 +37,111 @@
   --glass-border: rgba(255, 255, 255, 0.15);
   --shadow-glow: rgba(105, 190, 40, 0.4);
   
-  /* Typography Scale */
+  /* ============================================
+     BUTTON DESIGN TOKENS
+     Consistent sizing across all button variants
+     ============================================ */
+  
+  /* Button Heights - Touch-friendly minimums */
+  --btn-height-sm: 40px;
+  --btn-height-md: 48px;
+  --btn-height-lg: 56px;
+  --btn-height-xl: 64px;
+  
+  /* Button Padding - Horizontal */
+  --btn-padding-sm: 16px;
+  --btn-padding-md: 24px;
+  --btn-padding-lg: 32px;
+  --btn-padding-xl: 40px;
+  
+  /* Button Font Sizes */
+  --btn-font-sm: 12px;
+  --btn-font-md: 14px;
+  --btn-font-lg: 16px;
+  --btn-font-xl: 18px;
+  
+  /* Button Icon Gaps */
+  --btn-gap-sm: 6px;
+  --btn-gap-md: 8px;
+  --btn-gap-lg: 10px;
+  --btn-gap-xl: 12px;
+  
+  /* Button Border Radius */
+  --btn-radius-sm: 8px;
+  --btn-radius-md: 12px;
+  --btn-radius-lg: 16px;
+  --btn-radius-full: 9999px;
+  
+  /* ============================================
+     TYPOGRAPHY SCALE
+     ============================================ */
   --text-hero: clamp(3rem, 10vw, 6rem);
   --text-title: clamp(2rem, 6vw, 3.5rem);
   --text-subtitle: clamp(1.25rem, 4vw, 2rem);
   --text-body: clamp(0.875rem, 2.5vw, 1rem);
   --text-caption: clamp(0.75rem, 2vw, 0.875rem);
+  --text-micro: 11px;
   
-  /* Spacing */
-  --space-xs: 0.25rem;
-  --space-sm: 0.5rem;
-  --space-md: 1rem;
-  --space-lg: 1.5rem;
-  --space-xl: 2rem;
-  --space-2xl: 3rem;
-  --space-3xl: 4rem;
+  /* ============================================
+     SPACING SCALE (8px base unit)
+     ============================================ */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+  --space-24: 96px;
   
-  /* Transitions */
+  /* Legacy spacing aliases */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-2xl: 48px;
+  --space-3xl: 64px;
+  
+  /* ============================================
+     CARD DESIGN TOKENS
+     ============================================ */
+  --card-padding-sm: 12px;
+  --card-padding-md: 16px;
+  --card-padding-lg: 24px;
+  --card-radius-sm: 12px;
+  --card-radius-md: 16px;
+  --card-radius-lg: 24px;
+  
+  /* ============================================
+     CONTAINER WIDTH
+     ============================================ */
+  --container-xs: 320px;
+  --container-sm: 384px;
+  --container-md: 448px;
+  --container-lg: 512px;
+  --container-content: 400px;
+  
+  /* ============================================
+     TRANSITIONS
+     ============================================ */
   --transition-fast: 150ms ease;
   --transition-normal: 250ms ease;
   --transition-slow: 400ms ease;
   --transition-spring: 500ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  
+  /* ============================================
+     SHADOWS
+     ============================================ */
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.15);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.2);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.3);
+  --shadow-glow-green: 0 0 20px rgba(105, 190, 40, 0.4);
+  --shadow-glow-green-strong: 0 0 40px rgba(105, 190, 40, 0.6);
 }
 
 /* Base Reset */
