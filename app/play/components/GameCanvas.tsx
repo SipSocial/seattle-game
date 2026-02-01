@@ -301,40 +301,7 @@ export default function GameCanvas({ onChangePlayer }: GameCanvasProps) {
       {/* Stage Banner */}
       <StageBanner />
 
-      {/* Back to Menu Link (only when playing) */}
-      {gameLoaded && !isGameOver && !isPaused && (
-        <div 
-          className="absolute z-30"
-          style={{
-            top: 'max(env(safe-area-inset-top), 8px)',
-            left: 'max(env(safe-area-inset-left), 8px)',
-          }}
-        >
-          <a
-            href="/"
-            onClick={(e) => {
-              e.preventDefault()
-              handleQuit()
-            }}
-            className="text-white/30 hover:text-white/70 text-xs flex items-center gap-1 transition-colors p-2"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M19 12H5M12 19l-7-7 7-7" />
-            </svg>
-            Exit
-          </a>
-        </div>
-      )}
+      {/* Exit is now handled via Pause Menu - removed redundant Exit link */}
     </div>
   )
 }

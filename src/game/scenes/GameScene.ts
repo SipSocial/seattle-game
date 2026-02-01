@@ -2015,31 +2015,9 @@ export class GameScene extends Phaser.Scene {
   }
 
   private updateTimerBar(wave: number): void {
-    const waveDuration = getWaveDuration(wave)
-    const progress = Math.min(1, this.waveTimer / waveDuration)
-    const barWidth = GAME_WIDTH - 40
-    const fillWidth = barWidth * progress
-    
+    // Timer bar is now handled by React GameHUD - this is a no-op
+    // Just clear to ensure nothing renders
     this.timerBar.clear()
-    
-    if (fillWidth > 0) {
-      // Dynamic color based on progress
-      const color = progress < 0.7 ? COLORS.green : (progress < 0.9 ? COLORS.gold : COLORS.dlRed)
-      
-      // Main fill with glow
-      this.timerBar.fillStyle(color, 0.9)
-      this.timerBar.fillRoundedRect(22, 87, fillWidth - 4, 4, 2)
-      
-      // Top shine
-      this.timerBar.fillStyle(0xffffff, 0.3)
-      this.timerBar.fillRoundedRect(22, 87, fillWidth - 4, 1, { tl: 2, tr: 2, bl: 0, br: 0 })
-      
-      // Glow at the end of the bar
-      if (fillWidth > 10) {
-        this.timerBar.fillStyle(color, 0.4)
-        this.timerBar.fillCircle(20 + fillWidth - 2, 89, 6)
-      }
-    }
   }
 
   private updatePlayerDefender(delta: number): void {
