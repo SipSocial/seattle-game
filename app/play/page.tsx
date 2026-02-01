@@ -1,11 +1,13 @@
 'use client'
 
 import dynamic from 'next/dynamic'
-import { Suspense, useState, useCallback } from 'react'
+import { Suspense, useState, useCallback, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import PlayerSelect from './components/PlayerSelect'
-import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
+import { LoadingSpinner, SoundtrackPlayer } from '@/components/ui'
 import { useGlobalAudioUnlock } from './hooks/useAudio'
+import { SoundtrackManager } from '@/src/game/systems/SoundtrackManager'
+import { useSoundtrackStore } from '@/src/store/soundtrackStore'
 
 // Dynamically import the game component with no SSR
 const GameCanvas = dynamic(() => import('./components/GameCanvas'), {
@@ -36,11 +38,22 @@ const pageTransition = {
 
 export default function PlayPage() {
   const [gameState, setGameState] = useState<'select' | 'playing'>('select')
+  const musicEnabled = useSoundtrackStore((state) => state.musicEnabled)
+  const closePlayer = useSoundtrackStore((state) => state.closePlayer)
   
   // Initialize audio system and set up global unlock on first interaction
   useGlobalAudioUnlock()
+  
+  // Start player select music when entering this page
+  useEffect(() => {
+    SoundtrackManager.init()
+    if (musicEnabled && gameState === 'select') {
+      // Crossfade from home music to player select music
+      SoundtrackManager.playForScreen('playerSelect', { crossfade: true })
+    }
+  }, [musicEnabled, gameState])
 
-  const handlePlayerSelect = useCallback((jersey: number) => {
+  const handlePlayerSelect = useCallback(async (jersey: number) => {
     // Store selection in localStorage for Phaser to read
     if (typeof window !== 'undefined') {
       localStorage.setItem('selectedDefender', String(jersey))
@@ -53,13 +66,23 @@ export default function PlayPage() {
       }
     }
     
+    // Stop music with whistle transition before game starts
+    await SoundtrackManager.stopWithWhistle()
+    
+    // Hide the player UI during gameplay
+    closePlayer()
+    
     // Transition to game immediately (PlayerSelect handles its own exit animation)
     setGameState('playing')
-  }, [])
+  }, [closePlayer])
 
   const handleChangePlayer = useCallback(() => {
     setGameState('select')
-  }, [])
+    // Resume player select music when going back to selection
+    if (musicEnabled) {
+      SoundtrackManager.playForScreen('playerSelect')
+    }
+  }, [musicEnabled])
 
   return (
     <AnimatePresence mode="wait">
@@ -100,6 +123,9 @@ export default function PlayPage() {
           </Suspense>
         </motion.div>
       )}
+      
+      {/* Soundtrack Player - only visible during player select */}
+      {gameState === 'select' && <SoundtrackPlayer />}
     </AnimatePresence>
   )
 }

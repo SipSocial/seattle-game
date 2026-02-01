@@ -4,13 +4,17 @@ import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { CampaignMapV2 } from '@/components/game/CampaignMapV2'
+import { SoundtrackPlayer } from '@/components/ui/SoundtrackPlayer'
 import { useGameStore } from '@/src/store/gameStore'
+import { useSoundtrackStore } from '@/src/store/soundtrackStore'
 import { GENERATED_ASSETS } from '@/src/game/data/campaignAssets'
 import { AudioManager } from '@/src/game/systems/AudioManager'
+import { SoundtrackManager } from '@/src/game/systems/SoundtrackManager'
 
 export default function CampaignPage() {
   const router = useRouter()
   const setGameMode = useGameStore((s) => s.setGameMode)
+  const musicEnabled = useSoundtrackStore((s) => s.musicEnabled)
   const [mounted, setMounted] = useState(false)
   const [isExiting, setIsExiting] = useState(false)
 
@@ -19,10 +23,15 @@ export default function CampaignPage() {
     
     // Initialize audio system
     AudioManager.init()
+    SoundtrackManager.init()
     
     // Set up global audio unlock on first user interaction
     const handleInteraction = () => {
       AudioManager.unlock()
+      // Start campaign music after first interaction
+      if (musicEnabled) {
+        SoundtrackManager.playForScreen('campaign', { crossfade: true })
+      }
       document.removeEventListener('click', handleInteraction)
       document.removeEventListener('touchstart', handleInteraction)
     }
@@ -30,13 +39,16 @@ export default function CampaignPage() {
     if (!AudioManager.isReady()) {
       document.addEventListener('click', handleInteraction, { once: true })
       document.addEventListener('touchstart', handleInteraction, { once: true })
+    } else if (musicEnabled) {
+      // Audio already unlocked, crossfade to campaign music
+      SoundtrackManager.playForScreen('campaign', { crossfade: true })
     }
     
     return () => {
       document.removeEventListener('click', handleInteraction)
       document.removeEventListener('touchstart', handleInteraction)
     }
-  }, [])
+  }, [musicEnabled])
 
   const handleSelectStage = useCallback((stageId: number) => {
     setIsExiting(true)
@@ -67,6 +79,9 @@ export default function CampaignPage() {
         mapImageUrl={GENERATED_ASSETS.mapImageUrl}
         airplaneUrl={GENERATED_ASSETS.airplaneUrl}
       />
+      
+      {/* Soundtrack Player */}
+      <SoundtrackPlayer />
     </motion.div>
   )
 }

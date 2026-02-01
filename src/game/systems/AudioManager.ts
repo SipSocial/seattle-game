@@ -1079,6 +1079,83 @@ class AudioManagerClass {
     this.crowdIntensity = Math.max(0, Math.min(1, intensity))
     log('Crowd intensity:', this.crowdIntensity)
   }
+  
+  // ============================================
+  // WHISTLE (for game start transition)
+  // ============================================
+  
+  /**
+   * Play referee whistle sound
+   * Used when transitioning from player select to game
+   * Creates a classic sports whistle with attack, sustain, and decay
+   */
+  public playWhistle(): void {
+    if (!this.canPlay()) return
+    this.trackSound('whistle')
+    
+    const t = this.now()
+    
+    // Main whistle tone (two frequencies for authentic whistle sound)
+    const mainFreq = 2800 // Primary whistle frequency
+    const secondaryFreq = 3200 // Overtone for richness
+    
+    // Primary tone
+    const main = this.osc('sine')
+    if (main) {
+      main.o.frequency.setValueAtTime(mainFreq, t)
+      
+      // Quick attack, sustain, then decay
+      main.g.gain.setValueAtTime(0, t)
+      main.g.gain.linearRampToValueAtTime(0.35, t + 0.02) // Fast attack
+      main.g.gain.setValueAtTime(0.35, t + 0.15) // Sustain
+      main.g.gain.linearRampToValueAtTime(0.3, t + 0.25)
+      main.g.gain.exponentialRampToValueAtTime(0.001, t + 0.4) // Decay
+      
+      // Slight frequency modulation for realism
+      main.o.frequency.linearRampToValueAtTime(mainFreq * 1.02, t + 0.05)
+      main.o.frequency.linearRampToValueAtTime(mainFreq * 0.98, t + 0.2)
+      main.o.frequency.linearRampToValueAtTime(mainFreq, t + 0.35)
+      
+      main.o.start(t)
+      main.o.stop(t + 0.45)
+    }
+    
+    // Secondary overtone for richness
+    const secondary = this.osc('sine')
+    if (secondary) {
+      secondary.o.frequency.setValueAtTime(secondaryFreq, t)
+      
+      secondary.g.gain.setValueAtTime(0, t)
+      secondary.g.gain.linearRampToValueAtTime(0.15, t + 0.02)
+      secondary.g.gain.setValueAtTime(0.15, t + 0.15)
+      secondary.g.gain.exponentialRampToValueAtTime(0.001, t + 0.35)
+      
+      secondary.o.start(t)
+      secondary.o.stop(t + 0.4)
+    }
+    
+    // Add a bit of noise for air/breath sound
+    const noiseNode = this.noise(0.5)
+    if (noiseNode) {
+      // Bandpass filter for whistle-like noise
+      const filter = this.ctx!.createBiquadFilter()
+      filter.type = 'bandpass'
+      filter.frequency.value = 3000
+      filter.Q.value = 5
+      
+      noiseNode.g.disconnect()
+      noiseNode.g.connect(filter)
+      filter.connect(this.masterGain!)
+      
+      noiseNode.g.gain.setValueAtTime(0, t)
+      noiseNode.g.gain.linearRampToValueAtTime(0.08, t + 0.02)
+      noiseNode.g.gain.linearRampToValueAtTime(0.05, t + 0.2)
+      noiseNode.g.gain.exponentialRampToValueAtTime(0.001, t + 0.35)
+      
+      noiseNode.source.start(t)
+      noiseNode.source.stop(t + 0.4)
+    }
+  }
 }
 
 // Singleton

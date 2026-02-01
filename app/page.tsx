@@ -6,7 +6,10 @@ import { motion } from 'framer-motion'
 import { VideoBackground } from '@/components/ui/VideoBackground'
 import { GradientButton } from '@/components/ui/GradientButton'
 import { GhostButton } from '@/components/ui/GhostButton'
+import { SoundtrackPlayer } from '@/components/ui/SoundtrackPlayer'
 import { AudioManager } from '@/src/game/systems/AudioManager'
+import { SoundtrackManager } from '@/src/game/systems/SoundtrackManager'
+import { useSoundtrackStore } from '@/src/store/soundtrackStore'
 
 const BACKGROUND_VIDEO = 'https://cdn.leonardo.ai/users/eb9a23b8-36c0-4667-b97f-64fdee85d14b/generations/4b5f0ad3-9f4e-413f-b44a-053e9af6240c/4b5f0ad3-9f4e-413f-b44a-053e9af6240c.mp4'
 const BACKGROUND_POSTER = 'https://cdn.leonardo.ai/users/eb9a23b8-36c0-4667-b97f-64fdee85d14b/generations/16412705-ca65-400e-bb78-80ff29be860a/segments/2:2:1/Phoenix_Empty_NFL_football_field_at_night_dramatic_billowing_s_0.jpg'
@@ -35,16 +38,22 @@ const SettingsIcon = () => (
 
 export default function Home() {
   const [mounted, setMounted] = useState(false)
+  const musicEnabled = useSoundtrackStore((state) => state.musicEnabled)
 
   useEffect(() => {
     setMounted(true)
     
     // Initialize audio system early
     AudioManager.init()
+    SoundtrackManager.init()
     
     // Set up global audio unlock on first user interaction
     const handleInteraction = () => {
       AudioManager.unlock()
+      // Start home screen music after first interaction (browser autoplay policy)
+      if (musicEnabled) {
+        SoundtrackManager.playForScreen('home')
+      }
       document.removeEventListener('click', handleInteraction)
       document.removeEventListener('touchstart', handleInteraction)
     }
@@ -52,13 +61,16 @@ export default function Home() {
     if (!AudioManager.isReady()) {
       document.addEventListener('click', handleInteraction, { once: true })
       document.addEventListener('touchstart', handleInteraction, { once: true })
+    } else if (musicEnabled) {
+      // Audio already unlocked, start music immediately
+      SoundtrackManager.playForScreen('home')
     }
     
     return () => {
       document.removeEventListener('click', handleInteraction)
       document.removeEventListener('touchstart', handleInteraction)
     }
-  }, [])
+  }, [musicEnabled])
 
   return (
     <div className="fixed inset-0 bg-[#002244]">
@@ -249,12 +261,15 @@ export default function Home() {
           {/* Legal - 32px below sponsor */}
           <p 
             className="text-[8px] tracking-widest uppercase"
-            style={{ color: 'rgba(165,172,175,0.2)', marginTop: '32px' }}
+            style={{ color: 'rgba(165,172,175,0.2)', marginTop: '32px', marginBottom: '72px' }}
           >
             Not affiliated with Seattle Seahawks or NFL
           </p>
         </motion.div>
       </motion.div>
+
+      {/* Soundtrack Player */}
+      <SoundtrackPlayer />
     </div>
   )
 }

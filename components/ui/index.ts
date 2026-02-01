@@ -10,3 +10,9 @@ export { VideoBackground } from './VideoBackground'
 export { NavigationArrow, NavigationArrows } from './NavigationArrows'
 export { DotIndicator } from './DotIndicator'
 export { LoadingSpinner } from './LoadingSpinner'
+
+// Soundtrack Player
+export { MiniPlayer } from './MiniPlayer'
+export { FullPlayer } from './FullPlayer'
+export { ArtistProfile } from './ArtistProfile'
+export { SoundtrackPlayer } from './SoundtrackPlayer'
