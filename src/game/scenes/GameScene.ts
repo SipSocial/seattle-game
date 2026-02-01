@@ -214,6 +214,9 @@ export class GameScene extends Phaser.Scene {
   create(): void {
     this.cameras.main.fadeIn(400)
     
+    // Ensure AudioManager is initialized (should already be unlocked from PlayerSelect)
+    AudioManager.init()
+    
     // Detect game mode and setup campaign if applicable
     const { gameMode, campaign } = useGameStore.getState()
     this.isCampaignMode = gameMode === 'campaign'

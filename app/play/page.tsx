@@ -5,6 +5,7 @@ import { Suspense, useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import PlayerSelect from './components/PlayerSelect'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
+import { useGlobalAudioUnlock } from './hooks/useAudio'
 
 // Dynamically import the game component with no SSR
 const GameCanvas = dynamic(() => import('./components/GameCanvas'), {
@@ -35,6 +36,9 @@ const pageTransition = {
 
 export default function PlayPage() {
   const [gameState, setGameState] = useState<'select' | 'playing'>('select')
+  
+  // Initialize audio system and set up global unlock on first interaction
+  useGlobalAudioUnlock()
 
   const handlePlayerSelect = useCallback((jersey: number) => {
     // Store selection in localStorage for Phaser to read

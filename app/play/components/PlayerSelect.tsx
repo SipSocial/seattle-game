@@ -8,6 +8,7 @@ import { PositionChip } from '@/components/ui/PositionChip'
 import { StatDisplay } from '@/components/ui/StatDisplay'
 import { NavigationArrows } from '@/components/ui/NavigationArrows'
 import { DotIndicator } from '@/components/ui/DotIndicator'
+import { useAudioUnlock } from '../hooks/useAudio'
 
 // ============================================================================
 // PLAYER DATA
@@ -69,6 +70,9 @@ export default function PlayerSelect({ onSelect }: PlayerSelectProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const playerContainerRef = useRef<HTMLDivElement>(null)
   const playerImageRef = useRef<HTMLDivElement>(null)
+  
+  // Audio unlock - ensures audio is ready before game starts
+  const ensureAudioUnlocked = useAudioUnlock()
 
   // Smooth animation refs
   const targetX = useRef(0)
@@ -116,14 +120,17 @@ export default function PlayerSelect({ onSelect }: PlayerSelectProps) {
     setIndex((i) => (i + dir + PLAYERS.length) % PLAYERS.length)
   }, [])
 
-  const handleSelect = useCallback(() => {
+  const handleSelect = useCallback(async () => {
+    // Unlock audio before game starts - this is crucial!
+    await ensureAudioUnlocked()
+    
     if (navigator.vibrate) navigator.vibrate([50, 30, 100])
     setIsExiting(true)
     // Give time for exit animation
     setTimeout(() => {
       onSelect(PLAYERS[index].jersey)
     }, 200)
-  }, [index, onSelect])
+  }, [index, onSelect, ensureAudioUnlocked])
 
   // Keyboard nav
   useEffect(() => {
