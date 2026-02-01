@@ -189,7 +189,7 @@ class SoundtrackManagerClass {
   
   /**
    * Start music with the natural warm-up experience
-   * Delay -> Quiet start -> Progressive swell
+   * Delay -> Start from silence -> Progressive swell to full volume
    */
   private async startWithWarmup(track: Track): Promise<void> {
     // Clear any existing warmup
@@ -206,10 +206,16 @@ class SoundtrackManagerClass {
     await this.delay(AUDIO_EXPERIENCE.WARMUP_DELAY)
     
     // Check if we were cancelled during delay
-    if (!this.isWarmingUp) return
+    if (!this.isWarmingUp) {
+      console.log(`[SoundtrackManager] Warm-up cancelled during delay`)
+      return
+    }
     
     const player = this.getActivePlayer()
-    if (!player) return
+    if (!player) {
+      console.log(`[SoundtrackManager] No player available`)
+      return
+    }
     
     try {
       // Set up the track
@@ -217,23 +223,32 @@ class SoundtrackManagerClass {
       player.src = track.src
       player.currentTime = startTime
       
-      // Start at whisper volume
-      const initialVolume = this.muted ? 0 : this.volume * AUDIO_EXPERIENCE.INITIAL_VOLUME
+      // Start at a tiny but non-zero volume (0 can cause issues on some browsers)
+      // We'll immediately start fading up from here
+      const initialVolume = this.muted ? 0 : 0.001
       player.volume = initialVolume
       this.currentVolume = initialVolume
       
       await player.play()
       
-      console.log(`[SoundtrackManager] Playing at whisper volume: ${(initialVolume * 100).toFixed(0)}%`)
+      console.log(`[SoundtrackManager] Started playback, beginning volume swell`)
       
-      // Now do the progressive swell
+      // Check again if we were cancelled
+      if (!this.isWarmingUp) {
+        console.log(`[SoundtrackManager] Warm-up cancelled after play started`)
+        return
+      }
+      
+      // Now do the progressive swell from near-silence to full volume
       await this.progressiveSwell(player)
       
-      this.isWarmingUp = false
-      this.playbackState = 'playing'
-      this.notifyListeners()
-      
-      console.log(`[SoundtrackManager] Music fully engaged: ${track.title}`)
+      // Only update state if we're still in warming mode (not cancelled)
+      if (this.isWarmingUp) {
+        this.isWarmingUp = false
+        this.playbackState = 'playing'
+        this.notifyListeners()
+        console.log(`[SoundtrackManager] Music fully engaged: ${track.title}`)
+      }
       
     } catch (error) {
       console.error('[SoundtrackManager] Warm-up playback failed:', error)
@@ -250,6 +265,7 @@ class SoundtrackManagerClass {
   private progressiveSwell(audio: HTMLAudioElement): Promise<void> {
     return new Promise((resolve) => {
       if (this.muted) {
+        console.log(`[SoundtrackManager] Skipping swell - muted`)
         resolve()
         return
       }
@@ -261,11 +277,14 @@ class SoundtrackManagerClass {
       const stepDuration = duration / steps
       let currentStep = 0
       
+      console.log(`[SoundtrackManager] Starting swell: ${startVolume.toFixed(3)} -> ${targetVolume.toFixed(2)} over ${duration}ms`)
+      
       const animate = () => {
         currentStep++
         
-        // Check if cancelled
-        if (!this.isWarmingUp && this.playbackState !== 'playing') {
+        // Only cancel if explicitly stopped (not just because we're still warming)
+        if (this.playbackState === 'stopped' || this.playbackState === 'paused') {
+          console.log(`[SoundtrackManager] Swell cancelled - state: ${this.playbackState}`)
           resolve()
           return
         }
@@ -284,6 +303,7 @@ class SoundtrackManagerClass {
         if (currentStep >= steps) {
           audio.volume = targetVolume
           this.currentVolume = targetVolume
+          console.log(`[SoundtrackManager] Swell complete - volume: ${targetVolume.toFixed(2)}`)
           resolve()
         } else {
           this.swellAnimationId = requestAnimationFrame(() => {
