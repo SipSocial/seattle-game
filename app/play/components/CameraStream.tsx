@@ -6,6 +6,7 @@ import { useGameStore } from '@/src/store/gameStore'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { GradientButton } from '@/components/ui/GradientButton'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
+import { AudioManager } from '@/src/game/systems/AudioManager'
 
 interface CameraStreamProps {
   isActive: boolean
@@ -211,7 +212,7 @@ export function CameraStream({ isActive, onCameraReady, onCameraDisabled }: Came
 
               {/* Cancel button */}
               <motion.button
-                onClick={handleDisableAR}
+                onClick={() => { AudioManager.playMenuClick(); handleDisableAR(); }}
                 className="mt-6 text-white/50 text-xs hover:text-white/80 transition-colors"
                 whileTap={{ scale: 0.95 }}
               >
@@ -277,7 +278,7 @@ export function CameraStream({ isActive, onCameraReady, onCameraDisabled }: Came
                 </GradientButton>
                 
                 <motion.button
-                  onClick={handleDisableAR}
+                  onClick={() => { AudioManager.playMenuClick(); handleDisableAR(); }}
                   className="py-2 text-white/50 text-sm hover:text-white/80 transition-colors"
                   whileTap={{ scale: 0.98 }}
                 >

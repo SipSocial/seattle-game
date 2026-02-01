@@ -5,6 +5,7 @@ import { GlassCard } from '@/components/ui/GlassCard'
 import { GradientButton } from '@/components/ui/GradientButton'
 import { GhostButton } from '@/components/ui/GhostButton'
 import { useGameStore } from '@/src/store/gameStore'
+import { AudioManager } from '@/src/game/systems/AudioManager'
 
 interface PauseMenuProps {
   isOpen: boolean
@@ -32,7 +33,7 @@ export function PauseMenu({ isOpen, onResume, onRestart, onQuit }: PauseMenuProp
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            onClick={onResume}
+            onClick={() => { AudioManager.playMenuClick(); onResume(); }}
           />
 
           {/* Content */}

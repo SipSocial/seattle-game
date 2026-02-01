@@ -5,6 +5,7 @@ import { CampaignStage } from '@/src/game/data/campaign'
 import { getCityAsset } from '@/src/game/data/campaignAssets'
 import { GradientButton } from '@/components/ui/GradientButton'
 import { GhostButton } from '@/components/ui/GhostButton'
+import { AudioManager } from '@/src/game/systems/AudioManager'
 
 interface CityPreviewProps {
   stage: CampaignStage
@@ -44,7 +45,7 @@ export function CityPreview({
           {/* Backdrop */}
           <motion.div
             className="absolute inset-0 bg-black/80 backdrop-blur-md"
-            onClick={onClose}
+            onClick={() => { AudioManager.playMenuClick(); onClose(); }}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -97,7 +98,7 @@ export function CityPreview({
                 backdropFilter: 'blur(10px)',
                 border: '1px solid rgba(255, 255, 255, 0.1)',
               }}
-              onClick={onClose}
+              onClick={() => { AudioManager.playMenuClick(); onClose(); }}
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
             >

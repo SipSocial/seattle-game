@@ -12,6 +12,7 @@ import { CityPreview } from './CityPreview'
 import { useGameStore } from '@/src/store/gameStore'
 import { CAMPAIGN_STAGES, CampaignStage } from '@/src/game/data/campaign'
 import { PLACEHOLDER_ASSETS, getCityAsset } from '@/src/game/data/campaignAssets'
+import { AudioManager } from '@/src/game/systems/AudioManager'
 
 // Default background (will be replaced with Leonardo-generated map)
 const MAP_VIDEO = PLACEHOLDER_ASSETS.mapVideo
@@ -227,7 +228,7 @@ export function CampaignMapV2({
         <div className="flex items-center gap-4">
           {/* Back button */}
           <motion.button
-            onClick={onBack}
+            onClick={() => { AudioManager.playMenuClick(); onBack(); }}
             className="w-10 h-10 rounded-full flex items-center justify-center backdrop-blur-md"
             style={{
               background: 'rgba(0, 0, 0, 0.4)',
@@ -331,7 +332,7 @@ export function CampaignMapV2({
               transform: 'translate(-50%, -50%)',
               zIndex: location.hasCurrentGame ? 50 : location.hasUnlockedGames ? 45 : 40,
             }}
-            onClick={() => handleMarkerClick(location)}
+            onClick={() => { AudioManager.playNavigate(); handleMarkerClick(location); }}
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.95 }}
             initial={{ scale: 0, opacity: 0 }}
@@ -540,7 +541,7 @@ export function CampaignMapV2({
             {/* Backdrop */}
             <motion.div
               className="absolute inset-0 bg-black/70 backdrop-blur-sm"
-              onClick={() => setSelectedLocation(null)}
+              onClick={() => { AudioManager.playMenuClick(); setSelectedLocation(null); }}
             />
 
             {/* City background */}
@@ -578,7 +579,7 @@ export function CampaignMapV2({
                     </p>
                   </div>
                   <motion.button
-                    onClick={() => setSelectedLocation(null)}
+                    onClick={() => { AudioManager.playMenuClick(); setSelectedLocation(null); }}
                     className="w-8 h-8 rounded-full flex items-center justify-center"
                     style={{ background: 'rgba(255, 255, 255, 0.1)' }}
                     whileHover={{ scale: 1.1 }}
@@ -611,7 +612,7 @@ export function CampaignMapV2({
                             : '1px solid rgba(255, 255, 255, 0.1)',
                           opacity: isUnlocked ? 1 : 0.5,
                         }}
-                        onClick={() => handleStageSelect(stage)}
+                        onClick={() => { if (isUnlocked) AudioManager.playSelect(); handleStageSelect(stage); }}
                         whileHover={{ scale: isUnlocked ? 1.02 : 1 }}
                         whileTap={{ scale: isUnlocked ? 0.98 : 1 }}
                         initial={{ x: -20, opacity: 0 }}

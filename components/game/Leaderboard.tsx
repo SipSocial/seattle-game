@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { GhostButton } from '@/components/ui/GhostButton'
 import { useGameStore, LeaderboardEntry } from '@/src/store/gameStore'
+import { AudioManager } from '@/src/game/systems/AudioManager'
 
 interface LeaderboardProps {
   isOpen: boolean
@@ -26,7 +27,7 @@ export function Leaderboard({ isOpen, onClose }: LeaderboardProps) {
           {/* Backdrop */}
           <motion.div
             className="absolute inset-0 bg-black/80 backdrop-blur-sm"
-            onClick={onClose}
+            onClick={() => { AudioManager.playMenuClick(); onClose(); }}
           />
 
           {/* Content */}
@@ -59,7 +60,7 @@ export function Leaderboard({ isOpen, onClose }: LeaderboardProps) {
                   </p>
                 </div>
                 <button
-                  onClick={onClose}
+                  onClick={() => { AudioManager.playMenuClick(); onClose(); }}
                   className="w-10 h-10 rounded-full flex items-center justify-center transition-colors"
                   style={{ background: 'rgba(255,255,255,0.1)' }}
                 >

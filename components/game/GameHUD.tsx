@@ -2,6 +2,7 @@
 
 import { motion, AnimatePresence } from 'framer-motion'
 import { useGameStore, usePlayerStats, useArMode } from '@/src/store/gameStore'
+import { AudioManager } from '@/src/game/systems/AudioManager'
 
 interface GameHUDProps {
   onPause?: () => void
@@ -199,7 +200,7 @@ export function GameHUD({ onPause, onToggleAR }: GameHUDProps) {
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.3, delay: 0.12 }}
-              onClick={handleToggleAR}
+              onClick={() => { AudioManager.playClick(); handleToggleAR(); }}
               className="flex items-center justify-center gap-1.5 transition-all active:scale-95"
               style={{
                 height: 40,
@@ -256,7 +257,7 @@ export function GameHUD({ onPause, onToggleAR }: GameHUDProps) {
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.3, delay: 0.15 }}
-                onClick={onPause}
+                onClick={() => { AudioManager.playClick(); onPause?.(); }}
                 className="flex items-center justify-center transition-all active:scale-90"
                 style={{
                   width: 40,
