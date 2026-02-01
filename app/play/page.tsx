@@ -131,8 +131,8 @@ export default function PlayPage() {
         </motion.div>
       )}
       
-      {/* Soundtrack Player - slim variant for player select, sits at very bottom */}
-      {gameState === 'select' && <SoundtrackPlayer position="bottom" offset={0} variant="slim" />}
+      {/* Soundtrack Player - slim bar at very bottom during player select */}
+      {gameState === 'select' && <SoundtrackPlayer />}
     </AnimatePresence>
   )
 }

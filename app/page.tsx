@@ -275,8 +275,8 @@ export default function Home() {
         </motion.div>
       </motion.div>
 
-      {/* Soundtrack Player - positioned at bottom on home page */}
-      <SoundtrackPlayer position="bottom" offset={0} />
+      {/* Soundtrack Player - slim bar at very bottom */}
+      <SoundtrackPlayer />
     </div>
   )
 }

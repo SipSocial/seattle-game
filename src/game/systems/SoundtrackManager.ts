@@ -56,6 +56,10 @@ class SoundtrackManagerClass {
   private readonly CROSSFADE_DURATION = 1500 // ms
   private readonly QUICK_FADE_DURATION = 200 // ms for game start
   
+  // Progressive volume fade-in settings (for natural audio experience)
+  private readonly FADE_IN_DURATION = 3000 // ms - gentle 3 second fade in
+  private readonly INITIAL_VOLUME_RATIO = 0.15 // Start at 15% of target volume
+  
   private constructor() {
     // Private constructor for singleton
   }
@@ -159,7 +163,7 @@ class SoundtrackManagerClass {
     await this.play(track.id, { crossfade: shouldCrossfade })
   }
   
-  private async playTrack(track: Track, startTime: number = 0): Promise<void> {
+  private async playTrack(track: Track, startTime: number = 0, options?: { skipFadeIn?: boolean }): Promise<void> {
     const player = this.getActivePlayer()
     if (!player) return
     
@@ -170,11 +174,26 @@ class SoundtrackManagerClass {
     try {
       player.src = track.src
       player.currentTime = startTime
-      player.volume = this.muted ? 0 : this.volume
+      
+      // Determine target volume
+      const targetVolume = this.muted ? 0 : this.volume
+      
+      // Start at low volume for natural fade-in (unless skipped)
+      const shouldFadeIn = !options?.skipFadeIn && targetVolume > 0
+      const initialVolume = shouldFadeIn 
+        ? targetVolume * this.INITIAL_VOLUME_RATIO 
+        : targetVolume
+      
+      player.volume = initialVolume
       
       await player.play()
       this.playbackState = 'playing'
       this.notifyListeners()
+      
+      // Progressive fade-in to target volume for natural experience
+      if (shouldFadeIn) {
+        await this.progressiveFadeIn(player, this.FADE_IN_DURATION, initialVolume, targetVolume)
+      }
       
       console.log(`[SoundtrackManager] Playing: ${track.title}`)
     } catch (error) {
@@ -182,6 +201,43 @@ class SoundtrackManagerClass {
       this.playbackState = 'stopped'
       this.notifyListeners()
     }
+  }
+  
+  /**
+   * Progressive fade-in with ease-out curve for natural perception
+   * Volume increases faster at the start, slower at the end
+   */
+  private progressiveFadeIn(
+    audio: HTMLAudioElement, 
+    duration: number, 
+    startVolume: number, 
+    targetVolume: number
+  ): Promise<void> {
+    return new Promise((resolve) => {
+      const steps = 30 // Smooth animation
+      const stepDuration = duration / steps
+      let currentStep = 0
+      
+      const interval = setInterval(() => {
+        currentStep++
+        
+        // Ease-out curve: faster at start, slower at end
+        // Using cubic ease-out: 1 - (1 - t)^3
+        const t = currentStep / steps
+        const easedT = 1 - Math.pow(1 - t, 3)
+        
+        const volumeDelta = targetVolume - startVolume
+        const newVolume = startVolume + (volumeDelta * easedT)
+        
+        audio.volume = Math.min(newVolume, targetVolume)
+        
+        if (currentStep >= steps) {
+          clearInterval(interval)
+          audio.volume = targetVolume
+          resolve()
+        }
+      }, stepDuration)
+    })
   }
   
   /**

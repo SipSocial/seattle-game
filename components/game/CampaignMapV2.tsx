@@ -480,10 +480,10 @@ export function CampaignMapV2({
         ))}
       </div>
 
-      {/* Bottom Quick Play Panel */}
+      {/* Bottom Quick Play Panel - 64px bottom padding for audio bar (48px) + 16px gap */}
       <div
         className="absolute bottom-0 left-0 right-0 z-20"
-        style={{ paddingBottom: 'max(16px, env(safe-area-inset-bottom))' }}
+        style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px)' }}
       >
         <motion.div
           initial={{ y: 100, opacity: 0 }}

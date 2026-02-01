@@ -81,10 +81,13 @@ export function CityPreview({
             <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-transparent" />
           </motion.div>
 
-          {/* Content */}
+          {/* Content - 72px bottom padding for audio bar (48px) + 24px gap */}
           <motion.div
             className="relative z-10 w-full px-6"
-            style={{ maxWidth: '480px' }}
+            style={{ 
+              maxWidth: '480px',
+              paddingBottom: '72px',
+            }}
             initial={{ y: 50, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 50, opacity: 0 }}

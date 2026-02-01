@@ -410,10 +410,10 @@ export default function PlayerSelect({ onSelect }: PlayerSelectProps) {
         {/* Navigation Arrows */}
         <NavigationArrows onPrev={() => go(-1)} onNext={() => go(1)} />
 
-        {/* Bottom Controls */}
+        {/* Bottom Controls - 56px bottom padding for audio bar (48px) + 8px gap */}
         <motion.div 
           className="flex flex-col items-center" 
-          style={{ gap: '20px', paddingBottom: 'max(24px, env(safe-area-inset-bottom))' }}
+          style={{ gap: '16px', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 56px)' }}
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ ...smoothSpring, delay: 0.2 }}
