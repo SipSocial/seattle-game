@@ -71,10 +71,10 @@ export const GradientButton = forwardRef<HTMLButtonElement, GradientButtonProps>
   }, ref) => {
     const s = BUTTON_SIZES[size]
     
-    // Wrap onClick to add audio feedback
+    // Wrap onClick to add audio feedback - primary buttons get confirm sound
     const handleClick = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
       if (!disabled && !loading) {
-        AudioManager.playClick()
+        AudioManager.playConfirm()
       }
       onClick?.(e)
     }, [onClick, disabled, loading])

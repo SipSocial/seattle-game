@@ -19,10 +19,10 @@ export const NavigationArrow = forwardRef<HTMLButtonElement, NavigationArrowProp
   ({ direction, size = 'md', className = '', disabled, onClick, ...props }, ref) => {
     const s = sizeStyles[size]
     
-    // Wrap onClick to add audio feedback
+    // Wrap onClick to add audio feedback - navigation arrows get navigate sound
     const handleClick = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
       if (!disabled) {
-        AudioManager.playClick()
+        AudioManager.playNavigate()
       }
       onClick?.(e)
     }, [onClick, disabled])

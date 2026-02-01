@@ -27,10 +27,10 @@ export function DotIndicator({
 }: DotIndicatorProps) {
   const s = sizeStyles[size]
   
-  // Wrap onSelect to add audio feedback
+  // Wrap onSelect to add audio feedback - dots get navigate sound
   const handleSelect = useCallback((index: number) => {
     if (onSelect && index !== current) {
-      AudioManager.playClick()
+      AudioManager.playNavigate()
       onSelect(index)
     }
   }, [onSelect, current])

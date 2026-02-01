@@ -96,10 +96,10 @@ export const GhostButton = forwardRef<HTMLButtonElement, GhostButtonProps>(
     const s = BUTTON_SIZES[size]
     const v = VARIANTS[variant]
     
-    // Wrap onClick to add audio feedback
+    // Wrap onClick to add audio feedback - secondary buttons get menu click sound
     const handleClick = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
       if (!disabled) {
-        AudioManager.playClick()
+        AudioManager.playMenuClick()
       }
       onClick?.(e)
     }, [onClick, disabled])

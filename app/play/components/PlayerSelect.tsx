@@ -9,6 +9,7 @@ import { StatDisplay } from '@/components/ui/StatDisplay'
 import { NavigationArrows } from '@/components/ui/NavigationArrows'
 import { DotIndicator } from '@/components/ui/DotIndicator'
 import { useAudioUnlock } from '../hooks/useAudio'
+import { AudioManager } from '@/src/game/systems/AudioManager'
 
 // ============================================================================
 // PLAYER DATA
@@ -118,11 +119,16 @@ export default function PlayerSelect({ onSelect }: PlayerSelectProps) {
   const go = useCallback((dir: 1 | -1) => {
     setDirection(dir)
     setIndex((i) => (i + dir + PLAYERS.length) % PLAYERS.length)
+    // Play swipe sound for player navigation
+    AudioManager.playPlayerSwipe()
   }, [])
 
   const handleSelect = useCallback(async () => {
     // Unlock audio before game starts - this is crucial!
     await ensureAudioUnlocked()
+    
+    // Play heroic player select sound
+    AudioManager.playPlayerSelect()
     
     if (navigator.vibrate) navigator.vibrate([50, 30, 100])
     setIsExiting(true)

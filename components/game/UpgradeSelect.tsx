@@ -2,6 +2,7 @@
 
 import { motion, AnimatePresence } from 'framer-motion'
 import { useGameStore, useUpgradeModal, Upgrade, UpgradeType } from '@/src/store/gameStore'
+import { AudioManager } from '@/src/game/systems/AudioManager'
 
 // SVG Icons for each upgrade type
 const UpgradeIcons: Record<Upgrade['icon'], React.FC<{ className?: string }>> = {
@@ -58,6 +59,11 @@ interface UpgradeCardProps {
 function UpgradeCard({ upgrade, index, onSelect }: UpgradeCardProps) {
   const IconComponent = UpgradeIcons[upgrade.icon]
   
+  const handleClick = () => {
+    AudioManager.playSelect()
+    onSelect(upgrade.type)
+  }
+  
   return (
     <motion.button
       initial={{ opacity: 0, y: 16 }}
@@ -68,7 +74,7 @@ function UpgradeCard({ upgrade, index, onSelect }: UpgradeCardProps) {
         duration: 0.25,
         ease: [0.25, 0.46, 0.45, 0.94], // easeOutQuad - smooth deceleration
       }}
-      onClick={() => onSelect(upgrade.type)}
+      onClick={handleClick}
       className="w-full relative overflow-hidden rounded-2xl outline-none focus:outline-none active:scale-[0.98] transition-transform"
       style={{
         background: 'linear-gradient(135deg, rgba(0,0,0,0.85) 0%, rgba(15,15,15,0.9) 100%)',
