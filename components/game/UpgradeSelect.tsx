@@ -60,20 +60,20 @@ function UpgradeCard({ upgrade, index, onSelect }: UpgradeCardProps) {
   
   return (
     <motion.button
-      initial={{ opacity: 0, x: 40, scale: 0.95 }}
-      animate={{ opacity: 1, x: 0, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.1 } }}
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, transition: { duration: 0.08 } }}
       transition={{ 
-        delay: 0.1 + index * 0.08,
-        type: 'spring',
-        stiffness: 400,
-        damping: 30,
+        delay: index * 0.05,
+        duration: 0.25,
+        ease: [0.25, 0.46, 0.45, 0.94], // easeOutQuad - smooth deceleration
       }}
       onClick={() => onSelect(upgrade.type)}
       className="w-full relative overflow-hidden rounded-2xl outline-none focus:outline-none active:scale-[0.98] transition-transform"
       style={{
         background: 'linear-gradient(135deg, rgba(0,0,0,0.85) 0%, rgba(15,15,15,0.9) 100%)',
         border: `1px solid ${upgrade.color}50`,
+        willChange: 'transform, opacity',
       }}
     >
       {/* Left accent bar */}
@@ -150,16 +150,15 @@ export function UpgradeSelect() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
+          transition={{ duration: 0.2, ease: 'easeOut' }}
         >
           {/* Backdrop */}
-          <motion.div
+          <div
             className="absolute inset-0"
             style={{ 
               background: 'linear-gradient(180deg, rgba(0,0,0,0.92) 0%, rgba(0,26,51,0.95) 50%, rgba(0,34,68,0.95) 100%)',
               backdropFilter: 'blur(8px)',
             }}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
           />
           
           {/* Content */}
@@ -168,10 +167,11 @@ export function UpgradeSelect() {
             style={{ 
               maxWidth: '380px',
               padding: '24px',
+              willChange: 'transform, opacity',
             }}
-            initial={{ y: 20, opacity: 0 }}
+            initial={{ y: 12, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.05, type: 'spring', stiffness: 300, damping: 28 }}
+            transition={{ duration: 0.22, ease: [0.25, 0.46, 0.45, 0.94] }}
           >
             {/* Header */}
             <div className="text-center" style={{ marginBottom: '40px' }}>
@@ -230,7 +230,7 @@ export function UpgradeSelect() {
               style={{ marginTop: '40px', fontSize: '11px', color: 'rgba(255,255,255,0.25)' }}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ delay: 0.4 }}
+              transition={{ delay: 0.2, duration: 0.2 }}
             >
               Tap to select
             </motion.p>
