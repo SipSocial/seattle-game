@@ -86,6 +86,18 @@ export const ARTISTS: Artist[] = [
       youtube: 'https://youtube.com/@SauceWalka',
     },
   },
+  {
+    id: 'tha-real-rob',
+    name: 'Tha Real Rob',
+    image: 'https://i1.sndcdn.com/avatars-000684741987-c5kq9x-t500x500.jpg', // SoundCloud avatar
+    bio: 'Seattle-born rapper writing music since 4th grade. Influenced by Kanye, Drake, Kendrick, Travis Scott, and Jay-Z.',
+    social: {
+      instagram: 'https://instagram.com/realrob100',
+      youtube: 'https://youtube.com/channel/UCx-f7WAjO8Vsukp3J4zEmMQ',
+      soundcloud: 'https://soundcloud.com/real-100',
+      spotify: 'https://open.spotify.com/artist/5Qb8lKRrzqNNq0sToWMfDZ',
+    },
+  },
 ]
 
 // ----------------------------------------------------------------------------
@@ -119,17 +131,19 @@ export const TRACKS: Track[] = [
     title: 'Clean on Ice',
     artistId: 'big-enzo',
     src: '/audio/music/clean-on-ice.m4a',
-    duration: 180,  // TODO: Update with actual duration
+    duration: 180,
     coverArt: 'https://enzomcfly.com/cdn/shop/files/Enzo_New_Logo-10.png?v=1752205466&width=400',
-    bpm: 135,  // TODO: Update with actual BPM
+    bpm: 135,
     analysis: {
       sections: [
-        // TODO: Fill in from audio analysis tool
-        { type: 'intro', startTime: 0, endTime: 10, energy: 0.4 },
-        { type: 'verse', startTime: 10, endTime: 40, energy: 0.6 },
-        { type: 'hook', startTime: 40, endTime: 55, energy: 0.9 },
+        { type: 'intro', startTime: 0, endTime: 15, energy: 0.4 },
+        { type: 'verse', startTime: 15, endTime: 45, energy: 0.6 },
+        { type: 'hook', startTime: 45, endTime: 65, energy: 0.95, label: 'Hype Drop' },
+        { type: 'verse', startTime: 65, endTime: 100, energy: 0.7 },
+        { type: 'hook', startTime: 100, endTime: 120, energy: 1.0, label: 'Peak Energy' },
       ],
-      recommendedStart: 0,  // TODO: Update after analysis
+      recommendedStart: 45,  // Start at the hype hook section
+      loopPoints: { start: 45, end: 150 },
     },
   },
   {
@@ -168,6 +182,25 @@ export const TRACKS: Track[] = [
       recommendedStart: 12,  // Skip intro, start at verse
     },
   },
+  {
+    id: 'land-of-the-12s',
+    title: 'Land of the 12s',
+    artistId: 'tha-real-rob',
+    src: '/audio/music/land-of-the-12s.mp4',
+    duration: 180,  // Approximate
+    coverArt: 'https://i1.sndcdn.com/avatars-000684741987-c5kq9x-t500x500.jpg',
+    bpm: 140,
+    analysis: {
+      sections: [
+        { type: 'intro', startTime: 0, endTime: 10, energy: 0.5 },
+        { type: 'hook', startTime: 10, endTime: 35, energy: 0.9, label: 'Seattle Anthem' },
+        { type: 'verse', startTime: 35, endTime: 70, energy: 0.75 },
+        { type: 'hook', startTime: 70, endTime: 95, energy: 1.0 },
+      ],
+      recommendedStart: 10,  // Start at the hook for Seattle energy
+      loopPoints: { start: 10, end: 150 },
+    },
+  },
 ]
 
 // ----------------------------------------------------------------------------
@@ -175,14 +208,14 @@ export const TRACKS: Track[] = [
 // ----------------------------------------------------------------------------
 
 export const SCREEN_MUSIC: Record<ScreenType, string[]> = {
-  // Home (Main Menu) - The flagship track with the "I'm Him" hook
-  home: ['im-him'],
+  // Home (Main Menu) - Clean on Ice starting at the hype drop
+  home: ['clean-on-ice'],
   
   // Player Select - Instrumental for clean browsing without vocal distraction
   playerSelect: ['keep-goin-in-instrumental'],
   
-  // Campaign Map - Vocal track for the journey vibe
-  campaign: ['clean-on-ice'],
+  // Campaign Map - Seattle anthem by Tha Real Rob
+  campaign: ['land-of-the-12s'],
 }
 
 // ----------------------------------------------------------------------------
