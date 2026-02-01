@@ -38,15 +38,15 @@ type StateListener = (state: SoundtrackState) => void
 const AUDIO_EXPERIENCE = {
   // Delay before music starts after user interaction (ms)
   // Gives user time to settle into the page
-  WARMUP_DELAY: 1500,
+  WARMUP_DELAY: 2000,
   
   // Duration of the volume swell from 0 to target (ms)
-  // Slow enough to feel natural, not abrupt
-  SWELL_DURATION: 4000,
+  // Long gradual build - 6 seconds to feel natural
+  SWELL_DURATION: 6000,
   
   // Starting volume ratio (0-1) during warm-up
-  // Very quiet ambient start
-  INITIAL_VOLUME: 0.05,
+  // Nearly silent - just a hint of music
+  INITIAL_VOLUME: 0.01,
   
   // Volume at the end of warm-up before full swell
   WARMUP_TARGET_VOLUME: 0.25,
@@ -58,7 +58,7 @@ const AUDIO_EXPERIENCE = {
   QUICK_FADE_DURATION: 200,
   
   // How many steps in volume animations (smoothness)
-  ANIMATION_STEPS: 40,
+  ANIMATION_STEPS: 60,
 }
 
 // ----------------------------------------------------------------------------
