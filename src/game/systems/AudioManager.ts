@@ -151,8 +151,9 @@ class AudioManagerClass {
       
       this.updateState()
       
-      console.log('[AudioManager] Unlocked successfully')
-      return this.state === AudioState.RUNNING
+      const isRunning = this.audioContext.state === 'running'
+      console.log('[AudioManager] Unlocked successfully, running:', isRunning)
+      return isRunning
     } catch (e) {
       console.warn('[AudioManager] Unlock failed:', e)
       return false
