@@ -10,6 +10,17 @@ import {
 import { getTrackDisplayTitle } from '@/src/game/data/soundtrack'
 
 // ----------------------------------------------------------------------------
+// Types
+// ----------------------------------------------------------------------------
+
+export interface MiniPlayerProps {
+  /** Position of the player - 'top' or 'bottom' */
+  position?: 'top' | 'bottom'
+  /** Additional offset from the edge (in pixels) */
+  offset?: number
+}
+
+// ----------------------------------------------------------------------------
 // Icons
 // ----------------------------------------------------------------------------
 
@@ -25,7 +36,13 @@ const PauseIcon = () => (
   </svg>
 )
 
-const ExpandIcon = () => (
+const ChevronUpIcon = () => (
+  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" />
+  </svg>
+)
+
+const ChevronDownIcon = () => (
   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
     <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
   </svg>
@@ -41,6 +58,12 @@ const slideDown = {
   initial: { y: -60, opacity: 0, scale: 0.95 },
   animate: { y: 0, opacity: 1, scale: 1 },
   exit: { y: -60, opacity: 0, scale: 0.95 },
+}
+
+const slideUp = {
+  initial: { y: 60, opacity: 0, scale: 0.95 },
+  animate: { y: 0, opacity: 1, scale: 1 },
+  exit: { y: 60, opacity: 0, scale: 0.95 },
 }
 
 // ----------------------------------------------------------------------------
@@ -80,7 +103,7 @@ function MarqueeText({ text, className }: { text: string; className?: string }) 
 // MiniPlayer Component
 // ----------------------------------------------------------------------------
 
-export function MiniPlayer() {
+export function MiniPlayer({ position = 'bottom', offset = 0 }: MiniPlayerProps) {
   const playerView = useSoundtrackStore((state) => state.playerView)
   const currentTrack = useSoundtrackStore((state) => state.currentTrack)
   const isPlaying = useSoundtrackStore((state) => state.isPlaying)
@@ -99,15 +122,22 @@ export function MiniPlayer() {
   const artistName = artist?.name || 'Unknown Artist'
   const displayText = `${trackTitle} • ${artistName}`
   
+  // Determine positioning based on prop
+  const isTop = position === 'top'
+  const positionStyle = isTop
+    ? { top: `calc(env(safe-area-inset-top, 0px) + 8px + ${offset}px)` }
+    : { bottom: `calc(env(safe-area-inset-bottom, 0px) + 8px + ${offset}px)` }
+  
+  const animationVariants = isTop ? slideDown : slideUp
+  const ExpandIcon = isTop ? ChevronDownIcon : ChevronUpIcon
+  
   return (
     <AnimatePresence>
       {shouldShow && (
         <motion.div
           className="fixed left-3 right-3 z-40"
-          style={{
-            top: 'calc(env(safe-area-inset-top, 0px) + 8px)',
-          }}
-          variants={slideDown}
+          style={positionStyle}
+          variants={animationVariants}
           initial="initial"
           animate="animate"
           exit="exit"
@@ -116,22 +146,22 @@ export function MiniPlayer() {
           {/* Floating glass pill container */}
           <div
             style={{
-              background: 'rgba(0, 34, 68, 0.75)',
+              background: 'rgba(0, 34, 68, 0.85)',
               backdropFilter: 'blur(20px)',
               WebkitBackdropFilter: 'blur(20px)',
-              borderRadius: '12px',
-              border: '1px solid rgba(105, 190, 40, 0.25)',
+              borderRadius: '14px',
+              border: '1px solid rgba(105, 190, 40, 0.3)',
               boxShadow: isPlaying 
-                ? '0 4px 24px rgba(0, 0, 0, 0.4), 0 0 20px rgba(105, 190, 40, 0.15)'
-                : '0 4px 24px rgba(0, 0, 0, 0.4)',
+                ? '0 4px 24px rgba(0, 0, 0, 0.5), 0 0 24px rgba(105, 190, 40, 0.2)'
+                : '0 4px 24px rgba(0, 0, 0, 0.5)',
             }}
           >
             <div
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                padding: '8px 12px',
-                gap: '10px',
+                padding: '10px 14px',
+                gap: '12px',
               }}
             >
               {/* Artist Image - Compact */}
@@ -139,19 +169,19 @@ export function MiniPlayer() {
                 animate={isPlaying ? { scale: [1, 1.05, 1] } : { scale: 1 }}
                 transition={isPlaying ? { repeat: Infinity, duration: 2, ease: 'easeInOut' } : {}}
                 style={{
-                  width: '32px',
-                  height: '32px',
-                  borderRadius: '8px',
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '10px',
                   overflow: 'hidden',
                   flexShrink: 0,
-                  background: '#002244',
+                  background: '#001428',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   boxShadow: isPlaying 
-                    ? '0 0 12px rgba(105, 190, 40, 0.4)' 
-                    : 'none',
-                  border: '1px solid rgba(105, 190, 40, 0.3)',
+                    ? '0 0 16px rgba(105, 190, 40, 0.5)' 
+                    : '0 2px 8px rgba(0, 0, 0, 0.3)',
+                  border: '2px solid rgba(105, 190, 40, 0.4)',
                 }}
               >
                 {currentTrack?.coverArt ? (
@@ -163,13 +193,13 @@ export function MiniPlayer() {
                       width: '100%', 
                       height: '100%', 
                       objectFit: 'contain',
-                      padding: '3px',
+                      padding: '4px',
                     }}
                   />
                 ) : (
                   <span
                     style={{
-                      fontSize: '14px',
+                      fontSize: '16px',
                       fontWeight: 900,
                       color: '#69BE28',
                       fontFamily: 'var(--font-oswald), sans-serif',
@@ -195,42 +225,39 @@ export function MiniPlayer() {
               >
                 <MarqueeText
                   text={displayText}
-                  className="text-[12px] font-medium"
+                  className="text-[13px] font-medium"
                 />
               </button>
               
-              {/* Play/Pause Button - Compact */}
+              {/* Play/Pause Button */}
               <button
                 onClick={() => controls.togglePlayPause()}
                 disabled={isLoading}
                 style={{
-                  width: '36px',
-                  height: '36px',
+                  width: '40px',
+                  height: '40px',
                   borderRadius: '50%',
-                  background: 'rgba(105, 190, 40, 0.15)',
-                  border: '1px solid rgba(105, 190, 40, 0.3)',
-                  color: '#69BE28',
+                  background: isPlaying 
+                    ? 'linear-gradient(135deg, #69BE28 0%, #4A9A1C 100%)'
+                    : 'rgba(105, 190, 40, 0.15)',
+                  border: isPlaying ? 'none' : '1px solid rgba(105, 190, 40, 0.3)',
+                  color: isPlaying ? '#001428' : '#69BE28',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   cursor: 'pointer',
                   flexShrink: 0,
                   transition: 'all 0.2s ease',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'rgba(105, 190, 40, 0.25)'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'rgba(105, 190, 40, 0.15)'
+                  boxShadow: isPlaying ? '0 4px 16px rgba(105, 190, 40, 0.4)' : 'none',
                 }}
               >
                 {isLoading ? (
                   <motion.div
                     animate={{ rotate: 360 }}
                     transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
-                    style={{ width: '14px', height: '14px' }}
+                    style={{ width: '16px', height: '16px' }}
                   >
-                    <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
                       <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
                     </svg>
                   </motion.div>
@@ -241,21 +268,22 @@ export function MiniPlayer() {
                 )}
               </button>
               
-              {/* Expand Button - Compact */}
+              {/* Expand Button */}
               <button
                 onClick={expandPlayer}
                 style={{
-                  width: '28px',
-                  height: '28px',
+                  width: '32px',
+                  height: '32px',
                   borderRadius: '50%',
-                  background: 'transparent',
+                  background: 'rgba(255, 255, 255, 0.05)',
                   border: 'none',
-                  color: 'rgba(255, 255, 255, 0.5)',
+                  color: 'rgba(255, 255, 255, 0.6)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   cursor: 'pointer',
                   flexShrink: 0,
+                  transition: 'all 0.2s ease',
                 }}
               >
                 <ExpandIcon />

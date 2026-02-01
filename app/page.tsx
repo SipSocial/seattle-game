@@ -53,6 +53,8 @@ export default function Home() {
       // Start home screen music after first interaction (browser autoplay policy)
       if (musicEnabled) {
         SoundtrackManager.playForScreen('home')
+        // Show mini player
+        useSoundtrackStore.getState().setPlayerView('mini')
       }
       document.removeEventListener('click', handleInteraction)
       document.removeEventListener('touchstart', handleInteraction)
@@ -64,6 +66,11 @@ export default function Home() {
     } else if (musicEnabled) {
       // Audio already unlocked, start music immediately
       SoundtrackManager.playForScreen('home')
+      // Ensure mini player is visible
+      const currentView = useSoundtrackStore.getState().playerView
+      if (currentView === 'hidden') {
+        useSoundtrackStore.getState().setPlayerView('mini')
+      }
     }
     
     return () => {
@@ -258,18 +265,18 @@ export default function Home() {
             />
           </div>
 
-          {/* Legal - 32px below sponsor */}
+          {/* Legal - 32px below sponsor, with room for mini player */}
           <p 
             className="text-[8px] tracking-widest uppercase"
-            style={{ color: 'rgba(165,172,175,0.2)', marginTop: '32px', marginBottom: '72px' }}
+            style={{ color: 'rgba(165,172,175,0.2)', marginTop: '32px', marginBottom: '80px' }}
           >
             Not affiliated with Seattle Seahawks or NFL
           </p>
         </motion.div>
       </motion.div>
 
-      {/* Soundtrack Player */}
-      <SoundtrackPlayer />
+      {/* Soundtrack Player - positioned at bottom on home page */}
+      <SoundtrackPlayer position="bottom" offset={0} />
     </div>
   )
 }

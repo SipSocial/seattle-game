@@ -31,6 +31,8 @@ export default function CampaignPage() {
       // Start campaign music after first interaction
       if (musicEnabled) {
         SoundtrackManager.playForScreen('campaign', { crossfade: true })
+        // Show mini player
+        useSoundtrackStore.getState().setPlayerView('mini')
       }
       document.removeEventListener('click', handleInteraction)
       document.removeEventListener('touchstart', handleInteraction)
@@ -42,6 +44,11 @@ export default function CampaignPage() {
     } else if (musicEnabled) {
       // Audio already unlocked, crossfade to campaign music
       SoundtrackManager.playForScreen('campaign', { crossfade: true })
+      // Ensure mini player is visible
+      const currentView = useSoundtrackStore.getState().playerView
+      if (currentView === 'hidden') {
+        useSoundtrackStore.getState().setPlayerView('mini')
+      }
     }
     
     return () => {
@@ -80,8 +87,8 @@ export default function CampaignPage() {
         airplaneUrl={GENERATED_ASSETS.airplaneUrl}
       />
       
-      {/* Soundtrack Player */}
-      <SoundtrackPlayer />
+      {/* Soundtrack Player - positioned at bottom with offset for game panel */}
+      <SoundtrackPlayer position="bottom" offset={100} />
     </motion.div>
   )
 }

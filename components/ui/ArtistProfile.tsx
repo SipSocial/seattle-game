@@ -410,19 +410,21 @@ export function ArtistProfile() {
               {selectedArtist?.name}
             </h1>
             
-            {/* Bio */}
-            <p
-              style={{
-                fontSize: '14px',
-                lineHeight: 1.6,
-                color: 'rgba(255, 255, 255, 0.6)',
-                textAlign: 'center',
-                padding: '0 32px',
-                marginBottom: '24px',
-              }}
-            >
-              {selectedArtist?.bio}
-            </p>
+            {/* Bio - only show if content exists */}
+            {selectedArtist?.bio && (
+              <p
+                style={{
+                  fontSize: '14px',
+                  lineHeight: 1.6,
+                  color: 'rgba(255, 255, 255, 0.6)',
+                  textAlign: 'center',
+                  padding: '0 32px',
+                  marginBottom: '24px',
+                }}
+              >
+                {selectedArtist.bio}
+              </p>
+            )}
             
             {/* Social Links */}
             {social && Object.keys(social).length > 0 && (

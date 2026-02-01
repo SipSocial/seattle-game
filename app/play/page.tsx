@@ -50,6 +50,11 @@ export default function PlayPage() {
     if (musicEnabled && gameState === 'select') {
       // Crossfade from home music to player select music
       SoundtrackManager.playForScreen('playerSelect', { crossfade: true })
+      // Ensure mini player is visible
+      const currentView = useSoundtrackStore.getState().playerView
+      if (currentView === 'hidden') {
+        useSoundtrackStore.getState().setPlayerView('mini')
+      }
     }
   }, [musicEnabled, gameState])
 
@@ -81,6 +86,8 @@ export default function PlayPage() {
     // Resume player select music when going back to selection
     if (musicEnabled) {
       SoundtrackManager.playForScreen('playerSelect')
+      // Re-show the mini player
+      useSoundtrackStore.getState().setPlayerView('mini')
     }
   }, [musicEnabled])
 
@@ -124,8 +131,8 @@ export default function PlayPage() {
         </motion.div>
       )}
       
-      {/* Soundtrack Player - only visible during player select */}
-      {gameState === 'select' && <SoundtrackPlayer />}
+      {/* Soundtrack Player - only visible during player select, positioned above SELECT button */}
+      {gameState === 'select' && <SoundtrackPlayer position="bottom" offset={140} />}
     </AnimatePresence>
   )
 }

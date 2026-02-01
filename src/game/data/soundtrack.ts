@@ -68,19 +68,22 @@ export const ARTISTS: Artist[] = [
     id: 'big-enzo',
     name: 'BIG ENZO',
     image: 'https://enzomcfly.com/cdn/shop/files/Enzo_New_Logo-10.png?v=1752205466&width=190',
-    bio: 'Seattle-based rapper bringing heat to the Dark Side Game soundtrack. Official artist for the Dark Side Defense experience.',
+    bio: '', // Bio to be added
     social: {
       instagram: 'https://instagram.com/enzomcfly',
+      youtube: 'https://youtube.com/c/enzomcfly',
+      soundcloud: 'https://soundcloud.com/enzomcfly',
     },
   },
   {
     id: 'sauce-walka',
     name: 'Sauce Walka',
     image: 'https://i.scdn.co/image/ab6761610000e5eb8ae7f2aaa9817a704a87ea36',
-    bio: 'Houston rapper known for his unique flow and drip. TSF CEO bringing that sauce to the game.',
+    bio: '', // Bio to be added
     social: {
       instagram: 'https://instagram.com/saborthedon',
       spotify: 'https://open.spotify.com/artist/0Y3agQaa6g2r0YmHPOO9rh',
+      youtube: 'https://youtube.com/@SauceWalka',
     },
   },
 ]
