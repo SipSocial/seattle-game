@@ -89,13 +89,10 @@ export const ARTISTS: Artist[] = [
   {
     id: 'tha-real-rob',
     name: 'Tha Real Rob',
-    image: 'https://i1.sndcdn.com/avatars-000684741987-c5kq9x-t500x500.jpg', // SoundCloud avatar
-    bio: 'Seattle-born rapper writing music since 4th grade. Influenced by Kanye, Drake, Kendrick, Travis Scott, and Jay-Z.',
+    image: 'https://i1.sndcdn.com/avatars-000684741987-c5kq9x-t500x500.jpg',
+    bio: 'Seattle-born rapper writing music since 4th grade.',
     social: {
       instagram: 'https://instagram.com/realrob100',
-      youtube: 'https://youtube.com/channel/UCx-f7WAjO8Vsukp3J4zEmMQ',
-      soundcloud: 'https://soundcloud.com/real-100',
-      spotify: 'https://open.spotify.com/artist/5Qb8lKRrzqNNq0sToWMfDZ',
     },
   },
 ]
