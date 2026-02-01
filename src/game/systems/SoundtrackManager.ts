@@ -41,12 +41,12 @@ const AUDIO_EXPERIENCE = {
   WARMUP_DELAY: 2000,
   
   // Duration of the volume swell from 0 to target (ms)
-  // Long gradual build - 6 seconds to feel natural
-  SWELL_DURATION: 6000,
+  // Long gradual build - 8 seconds for full natural feel
+  SWELL_DURATION: 8000,
   
-  // Starting volume ratio (0-1) during warm-up
-  // Nearly silent - just a hint of music
-  INITIAL_VOLUME: 0.01,
+  // Starting volume - ZERO, complete silence
+  // Music fades in from nothing
+  INITIAL_VOLUME: 0,
   
   // Volume at the end of warm-up before full swell
   WARMUP_TARGET_VOLUME: 0.25,
@@ -58,7 +58,7 @@ const AUDIO_EXPERIENCE = {
   QUICK_FADE_DURATION: 200,
   
   // How many steps in volume animations (smoothness)
-  ANIMATION_STEPS: 60,
+  ANIMATION_STEPS: 80,
 }
 
 // ----------------------------------------------------------------------------
