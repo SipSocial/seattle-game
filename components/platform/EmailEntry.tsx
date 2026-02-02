@@ -82,7 +82,7 @@ export function EmailEntry({
           </motion.div>
           
           <h3 className="text-xl font-bold text-white mb-2" style={{ fontFamily: 'var(--font-oswald)' }}>
-            You're In!
+            You&apos;re In!
           </h3>
           <p className="text-white/60 text-sm mb-4">
             {user.email || email}

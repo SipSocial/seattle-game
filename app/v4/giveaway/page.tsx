@@ -294,7 +294,7 @@ export default function GiveawayPage() {
               </div>
               
               <h2 style={{ fontSize: '24px', fontWeight: 800, color: '#69BE28', margin: '0 0 8px' }}>
-                YOU'RE ENTERED!
+                YOU&apos;RE ENTERED!
               </h2>
               <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.6)', margin: '0 0 30px' }}>
                 You have <strong style={{ color: '#FFD700' }}>{entries}</strong> entry in the drawing
