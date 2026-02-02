@@ -39,7 +39,7 @@ export function GameResults({
   const [activeTab, setActiveTab] = useState<Tab>('results')
   const [showEmailEntry, setShowEmailEntry] = useState(true)
   const user = useV3User()
-  const { addEntry, submitScore } = useV3GameStore()
+  const { addEntry } = useV3GameStore()
 
   // If user has email, skip email entry
   const hasEmail = !!user.email

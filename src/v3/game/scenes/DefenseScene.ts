@@ -573,7 +573,7 @@ export class DefenseScene extends Phaser.Scene {
       let closestBlocker: BlockerState | null = null
       let closestDist = Infinity
       
-      this.blockers.forEach(blocker => {
+      for (const blocker of this.blockers) {
         const dist = Phaser.Math.Distance.Between(
           defender.currentX, defender.currentY,
           blocker.currentX, blocker.currentY
@@ -583,14 +583,14 @@ export class DefenseScene extends Phaser.Scene {
           closestDist = dist
           closestBlocker = blocker
         }
-      })
+      }
       
-      if (closestBlocker) {
-        closestBlocker.isEngaged = true
-        closestBlocker.engagedDefenderId = defender.id
+      if (closestBlocker !== null) {
+        (closestBlocker as BlockerState).isEngaged = true;
+        (closestBlocker as BlockerState).engagedDefenderId = defender.id;
         
         // Visual feedback - blocker turns orange when engaged
-        closestBlocker.sprite.setFillStyle(COLORS.blockerEngaged)
+        (closestBlocker as BlockerState).sprite.setFillStyle(COLORS.blockerEngaged)
       }
     })
     
@@ -845,7 +845,7 @@ export class DefenseScene extends Phaser.Scene {
     })
     
     // End play with turnover
-    this.endPlay({ 
+    this.events.emit('playEnded', { 
       type: 'interception', 
       yardsGained: 0, 
       result: 'turnover' 

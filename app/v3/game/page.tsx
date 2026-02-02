@@ -321,7 +321,7 @@ function V3GameContent() {
     if (scene && scene.selectPlay) {
       setSelectedPlayId(play.id)
       scene.selectPlay(playIndex)
-      setPhase('countdown')
+      setPhase('SNAP')
       setLastEvent(null)
       
       // Reset selection after play starts
