@@ -72,13 +72,19 @@ export function PlaybookPanel({ currentWeek, onSelectPlay, isVisible, gameState 
     [currentWeek]
   )
   
-  const handleTap = useCallback((play: PlayDefinition) => {
+  const handleTap = useCallback((play: PlayDefinition, e: React.PointerEvent | React.MouseEvent) => {
+    console.log('[PlaybookPanel] handleTap:', play.name, 'week:', currentWeek, 'unlockWeek:', play.unlockWeek)
+    e.preventDefault()
+    e.stopPropagation()
+    
     if (play.unlockWeek > currentWeek) {
+      console.log('[PlaybookPanel] Play is locked')
       haptic('error')
       return
     }
     haptic('success')
     const globalIdx = PLAYBOOK.findIndex(p => p.id === play.id)
+    console.log('[PlaybookPanel] Calling onSelectPlay with index:', globalIdx)
     onSelectPlay(globalIdx)
   }, [currentWeek, onSelectPlay])
   
@@ -175,12 +181,14 @@ export function PlaybookPanel({ currentWeek, onSelectPlay, isVisible, gameState 
                   return (
                     <motion.div
                       key={play.id}
-                      onClick={() => handleTap(play)}
+                      onPointerDown={(e) => handleTap(play, e)}
+                      onTouchEnd={(e) => e.stopPropagation()}
                       whileTap={{ scale: locked ? 1 : 0.9 }}
                       style={{
                         flexShrink: 0,
                         cursor: locked ? 'not-allowed' : 'pointer',
                         opacity: locked ? 0.35 : 1,
+                        touchAction: 'manipulation',
                       }}
                     >
                       <div style={{

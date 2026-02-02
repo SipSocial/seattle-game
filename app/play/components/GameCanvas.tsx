@@ -15,6 +15,7 @@ import { CameraStream } from './CameraStream'
 import { AROverlay } from './AROverlay'
 import { useGyroscope } from '../hooks/useGyroscope'
 import { useGameStore, useArMode } from '@/src/store/gameStore'
+import { SoundtrackManager } from '@/src/game/systems/SoundtrackManager'
 
 interface GameCanvasProps {
   onChangePlayer?: () => void
@@ -41,6 +42,22 @@ export default function GameCanvas({ onChangePlayer }: GameCanvasProps) {
   
   // Gyroscope for AR parallax effect (only when camera is ready)
   const gyro = useGyroscope(isArEnabled && cameraReady)
+
+  // Stop menu music when entering game
+  useEffect(() => {
+    try {
+      SoundtrackManager.stop()
+      // Also pause any lingering audio elements not part of game
+      document.querySelectorAll('audio').forEach(audio => {
+        if (!audio.closest('[data-game-audio]')) {
+          audio.pause()
+          audio.currentTime = 0
+        }
+      })
+    } catch (e) {
+      console.error('[GameCanvas] Error stopping music:', e)
+    }
+  }, [])
 
   // Watch for game over (lives = 0)
   useEffect(() => {

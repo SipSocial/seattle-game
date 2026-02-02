@@ -1626,7 +1626,13 @@ export class OffenseSceneV2 extends Phaser.Scene {
   // ============================================================================
   
   public selectPlay(playIndex: number): void {
-    if (this.stateMachine.getCurrentState() !== 'PRE_SNAP') return
+    const currentState = this.stateMachine.getCurrentState()
+    console.log(`[OffenseSceneV2] selectPlay(${playIndex}) - current state: ${currentState}`)
+    
+    if (currentState !== 'PRE_SNAP') {
+      console.warn(`[OffenseSceneV2] Cannot select play - not in PRE_SNAP (currently: ${currentState})`)
+      return
+    }
     
     this.selectedPlayIndex = playIndex
     
@@ -1636,6 +1642,7 @@ export class OffenseSceneV2 extends Phaser.Scene {
     
     // Start the play
     this.stateMachine.startPlay()
+    console.log('[OffenseSceneV2] Play started!')
   }
   
   public getState(): {

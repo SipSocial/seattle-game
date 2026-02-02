@@ -89,9 +89,30 @@ function V3GameContent() {
   const [showResults, setShowResults] = useState(false)
   const [gameWon, setGameWon] = useState(false)
   
-  // Stop menu music
+  // Stop menu music completely when entering game
   useEffect(() => {
-    SoundtrackManager.stopWithWhistle()
+    // Stop soundtrack immediately and aggressively
+    const stopAllMusic = () => {
+      try {
+        SoundtrackManager.stop()
+        // Also directly pause any lingering audio elements
+        document.querySelectorAll('audio').forEach(audio => {
+          if (!audio.closest('[data-game-audio]')) {
+            audio.pause()
+            audio.currentTime = 0
+          }
+        })
+      } catch (e) {
+        console.error('[V3Game] Error stopping music:', e)
+      }
+    }
+    
+    stopAllMusic()
+    
+    // Also stop on unmount
+    return () => {
+      // Music stays stopped when in game
+    }
   }, [])
   
   // Clock timer - 1 MINUTE quarters (not 15!)
@@ -311,13 +332,23 @@ function V3GameContent() {
   
   // Handle play selection from Playbook panel - INSTANT PLAY
   const handleSelectPlay = useCallback((playIndex: number) => {
-    if (!phaserGameRef.current) return
+    console.log(`[V3Game] handleSelectPlay(${playIndex}) - phase: ${phase}`)
+    
+    if (!phaserGameRef.current) {
+      console.warn('[V3Game] No Phaser game reference')
+      return
+    }
     
     const play = PLAYBOOK[playIndex]
-    if (!play) return
+    if (!play) {
+      console.warn('[V3Game] Invalid play index')
+      return
+    }
     
     // Instantly start the play - no double tap needed
     const scene = phaserGameRef.current.scene.getScene('OffenseSceneV2') as any
+    console.log('[V3Game] Got scene:', !!scene, 'has selectPlay:', !!(scene?.selectPlay))
+    
     if (scene && scene.selectPlay) {
       setSelectedPlayId(play.id)
       scene.selectPlay(playIndex)
@@ -326,8 +357,10 @@ function V3GameContent() {
       
       // Reset selection after play starts
       setTimeout(() => setSelectedPlayId(null), 500)
+    } else {
+      console.warn('[V3Game] Scene or selectPlay not available')
     }
-  }, [])
+  }, [phase])
   
   // Haptic feedback utility
   const triggerHaptic = useCallback((type: 'light' | 'medium' | 'heavy' | 'success' | 'error' = 'light') => {
