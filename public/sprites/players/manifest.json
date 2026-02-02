@@ -1,0 +1,82 @@
+[
+  {
+    "playerId": "off-10",
+    "playerName": "Cooper Kupp",
+    "localPath": "/sprites/players/offense-10-cooper-kupp.png"
+  },
+  {
+    "playerId": "off-88",
+    "playerName": "AJ Barner",
+    "localPath": "/sprites/players/offense-88-aj-barner.png"
+  },
+  {
+    "playerId": "off-11",
+    "playerName": "Jaxon Smith-Njigba",
+    "localPath": "/sprites/players/offense-11-jaxon-smith-njigba.png"
+  },
+  {
+    "playerId": "off-14",
+    "playerName": "Sam Darnold",
+    "localPath": "/sprites/players/offense-14-sam-darnold.png"
+  },
+  {
+    "playerId": "off-9",
+    "playerName": "Kenneth Walker III",
+    "localPath": "/sprites/players/offense-9-kenneth-walker-iii.png"
+  },
+  {
+    "playerId": "def-91",
+    "playerName": "Byron Murphy II",
+    "localPath": "/sprites/players/defense-91-byron-murphy-ii.png"
+  },
+  {
+    "playerId": "def-58",
+    "playerName": "Derick Hall",
+    "localPath": "/sprites/players/defense-58-derick-hall.png"
+  },
+  {
+    "playerId": "def-0",
+    "playerName": "DeMarcus Lawrence",
+    "localPath": "/sprites/players/defense-0-demarcus-lawrence.png"
+  },
+  {
+    "playerId": "def-7",
+    "playerName": "Uchenna Nwosu",
+    "localPath": "/sprites/players/defense-7-uchenna-nwosu.png"
+  },
+  {
+    "playerId": "def-13",
+    "playerName": "Ernest Jones IV",
+    "localPath": "/sprites/players/defense-13-ernest-jones-iv.png"
+  },
+  {
+    "playerId": "def-42",
+    "playerName": "Drake Thomas",
+    "localPath": "/sprites/players/defense-42-drake-thomas.png"
+  },
+  {
+    "playerId": "def-21",
+    "playerName": "Devon Witherspoon",
+    "localPath": "/sprites/players/defense-21-devon-witherspoon.png"
+  },
+  {
+    "playerId": "def-29",
+    "playerName": "Josh Jobe",
+    "localPath": "/sprites/players/defense-29-josh-jobe.png"
+  },
+  {
+    "playerId": "def-20",
+    "playerName": "Julian Love",
+    "localPath": "/sprites/players/defense-20-julian-love.png"
+  },
+  {
+    "playerId": "def-8",
+    "playerName": "Coby Bryant",
+    "localPath": "/sprites/players/defense-8-coby-bryant.png"
+  },
+  {
+    "playerId": "def-99",
+    "playerName": "Leonard Williams",
+    "localPath": "/sprites/players/defense-99-leonard-williams.png"
+  }
+]

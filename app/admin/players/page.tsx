@@ -12,6 +12,7 @@ interface Player {
   positionGroup: string
   type: 'defender' | 'offense'
   isStarter: boolean
+  headshotUrl?: string
   stats?: Record<string, number>
 }
 
@@ -44,23 +45,60 @@ interface ReferenceImage {
   url: string
 }
 
+// Opponent team for helmet generation
+interface OpponentTeam {
+  id: string
+  teamId: number
+  teamName: string
+  abbreviation: string
+  primaryColor: string
+  accentColor: string
+  primaryColorName?: string  // Human-readable color name
+  accentColorName?: string   // Human-readable color name
+  helmetImage?: string
+}
+
+// Helmet generation job
+interface HelmetJob {
+  teamId: string
+  teamName: string
+  generationId: string
+  status: 'pending' | 'complete' | 'failed'
+  images: GeneratedImage[]
+}
+
+// Selected helmet
+interface SelectedHelmet {
+  teamId: string
+  teamName: string
+  abbreviation: string
+  imageUrl: string
+  imageId: string
+  selectedAt: string
+}
+
 export default function PlayerSpritesPage() {
   const [defenders, setDefenders] = useState<Player[]>([])
   const [offense, setOffense] = useState<Player[]>([])
+  const [opponentTeams, setOpponentTeams] = useState<OpponentTeam[]>([])
   const [jobs, setJobs] = useState<GenerationJob[]>([])
+  const [helmetJobs, setHelmetJobs] = useState<HelmetJob[]>([])
   const [selections, setSelections] = useState<SelectedSprite[]>([])
+  const [helmetSelections, setHelmetSelections] = useState<SelectedHelmet[]>([])
   const [loading, setLoading] = useState(true)
   const [generating, setGenerating] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<'defenders' | 'offense'>('defenders')
-  const [selectedStyle, setSelectedStyle] = useState<'card' | 'sprite' | 'action' | 'fullscreen'>('fullscreen')
+  const [activeTab, setActiveTab] = useState<'defenders' | 'offense' | 'opponents'>('defenders')
+  const [selectedStyle, setSelectedStyle] = useState<'darkside' | 'card' | 'sprite' | 'action' | 'fullscreen'>('darkside')
   const [batchGenerating, setBatchGenerating] = useState(false)
   const [referenceImages, setReferenceImages] = useState<ReferenceImage[]>([])
   const [useReferences, setUseReferences] = useState(true)
+  const [showPromptPreview, setShowPromptPreview] = useState(false)
 
   useEffect(() => {
     fetchPlayers()
     loadSelections()
+    loadHelmetSelections()
   }, [])
 
   async function fetchPlayers() {
@@ -70,6 +108,33 @@ export default function PlayerSpritesPage() {
       if (data.success) {
         setDefenders(data.defenders)
         setOffense(data.offense)
+        setOpponentTeams(data.opponentTeams || [])
+        
+        // Auto-populate reference images from API data
+        const refs: ReferenceImage[] = []
+        data.defenders.forEach((p: Player) => {
+          if (p.headshotUrl) {
+            refs.push({ playerId: p.id, url: p.headshotUrl })
+          }
+        })
+        data.offense.forEach((p: Player) => {
+          if (p.headshotUrl) {
+            refs.push({ playerId: p.id, url: p.headshotUrl })
+          }
+        })
+        // Merge with existing saved references (saved takes priority)
+        const saved = localStorage.getItem('playerReferenceImages')
+        if (saved) {
+          const savedRefs = JSON.parse(saved) as ReferenceImage[]
+          refs.forEach(r => {
+            if (!savedRefs.find(s => s.playerId === r.playerId)) {
+              savedRefs.push(r)
+            }
+          })
+          setReferenceImages(savedRefs)
+        } else {
+          setReferenceImages(refs)
+        }
       }
     } catch (err) {
       setError('Failed to fetch players')
@@ -83,6 +148,112 @@ export default function PlayerSpritesPage() {
     if (saved) {
       setSelections(JSON.parse(saved))
     }
+  }
+
+  function loadHelmetSelections() {
+    const saved = localStorage.getItem('teamHelmetSelections')
+    if (saved) {
+      setHelmetSelections(JSON.parse(saved))
+    }
+  }
+
+  function saveHelmetSelection(teamId: string, teamName: string, abbreviation: string, imageUrl: string, imageId: string) {
+    const newSelection: SelectedHelmet = {
+      teamId,
+      teamName,
+      abbreviation,
+      imageUrl,
+      imageId,
+      selectedAt: new Date().toISOString()
+    }
+    
+    // Replace existing selection for this team
+    const updated = helmetSelections.filter(s => s.teamId !== teamId)
+    updated.push(newSelection)
+    setHelmetSelections(updated)
+    localStorage.setItem('teamHelmetSelections', JSON.stringify(updated))
+  }
+
+  function getHelmetJobForTeam(teamId: string) {
+    return helmetJobs.find(j => j.teamId === teamId)
+  }
+
+  function getHelmetSelectionForTeam(teamId: string) {
+    return helmetSelections.find(s => s.teamId === teamId)
+  }
+
+  async function generateHelmet(team: OpponentTeam) {
+    setGenerating(team.id)
+    setError(null)
+
+    try {
+      const response = await fetch('/api/players/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          teamId: team.id,
+          numVariations: 4 
+        }),
+      })
+
+      const data = await response.json()
+
+      if (data.success || data.generationId) {
+        const newJob: HelmetJob = {
+          teamId: team.id,
+          teamName: data.teamName || team.teamName,
+          generationId: data.generationId,
+          status: 'pending',
+          images: [],
+        }
+        setHelmetJobs((prev) => [...prev.filter(j => j.teamId !== team.id), newJob])
+
+        // Start polling for results
+        pollForHelmetResults(data.generationId, team.id)
+      } else {
+        setError(data.error || 'Helmet generation failed')
+      }
+    } catch (err) {
+      setError('Failed to start helmet generation')
+    } finally {
+      setGenerating(null)
+    }
+  }
+
+  async function pollForHelmetResults(generationId: string, teamId: string) {
+    const maxAttempts = 60
+    const interval = 3000
+
+    for (let i = 0; i < maxAttempts; i++) {
+      await new Promise((resolve) => setTimeout(resolve, interval))
+
+      try {
+        const response = await fetch(`/api/leonardo/status/${generationId}`)
+        const data = await response.json()
+        console.log(`Helmet Poll ${i + 1}: Status=${data.status}, Images=${data.images?.length || 0}`)
+
+        if (data.complete) {
+          console.log('Helmet generation complete! Images:', data.images)
+          setHelmetJobs((prev) =>
+            prev.map((job) =>
+              job.generationId === generationId
+                ? { ...job, status: 'complete', images: data.images.map((img: { id: string; url: string }) => ({ ...img, selected: false })) }
+                : job
+            )
+          )
+          return
+        }
+      } catch (err) {
+        console.error('Helmet polling error:', err)
+      }
+    }
+
+    // Timeout
+    setHelmetJobs((prev) =>
+      prev.map((job) =>
+        job.generationId === generationId ? { ...job, status: 'failed' } : job
+      )
+    )
   }
 
   function saveSelection(playerId: string, playerName: string, style: string, imageUrl: string, imageId: string) {
@@ -127,36 +298,28 @@ export default function PlayerSpritesPage() {
     setGenerating(player.id)
     setError(null)
 
-    const referenceUrl = getReferenceImage(player.id)
-    const shouldUseReference = useReferences && referenceUrl && !forceWithoutRef
+    // Get reference URL - check both saved and player's default
+    const savedRef = getReferenceImage(player.id)
+    const referenceUrl = savedRef || player.headshotUrl
+    
+    // Only use reference if it's a valid URL
+    const hasValidRef = referenceUrl && referenceUrl.startsWith('http') && referenceUrl.length > 20
+    const shouldUseReference = useReferences && hasValidRef && !forceWithoutRef
 
     try {
       let response: Response
       
-      if (shouldUseReference) {
-        // Use the new reference-based generation
-        response = await fetch('/api/players/generate-with-reference', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            jersey: player.jersey,
-            referenceImageUrl: referenceUrl,
-            style: selectedStyle,
-            numImages: 4 
-          }),
-        })
-      } else {
-        // Use the standard generation
-        response = await fetch('/api/players/generate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            playerId: player.id, 
-            style: selectedStyle,
-            numVariations: 4 
-          }),
-        })
-      }
+      // For now, always use the standard Dark Side generation (no reference upload needed)
+      // The Dark Side prompts are detailed enough without character reference
+      response = await fetch('/api/players/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          playerId: player.id, 
+          style: selectedStyle,
+          numVariations: 4 
+        }),
+      })
 
       const data = await response.json()
 
@@ -243,8 +406,10 @@ export default function PlayerSpritesPage() {
       <header className="bg-[#001a33] border-b border-[#69BE28]/30 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-[#69BE28]">Player Sprite Generator</h1>
-            <p className="text-gray-400 text-sm">Generate 3D Madden-style player renders</p>
+            <h1 className="text-2xl font-bold text-[#69BE28]">Dark Side Sprite Generator</h1>
+            <p className="text-gray-400 text-sm">
+              Generate superhero-style player renders • Navy + Green • No Logos
+            </p>
           </div>
           <div className="flex items-center gap-4">
             <span className="text-sm text-gray-400">
@@ -292,11 +457,21 @@ export default function PlayerSpritesPage() {
             >
               Offense ({offense.length})
             </button>
+            <button
+              onClick={() => setActiveTab('opponents')}
+              className={`px-6 py-2 rounded-lg font-medium transition ${
+                activeTab === 'opponents'
+                  ? 'bg-red-600 text-white'
+                  : 'text-gray-400 hover:text-white'
+              }`}
+            >
+              Opponents ({opponentTeams.length})
+            </button>
           </div>
 
           {/* Style Selector */}
-          <div className="flex bg-[#001a33] rounded-lg p-1">
-            {(['fullscreen', 'card', 'sprite', 'action'] as const).map((style) => (
+          <div className="flex bg-[#001a33] rounded-lg p-1 flex-wrap">
+            {(['darkside', 'fullscreen', 'card', 'sprite', 'action'] as const).map((style) => (
               <button
                 key={style}
                 onClick={() => setSelectedStyle(style)}
@@ -306,10 +481,20 @@ export default function PlayerSpritesPage() {
                     : 'text-gray-400 hover:text-white'
                 }`}
               >
-                {style === 'fullscreen' ? 'Fullscreen (Mobile)' : style === 'card' ? 'Player Card' : style === 'sprite' ? 'Game Sprite' : 'Action Shot'}
+                {style === 'darkside' ? 'Dark Side Superhero' : style === 'fullscreen' ? 'Fullscreen' : style === 'card' ? 'Card' : style === 'sprite' ? 'Sprite' : 'Action'}
               </button>
             ))}
           </div>
+          
+          {/* Prompt Preview Toggle */}
+          <button
+            onClick={() => setShowPromptPreview(!showPromptPreview)}
+            className={`px-4 py-2 rounded-lg font-medium transition ${
+              showPromptPreview ? 'bg-yellow-500 text-black' : 'bg-[#001a33] text-gray-400 hover:text-white'
+            }`}
+          >
+            {showPromptPreview ? 'Hide Prompts' : 'Show Prompts'}
+          </button>
           
           {/* Reference Toggle */}
           <label className="flex items-center gap-2 bg-[#001a33] px-4 py-2 rounded-lg cursor-pointer">
@@ -345,36 +530,91 @@ export default function PlayerSpritesPage() {
           </button>
         </div>
 
-        {/* Player Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {players.map((player) => {
-            const job = getJobForPlayer(player.id, selectedStyle)
-            const selection = getSelectionForPlayer(player.id, selectedStyle)
-            const refImage = getReferenceImage(player.id)
-            
-            return (
-              <PlayerCard
-                key={player.id}
-                player={player}
-                style={selectedStyle}
-                job={job}
-                selection={selection}
-                generating={generating === player.id}
-                onGenerate={() => generatePlayer(player)}
-                onGenerateWithoutRef={() => generatePlayer(player, true)}
-                onSelect={(imageUrl, imageId) => saveSelection(player.id, player.name, selectedStyle, imageUrl, imageId)}
-                referenceImageUrl={refImage}
-                onReferenceChange={(url) => setReferenceImage(player.id, url)}
-                useReferences={useReferences}
-              />
-            )
-          })}
-        </div>
+        {/* Player Grid (Defense/Offense) */}
+        {activeTab !== 'opponents' && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {players.map((player) => {
+              const job = getJobForPlayer(player.id, selectedStyle)
+              const selection = getSelectionForPlayer(player.id, selectedStyle)
+              const refImage = getReferenceImage(player.id) || player.headshotUrl
+              
+              return (
+                <PlayerCard
+                  key={player.id}
+                  player={player}
+                  style={selectedStyle}
+                  job={job}
+                  selection={selection}
+                  generating={generating === player.id}
+                  onGenerate={() => generatePlayer(player)}
+                  onGenerateWithoutRef={() => generatePlayer(player, true)}
+                  onSelect={(imageUrl, imageId) => saveSelection(player.id, player.name, selectedStyle, imageUrl, imageId)}
+                  referenceImageUrl={refImage}
+                  onReferenceChange={(url) => setReferenceImage(player.id, url)}
+                  useReferences={useReferences}
+                  showPromptPreview={showPromptPreview}
+                />
+              )
+            })}
+          </div>
+        )}
+
+        {/* Opponent Teams Grid (Helmets) */}
+        {activeTab === 'opponents' && (
+          <div>
+            {/* Batch Generate Helmets */}
+            <div className="mb-6 flex items-center gap-4">
+              <button
+                onClick={async () => {
+                  if (batchGenerating) return
+                  setBatchGenerating(true)
+                  for (const team of opponentTeams) {
+                    const existingSelection = getHelmetSelectionForTeam(team.id)
+                    if (!existingSelection) {
+                      await generateHelmet(team)
+                      // Wait between requests to avoid rate limiting
+                      await new Promise(r => setTimeout(r, 2000))
+                    }
+                  }
+                  setBatchGenerating(false)
+                }}
+                disabled={batchGenerating}
+                className="bg-red-600 hover:bg-red-500 disabled:bg-gray-600 text-white font-bold px-6 py-2 rounded-lg transition"
+              >
+                {batchGenerating ? 'Generating All Helmets...' : `Generate All Helmets (${opponentTeams.filter(t => !getHelmetSelectionForTeam(t.id)).length} remaining)`}
+              </button>
+              <span className="text-gray-400 text-sm">
+                {helmetSelections.length} / {opponentTeams.length} helmets selected
+              </span>
+            </div>
+
+            {/* Team Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
+              {opponentTeams.map((team) => {
+                const job = getHelmetJobForTeam(team.id)
+                const selection = getHelmetSelectionForTeam(team.id)
+                
+                return (
+                  <TeamCard
+                    key={team.id}
+                    team={team}
+                    job={job}
+                    selection={selection}
+                    generating={generating === team.id}
+                    onGenerate={() => generateHelmet(team)}
+                    onSelect={(imageUrl, imageId) => saveHelmetSelection(team.id, team.teamName, team.abbreviation, imageUrl, imageId)}
+                    showPromptPreview={showPromptPreview}
+                  />
+                )
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Selected Sprites Summary */}
         {selections.length > 0 && (
           <div className="mt-12">
-            <h2 className="text-xl font-bold text-[#69BE28] mb-4">Selected Sprites ({selections.length})</h2>
+            <h2 className="text-xl font-bold text-[#69BE28] mb-4">Selected Player Sprites ({selections.length})</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
               {selections.map((sel) => (
                 <div key={`${sel.playerId}-${sel.style}`} className="bg-[#001a33] rounded-lg p-3 border border-[#69BE28]/30">
@@ -388,18 +628,49 @@ export default function PlayerSpritesPage() {
                 </div>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* Selected Helmets Summary */}
+        {helmetSelections.length > 0 && (
+          <div className="mt-12">
+            <h2 className="text-xl font-bold text-red-500 mb-4">Selected Team Helmets ({helmetSelections.length})</h2>
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+              {helmetSelections.map((sel) => (
+                <div key={sel.teamId} className="bg-[#001a33] rounded-lg p-3 border border-red-500/30">
+                  <img
+                    src={sel.imageUrl}
+                    alt={sel.teamName}
+                    className="w-full aspect-square object-cover rounded mb-2"
+                  />
+                  <p className="text-sm font-medium truncate">{sel.teamName}</p>
+                  <p className="text-xs text-gray-400">{sel.abbreviation}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Export All Selections */}
+        {(selections.length > 0 || helmetSelections.length > 0) && (
+          <div className="mt-8 flex gap-4">
             <button
               onClick={() => {
-                const blob = new Blob([JSON.stringify(selections, null, 2)], { type: 'application/json' })
+                const exportData = {
+                  playerSprites: selections,
+                  teamHelmets: helmetSelections,
+                  exportedAt: new Date().toISOString(),
+                }
+                const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' })
                 const url = URL.createObjectURL(blob)
                 const a = document.createElement('a')
                 a.href = url
-                a.download = 'selected-sprites.json'
+                a.download = 'dark-side-assets.json'
                 a.click()
               }}
-              className="mt-4 bg-[#69BE28] text-[#002244] px-6 py-2 rounded font-bold hover:bg-[#7ed957] transition"
+              className="bg-[#69BE28] text-[#002244] px-6 py-2 rounded font-bold hover:bg-[#7ed957] transition"
             >
-              Export Selections
+              Export All Assets ({selections.length + helmetSelections.length})
             </button>
           </div>
         )}
@@ -420,6 +691,7 @@ function PlayerCard({
   referenceImageUrl,
   onReferenceChange,
   useReferences,
+  showPromptPreview,
 }: {
   player: Player
   style: string
@@ -432,8 +704,29 @@ function PlayerCard({
   referenceImageUrl?: string
   onReferenceChange: (url: string) => void
   useReferences: boolean
+  showPromptPreview: boolean
 }) {
   const [refInput, setRefInput] = useState(referenceImageUrl || '')
+  const [promptPreview, setPromptPreview] = useState<string | null>(null)
+  
+  // Fetch prompt preview when showPromptPreview changes
+  useEffect(() => {
+    if (showPromptPreview && style === 'darkside') {
+      // Build a preview of the prompt (client-side approximation)
+      const isDef = player.type === 'defender'
+      const prompt = `Dark Side Superhero - #${player.jersey} ${player.name}
+      
+Navy blue tactical armor uniform with neon green accents, cape, helmet with dark visor, full body from helmet to cleats, dramatic stadium background.
+
+Position: ${player.position}
+Type: ${isDef ? 'Defense' : 'Offense'}
+
+NO LOGOS - custom uniform design`
+      setPromptPreview(prompt)
+    } else {
+      setPromptPreview(null)
+    }
+  }, [showPromptPreview, style, player])
   
   const positionColors: Record<string, string> = {
     DL: 'bg-red-600',
@@ -444,7 +737,7 @@ function PlayerCard({
     OL: 'bg-gray-600',
   }
   
-  const hasReference = !!referenceImageUrl
+  const hasReference = !!referenceImageUrl && referenceImageUrl.startsWith('http')
 
   return (
     <div className="bg-[#001a33] rounded-xl overflow-hidden border border-[#69BE28]/20 hover:border-[#69BE28]/50 transition">
@@ -478,6 +771,13 @@ function PlayerCard({
           </div>
         )}
         
+        {/* Prompt Preview */}
+        {promptPreview && (
+          <div className="mt-3 p-2 bg-[#002244] rounded text-xs text-gray-300 max-h-24 overflow-y-auto font-mono">
+            {promptPreview}
+          </div>
+        )}
+        
         {/* Reference Image Input */}
         {useReferences && (
           <div className="mt-3 space-y-2">
@@ -505,7 +805,7 @@ function PlayerCard({
                 </button>
               )}
             </div>
-            {hasReference && (
+            {hasReference && referenceImageUrl && referenceImageUrl.startsWith('http') && (
               <div className="mt-2">
                 <img
                   src={referenceImageUrl}
@@ -537,15 +837,14 @@ function PlayerCard({
               {generating ? (
                 <>
                   <div className="w-5 h-5 border-2 border-[#002244] border-t-transparent rounded-full animate-spin" />
-                  {useReferences && hasReference ? 'Uploading & Generating...' : 'Starting...'}
+                  Generating...
                 </>
               ) : (
                 <>
-                  {useReferences && hasReference ? (
-                    <>🎯 Generate with Reference</>
-                  ) : (
-                    <>Generate {style.charAt(0).toUpperCase() + style.slice(1)}</>
-                  )}
+                  {style === 'darkside' 
+                    ? 'Generate Dark Side' 
+                    : `Generate ${style.charAt(0).toUpperCase() + style.slice(1)}`
+                  }
                 </>
               )}
             </button>
@@ -678,6 +977,167 @@ function PlayerCard({
               <button
                 onClick={onGenerate}
                 className="absolute bottom-2 right-2 bg-[#002244]/80 text-[#69BE28] px-3 py-1 rounded text-sm hover:bg-[#002244] transition"
+              >
+                Regenerate
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ============================================================================
+// TEAM CARD - For Opponent Helmet Generation
+// ============================================================================
+
+function TeamCard({
+  team,
+  job,
+  selection,
+  generating,
+  onGenerate,
+  onSelect,
+  showPromptPreview,
+}: {
+  team: OpponentTeam
+  job?: HelmetJob
+  selection?: SelectedHelmet
+  generating: boolean
+  onGenerate: () => void
+  onSelect: (imageUrl: string, imageId: string) => void
+  showPromptPreview: boolean
+}) {
+  return (
+    <div className="bg-[#001a33] rounded-xl overflow-hidden border border-red-500/20 hover:border-red-500/50 transition">
+      {/* Team Header */}
+      <div className="p-4 border-b border-red-500/20">
+        <div className="flex items-center gap-3">
+          {/* Color Swatch */}
+          <div className="flex flex-col gap-1">
+            <div 
+              className="w-10 h-5 rounded-t" 
+              style={{ backgroundColor: team.primaryColor }}
+              title={team.primaryColorName}
+            />
+            <div 
+              className="w-10 h-3 rounded-b" 
+              style={{ backgroundColor: team.accentColor }}
+              title={team.accentColorName}
+            />
+          </div>
+          <div>
+            <h3 className="font-bold text-lg text-white">{team.teamName}</h3>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-400">{team.abbreviation}</span>
+              <span className="text-xs text-gray-500">• {team.primaryColorName} / {team.accentColorName}</span>
+            </div>
+          </div>
+        </div>
+        
+        {/* Prompt Preview */}
+        {showPromptPreview && (
+          <div className="mt-3 p-2 bg-[#002244] rounded text-xs text-gray-300 max-h-24 overflow-y-auto font-mono">
+            Photorealistic NFL football helmet, solid {team.primaryColorName || team.primaryColor} helmet color with {team.accentColorName || team.accentColor} accent stripe down center, NO logos NO decals NO text, clean solid color design, dark stadium background...
+          </div>
+        )}
+      </div>
+
+      {/* Generation Status */}
+      <div className="p-4">
+        {!job && !selection && (
+          <button
+            onClick={onGenerate}
+            disabled={generating}
+            className="w-full bg-red-600 hover:bg-red-500 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-bold py-3 px-4 rounded-lg transition flex items-center justify-center gap-2"
+          >
+            {generating ? (
+              <>
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                Generating...
+              </>
+            ) : (
+              'Generate Helmet'
+            )}
+          </button>
+        )}
+
+        {job?.status === 'pending' && (
+          <div className="flex flex-col items-center justify-center py-6">
+            <div className="w-10 h-10 border-4 border-red-500 border-t-transparent rounded-full animate-spin mb-3" />
+            <p className="text-red-400 font-medium text-sm">Generating helmet...</p>
+            <a 
+              href={`https://app.leonardo.ai/generations/${job.generationId}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-red-400 text-xs underline mt-1 hover:text-red-300"
+            >
+              View on Leonardo
+            </a>
+          </div>
+        )}
+
+        {job?.status === 'failed' && (
+          <div className="text-center py-4">
+            <p className="text-red-400 mb-2">Generation failed</p>
+            <button
+              onClick={onGenerate}
+              className="text-red-400 underline hover:text-red-300"
+            >
+              Try again
+            </button>
+          </div>
+        )}
+
+        {job?.status === 'complete' && job.images.length > 0 && (
+          <div>
+            <p className="text-sm text-gray-400 mb-2">Select helmet:</p>
+            <div className="grid grid-cols-2 gap-2">
+              {job.images.map((img, idx) => {
+                const isSelected = selection?.imageId === img.id
+                return (
+                  <button
+                    key={img.id}
+                    onClick={() => onSelect(img.url, img.id)}
+                    className={`relative rounded-lg overflow-hidden border-2 transition ${
+                      isSelected
+                        ? 'border-red-500 ring-2 ring-red-500/50'
+                        : 'border-transparent hover:border-gray-500'
+                    }`}
+                  >
+                    <img
+                      src={img.url}
+                      alt={`${team.teamName} helmet ${idx + 1}`}
+                      className="w-full aspect-square object-cover"
+                    />
+                    {isSelected && (
+                      <div className="absolute inset-0 bg-red-500/20 flex items-center justify-center">
+                        <div className="bg-red-500 text-white px-2 py-1 rounded text-xs font-bold">
+                          SELECTED
+                        </div>
+                      </div>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Show current selection if no job running */}
+        {selection && !job && (
+          <div>
+            <p className="text-sm text-gray-400 mb-2">Selected:</p>
+            <div className="relative">
+              <img
+                src={selection.imageUrl}
+                alt={team.teamName}
+                className="w-full rounded-lg border-2 border-red-500"
+              />
+              <button
+                onClick={onGenerate}
+                className="absolute bottom-2 right-2 bg-[#002244]/80 text-red-400 px-3 py-1 rounded text-sm hover:bg-[#002244] transition"
               >
                 Regenerate
               </button>

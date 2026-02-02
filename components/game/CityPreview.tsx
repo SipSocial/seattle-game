@@ -81,12 +81,15 @@ export function CityPreview({
             <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-transparent" />
           </motion.div>
 
-          {/* Content - 72px bottom padding for audio bar (48px) + 24px gap */}
+          {/* Content - with safe area padding */}
           <motion.div
-            className="relative z-10 w-full px-6"
+            className="relative z-10 w-full"
             style={{ 
               maxWidth: '480px',
-              paddingBottom: '72px',
+              paddingLeft: '24px',
+              paddingRight: '24px',
+              paddingTop: 'calc(env(safe-area-inset-top, 0px) + 24px)',
+              paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 96px)', // Room for audio bar
             }}
             initial={{ y: 50, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
@@ -359,15 +362,12 @@ export function CityPreview({
                 </GradientButton>
               )}
 
-              <GhostButton size="lg" fullWidth onClick={onClose}>
-                Back to Map
-              </GhostButton>
             </motion.div>
 
             {/* Landmarks */}
             <motion.div
               className="flex flex-wrap justify-center"
-              style={{ gap: '8px', marginTop: '24px' }}
+              style={{ gap: '8px', marginTop: '24px', paddingLeft: '8px', paddingRight: '8px' }}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.5 }}
@@ -375,11 +375,12 @@ export function CityPreview({
               {stage.visuals.landmarks.map((landmark, i) => (
                 <span
                   key={i}
-                  className="rounded-full text-[10px]"
+                  className="rounded-full text-[10px] whitespace-nowrap"
                   style={{ 
-                    padding: '6px 12px',
-                    background: 'rgba(255, 255, 255, 0.05)',
-                    color: 'rgba(255,255,255,0.4)',
+                    padding: '6px 14px',
+                    background: 'rgba(255, 255, 255, 0.08)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    color: 'rgba(255,255,255,0.5)',
                   }}
                 >
                   {landmark}

@@ -112,7 +112,11 @@ export interface CampaignProgress {
 interface GameState {
   // Player selection
   selectedDefender: number
+  selectedOffense: number
   playerName: string
+  
+  // Game mode - 'qb' for QB Legend, 'defense' for Blockbuster Defense
+  playMode: 'qb' | 'defense' | null
 
   // Game session state (reset each game)
   score: number
@@ -163,7 +167,9 @@ interface GameState {
   
   // Actions
   setSelectedDefender: (jersey: number) => void
+  setSelectedOffense: (jersey: number) => void
   setPlayerName: (name: string) => void
+  setPlayMode: (mode: 'qb' | 'defense') => void
   
   // Game actions
   startGame: () => void
@@ -305,7 +311,9 @@ export const useGameStore = create<GameState>()(
     (set, get) => ({
       // Initial state
       selectedDefender: DEFAULT_DEFENDER,
+      selectedOffense: 4, // Default to Sam Darnold #4
       playerName: '',
+      playMode: null,
       ...INITIAL_GAME_STATE,
       ...INITIAL_MODAL_STATES,
       campaign: INITIAL_CAMPAIGN_STATE,
@@ -318,7 +326,9 @@ export const useGameStore = create<GameState>()(
 
       // Player selection
       setSelectedDefender: (jersey) => set({ selectedDefender: jersey }),
+      setSelectedOffense: (jersey) => set({ selectedOffense: jersey }),
       setPlayerName: (name) => set({ playerName: name.toUpperCase().slice(0, 3) }),
+      setPlayMode: (mode) => set({ playMode: mode }),
 
       // Game actions
       startGame: () => set({ ...INITIAL_GAME_STATE }),

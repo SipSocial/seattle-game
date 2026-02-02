@@ -5,6 +5,34 @@
    Premium Sports Typography & Colors
    ============================================ */
 
+/* Hide scrollbar utility */
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Mobile touch optimization */
+.touch-manipulation {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Prevent pull-to-refresh on game screen */
+.no-overscroll {
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Fast tap for buttons */
+button, [role="button"] {
+  touch-action: manipulation;
+}
+
 /* CSS Custom Properties - Seahawks Brand */
 :root {
   /* Primary Seahawks Colors */
@@ -73,17 +101,28 @@
   --btn-radius-full: 9999px;
   
   /* ============================================
-     TYPOGRAPHY SCALE
+     FLUID TYPOGRAPHY SCALE (Utopia-style)
+     Viewport range: 320px → 1920px
      ============================================ */
-  --text-hero: clamp(3rem, 10vw, 6rem);
-  --text-title: clamp(2rem, 6vw, 3.5rem);
-  --text-subtitle: clamp(1.25rem, 4vw, 2rem);
-  --text-body: clamp(0.875rem, 2.5vw, 1rem);
-  --text-caption: clamp(0.75rem, 2vw, 0.875rem);
-  --text-micro: 11px;
+  --text-hero: clamp(3rem, 2rem + 8vw, 7rem);
+  --text-title: clamp(1.75rem, 1rem + 5vw, 3.5rem);
+  --text-subtitle: clamp(1rem, 0.75rem + 2vw, 1.75rem);
+  --text-body: clamp(0.875rem, 0.8rem + 0.5vw, 1rem);
+  --text-caption: clamp(0.6875rem, 0.65rem + 0.25vw, 0.8125rem);
+  --text-micro: clamp(0.5625rem, 0.55rem + 0.1vw, 0.6875rem);
+  
+  /* Modular type scale (1.2 ratio) */
+  --step--2: clamp(0.6944rem, 0.6736rem + 0.0926vw, 0.7813rem);
+  --step--1: clamp(0.8333rem, 0.7986rem + 0.1543vw, 0.9375rem);
+  --step-0: clamp(1rem, 0.9474rem + 0.2339vw, 1.125rem);
+  --step-1: clamp(1.2rem, 1.1237rem + 0.3392vw, 1.35rem);
+  --step-2: clamp(1.44rem, 1.3314rem + 0.4827vw, 1.62rem);
+  --step-3: clamp(1.728rem, 1.5752rem + 0.6795vw, 1.944rem);
+  --step-4: clamp(2.0736rem, 1.8604rem + 0.9484vw, 2.3328rem);
+  --step-5: clamp(2.4883rem, 2.1932rem + 1.3125vw, 2.7994rem);
   
   /* ============================================
-     SPACING SCALE (8px base unit)
+     SPACING SCALE (8px base unit - static)
      ============================================ */
   --space-1: 4px;
   --space-2: 8px;
@@ -97,6 +136,23 @@
   --space-16: 64px;
   --space-20: 80px;
   --space-24: 96px;
+  
+  /* ============================================
+     FLUID SPACING SCALE
+     Scales smoothly between viewports
+     ============================================ */
+  --space-fluid-xs: clamp(0.5rem, 0.25rem + 1vw, 0.75rem);
+  --space-fluid-sm: clamp(0.75rem, 0.5rem + 1.5vw, 1.25rem);
+  --space-fluid-md: clamp(1rem, 0.75rem + 2vw, 1.75rem);
+  --space-fluid-lg: clamp(1.5rem, 1rem + 3vw, 2.5rem);
+  --space-fluid-xl: clamp(2rem, 1.5rem + 4vw, 4rem);
+  --space-fluid-2xl: clamp(3rem, 2rem + 6vw, 6rem);
+  --space-fluid-3xl: clamp(4rem, 2.5rem + 8vw, 8rem);
+  
+  /* Semantic fluid pairs (for dramatic scaling) */
+  --space-s-l: clamp(0.75rem, 0.25rem + 2.5vw, 1.5rem);
+  --space-m-xl: clamp(1rem, 0.5rem + 3vw, 2rem);
+  --space-l-2xl: clamp(1.5rem, 0.75rem + 4vw, 3rem);
   
   /* Legacy spacing aliases */
   --space-xs: 4px;
@@ -185,6 +241,7 @@ body {
   font-family: var(--font-inter), sans-serif;
 }
 
+/* Fluid typography classes */
 .text-hero {
   font-size: var(--text-hero);
   line-height: 0.9;
@@ -198,6 +255,86 @@ body {
 .text-subtitle {
   font-size: var(--text-subtitle);
   line-height: 1.2;
+}
+
+.text-body {
+  font-size: var(--text-body);
+  line-height: 1.5;
+}
+
+.text-caption {
+  font-size: var(--text-caption);
+  line-height: 1.4;
+}
+
+.text-micro {
+  font-size: var(--text-micro);
+  line-height: 1.3;
+}
+
+/* Modular scale classes */
+.text-step--2 { font-size: var(--step--2); }
+.text-step--1 { font-size: var(--step--1); }
+.text-step-0 { font-size: var(--step-0); }
+.text-step-1 { font-size: var(--step-1); }
+.text-step-2 { font-size: var(--step-2); }
+.text-step-3 { font-size: var(--step-3); }
+.text-step-4 { font-size: var(--step-4); }
+.text-step-5 { font-size: var(--step-5); }
+
+/* ============================================
+   CONTAINER QUERY SUPPORT
+   ============================================ */
+
+.container-query {
+  container-type: inline-size;
+}
+
+.container-query-size {
+  container-type: size;
+}
+
+/* Container-relative fluid sizing */
+.cq-text-sm {
+  font-size: clamp(0.75rem, 3cqw, 0.875rem);
+}
+
+.cq-text-base {
+  font-size: clamp(0.875rem, 4cqw, 1rem);
+}
+
+.cq-text-lg {
+  font-size: clamp(1rem, 5cqw, 1.25rem);
+}
+
+.cq-text-xl {
+  font-size: clamp(1.25rem, 6cqw, 1.5rem);
+}
+
+.cq-text-2xl {
+  font-size: clamp(1.5rem, 8cqw, 2rem);
+}
+
+/* Container query breakpoints for cards/components */
+@container (min-width: 200px) {
+  .cq-compact-row {
+    flex-direction: row;
+    align-items: center;
+  }
+}
+
+@container (min-width: 300px) {
+  .cq-card-expanded {
+    padding: var(--space-fluid-md);
+  }
+}
+
+@container (min-width: 400px) {
+  .cq-card-grid {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: var(--space-fluid-sm);
+  }
 }
 
 /* Text Gradient - Seahawks */

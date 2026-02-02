@@ -270,3 +270,92 @@ npx lsof -i :3004    # Find port usage
 ---
 
 *Last Updated: 2026-01-30*
+
+---
+
+## Current State (Feb 2026)
+
+### Dark Side Sprite Generator
+- Working at `/admin/players`
+- 16 players wired up (11 defense, 5 offense)
+- Dark Side superhero prompt template finalized:
+  - Navy blue tactical armor uniform
+  - Neon green #69BE28 accents
+  - Cape, helmet with dark visor
+  - Full body from helmet to cleats
+  - Stadium background with volumetric lighting
+  - NO LOGOS (described positively to avoid AI inserting brands)
+
+### Key Files
+
+| File | Purpose |
+|------|---------|
+| `src/lib/darkSidePrompts.ts` | Dark Side prompt generator |
+| `app/admin/players/page.tsx` | Sprite generation UI |
+| `src/game/data/playerReferences.ts` | Defense player data (11 players) |
+| `src/v3/lib/offensePlayerData.ts` | Offense player data (5 players) |
+
+### Design Decisions
+- **Phoenix model** for photorealistic generation
+- Prompts kept **under 1500 chars** for Leonardo API
+- Reference photos optional (detailed prompts work without them)
+- Superhero aesthetic: tactical armor, cape, visor helmet
+- Described as "no visible text or branding" rather than "no logos" (positive framing avoids AI hallucinating logos)
+
+---
+
+## V3 Game Architecture
+
+The V3 version introduces a new game flow with offense/defense modes:
+
+```
+/v3                 -> Main entry point
+/v3/game            -> Game UI wrapper
+/v3/roster          -> Player selection
+/v3/map             -> Campaign map
+/v3/match           -> Match screen
+/v3/results         -> Post-game results
+/v3/admin           -> Asset generation
+```
+
+### V3 Key Files
+
+```
+src/v3/
++-- game/
+|   +-- data/v3Config.ts      # Game configuration
+|   +-- scenes/
+|   |   +-- DefenseScene.ts   # Defense gameplay
+|   |   +-- OffenseScene.ts   # Offense gameplay
+|   +-- systems/
+|       +-- GameManager.ts    # Game state management
++-- lib/
+|   +-- offensePlayerData.ts  # Offense roster
+|   +-- v3Assets.ts           # Asset management
++-- store/
+    +-- v3GameStore.ts        # Zustand store for V3
+```
+
+---
+
+## Pending Work
+
+### Immediate
+- [ ] Generate all 16 player sprites with Dark Side template
+- [ ] Build play selection UI
+- [ ] Implement game flow (menu -> roster -> match -> results)
+
+### Short Term
+- [ ] Generate opponent helmets (20 teams)
+- [ ] Field backgrounds for home/away games
+- [ ] Stage transition animations
+
+### Future
+- [ ] Offensive mode gameplay (QB mechanics)
+- [ ] Leaderboard integration
+- [ ] DrinkSip e-commerce end screen
+- [ ] Social sharing features
+
+---
+
+*Last Updated: 2026-02-01*

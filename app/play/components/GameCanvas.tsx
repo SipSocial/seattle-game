@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { AnimatePresence, motion } from 'framer-motion'
 import { GameHUD } from '@/components/game/GameHUD'
 import { GameOver } from '@/components/game/GameOver'
@@ -20,6 +21,7 @@ interface GameCanvasProps {
 }
 
 export default function GameCanvas({ onChangePlayer }: GameCanvasProps) {
+  const router = useRouter()
   const containerRef = useRef<HTMLDivElement>(null)
   const [gameLoaded, setGameLoaded] = useState(false)
   const [isPaused, setIsPaused] = useState(false)
@@ -79,10 +81,8 @@ export default function GameCanvas({ onChangePlayer }: GameCanvasProps) {
     // Clean up AR mode before leaving
     setArMode(false)
     setCameraReady(false)
-    if (typeof window !== 'undefined') {
-      window.location.href = '/'
-    }
-  }, [setArMode])
+    router.push('/')
+  }, [setArMode, router])
 
   const handlePlayAgain = useCallback(() => {
     setIsGameOver(false)
@@ -97,11 +97,17 @@ export default function GameCanvas({ onChangePlayer }: GameCanvasProps) {
     // Clean up AR mode before leaving
     setArMode(false)
     setCameraReady(false)
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('selectedDefender')
-      window.location.reload()
-    }
-  }, [setArMode])
+    localStorage.removeItem('selectedDefender')
+    localStorage.removeItem('selectedOffense')
+    router.push('/play')
+  }, [setArMode, router])
+
+  const handleGiveaway = useCallback(() => {
+    // Clean up AR mode and navigate to giveaway
+    setArMode(false)
+    setCameraReady(false)
+    router.push('/v4/giveaway')
+  }, [setArMode, router])
 
   // Handle camera ready state
   const handleCameraReady = useCallback(() => {
@@ -279,6 +285,7 @@ export default function GameCanvas({ onChangePlayer }: GameCanvasProps) {
             onPlayAgain={handlePlayAgain}
             onChangePlayer={handleChangePlayer}
             onViewLeaderboard={() => setShowLeaderboard(true)}
+            onGiveaway={handleGiveaway}
           />
         )}
       </AnimatePresence>

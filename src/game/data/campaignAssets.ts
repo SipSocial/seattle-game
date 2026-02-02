@@ -2,7 +2,7 @@
  * Campaign Map Assets - Leonardo AI Generated
  * 
  * This file stores URLs for all generated assets used in the campaign map.
- * Assets are generated via the /admin/campaign-assets page.
+ * Assets are generated via the /admin/players page (Leonardo API).
  */
 
 export interface CityAsset {
@@ -43,6 +43,34 @@ export const MAP_PROMPTS = {
   seahawksPlaneIdle: `Seattle Seahawks themed military stealth fighter jet parked on runway, dark navy blue (#002244) with neon action green (#69BE28) accents, defensive stance, top-down angled view, game asset, transparent background, 4k quality`,
 }
 
+// Stadium Field prompts (top-down view for gameplay)
+// These are tall images that scroll with gameplay (342x1024 scaled to 400x1200)
+export const STADIUM_FIELD_PROMPTS: Record<string, string> = {
+  Seattle: `Top-down aerial view of Lumen Field Seattle NFL stadium at night, football field perfectly centered, dark moody atmosphere, navy blue (#002244) end zones with Seattle Seahawks branding, action green (#69BE28) sideline accents, stadium lights creating dramatic shadows, crowd as abstract bokeh blur in seats, wet grass reflecting lights, rain mist, fog rolling in from Puget Sound, 12th man flags waving, photorealistic aerial drone shot, 8k quality, dark atmospheric cinematic, no players visible`,
+  
+  Pittsburgh: `Top-down aerial view of Acrisure Stadium Pittsburgh NFL stadium at night, football field perfectly centered, black and gold end zones with Pittsburgh Steelers branding, three rivers visible beyond stadium, steel city industrial glow, stadium lights dramatic, crowd as abstract blur, photorealistic aerial drone shot, 8k quality, dark atmospheric cinematic, no players visible`,
+  
+  Phoenix: `Top-down aerial view of State Farm Stadium Arizona NFL stadium interior, retractable roof open, football field centered, cardinal red end zones, desert twilight visible through roof, dramatic stadium lights, crowd as abstract blur, photorealistic aerial drone shot, 8k quality, dark atmospheric cinematic, no players visible`,
+  
+  'San Francisco': `Top-down aerial view of Levi's Stadium San Francisco 49ers NFL stadium at night, football field centered, red and gold end zones, Bay Area fog rolling in, stadium lights dramatic, Silicon Valley city lights in distance, photorealistic aerial drone shot, 8k quality, dark atmospheric cinematic, no players visible`,
+  
+  'Los Angeles': `Top-down aerial view of SoFi Stadium Los Angeles NFL stadium at night, futuristic transparent roof, football field centered, purple and gold end zones, LA city lights beyond, premium modern design, stadium lights dramatic, crowd as abstract blur, photorealistic aerial drone shot, 8k quality, dark atmospheric cinematic, no players visible`,
+  
+  Atlanta: `Top-down aerial view of Mercedes-Benz Stadium Atlanta NFL stadium at night, unique retractable roof partially open, football field centered, red and black end zones, downtown Atlanta skyline visible, stadium lights dramatic, crowd as abstract blur, photorealistic aerial drone shot, 8k quality, dark atmospheric cinematic, no players visible`,
+  
+  Nashville: `Top-down aerial view of Nissan Stadium Nashville NFL stadium at night, football field centered, titan blue and red end zones, Cumberland River visible, downtown Nashville lights, country music city vibe, stadium lights dramatic, crowd as abstract blur, photorealistic aerial drone shot, 8k quality, dark atmospheric cinematic, no players visible`,
+  
+  'Washington DC': `Top-down aerial view of Northwest Stadium Washington DC NFL stadium at night, football field centered, burgundy and gold end zones, subtle Capitol dome glow in far distance, patriotic atmosphere, stadium lights dramatic, crowd as abstract blur, photorealistic aerial drone shot, 8k quality, dark atmospheric cinematic, no players visible`,
+  
+  Jacksonville: `Top-down aerial view of TIAA Bank Field Jacksonville NFL stadium at night, football field centered, teal and gold end zones, St. Johns River visible, palm trees around stadium, tropical atmosphere, stadium lights dramatic, crowd as abstract blur, photorealistic aerial drone shot, 8k quality, dark atmospheric cinematic, no players visible`,
+  
+  Charlotte: `Top-down aerial view of Bank of America Stadium Charlotte NFL stadium at night, football field centered, Carolina blue and black end zones, Charlotte skyline, southern atmosphere, stadium lights dramatic, crowd as abstract blur, photorealistic aerial drone shot, 8k quality, dark atmospheric cinematic, no players visible`,
+  
+  Indianapolis: `Top-down aerial view of Lucas Oil Stadium Indianapolis NFL stadium at night, retractable roof closed, football field centered, blue and white end zones, classic football town atmosphere, stadium lights dramatic, crowd as abstract blur, photorealistic aerial drone shot, 8k quality, dark atmospheric cinematic, no players visible`,
+  
+  Minneapolis: `Top-down aerial view of US Bank Stadium Minneapolis NFL stadium at night, angular glass exterior visible from interior, football field centered, purple and gold end zones, northern lights effect in sky visible through roof, Viking winter atmosphere, stadium lights dramatic, crowd as abstract blur, photorealistic aerial drone shot, 8k quality, dark atmospheric cinematic, no players visible`,
+}
+
 // City-specific Leonardo prompts
 export const CITY_PROMPTS: Record<string, string> = {
   Seattle: `Seattle Washington skyline at dusk, Space Needle prominent, Mount Rainier in misty background, Lumen Field stadium lights glowing, dramatic navy and green atmosphere, rain mist, photorealistic cinematic, 8k quality, NFL game day atmosphere`,
@@ -77,6 +105,25 @@ export const GENERATED_ASSETS = {
   airplaneUrl: 'https://cdn.leonardo.ai/users/eb9a23b8-36c0-4667-b97f-64fdee85d14b/generations/25a25712-b04b-48f6-b9ae-e8bd3122b674/variations/Default_Seattle_Seahawks_NFL_team_Boeing_737_airplane_sleek_mo_0_25a25712-b04b-48f6-b9ae-e8bd3122b674_0.png',
   // Dark Side plane animated video for level entry
   airplaneVideoUrl: 'https://cdn.leonardo.ai/users/eb9a23b8-36c0-4667-b97f-64fdee85d14b/generations/9f2a04f7-2211-4b9e-98ea-b49ef7fe51d1/9f2a04f7-2211-4b9e-98ea-b49ef7fe51d1.mp4',
+  
+  // Stadium Field backgrounds (top-down, 344x1024 -> scaled to 400x1200)
+  // FIELD-ONLY images - no stands, just the playing surface
+  stadiumFields: {
+    'Seattle': 'https://cdn.leonardo.ai/users/eb9a23b8-36c0-4667-b97f-64fdee85d14b/generations/f2112b3a-cc20-461e-85c3-5f0bc1451fef/segments/3:4:1/Phoenix_Photorealistic_aerial_drone_shot_looking_straight_down_0.jpg',
+  } as Record<string, string>,
+  
+  // Flat grass texture (512x512, tileable) - vertical stripes
+  grassTexture: 'https://cdn.leonardo.ai/users/eb9a23b8-36c0-4667-b97f-64fdee85d14b/generations/aba82089-ea96-48d9-93c6-572569aa4816/segments/1:4:1/Phoenix_Flat_topdown_view_of_NFL_football_field_grass_alternat_0.jpg',
+  
+  // Stadium crowd frame (512x192) - placed at top of viewport for atmosphere
+  stadiumCrowd: 'https://cdn.leonardo.ai/users/eb9a23b8-36c0-4667-b97f-64fdee85d14b/generations/0e8991a3-8330-4720-82c9-b20f5685262c/segments/1:4:1/Phoenix_Photorealistic_NFL_stadium_crowd_and_stands_viewed_fro_0.jpg',
+  
+  // End zone images (512x256) - placed at top/bottom of field
+  endZones: {
+    'Seattle': 'https://cdn.leonardo.ai/users/eb9a23b8-36c0-4667-b97f-64fdee85d14b/generations/b1bc5d22-05d9-4f13-b696-bfeb6a34d670/segments/2:4:1/Phoenix_Photorealistic_NFL_end_zone_at_Lumen_Field_Seattle_top_0.jpg',
+    '49ers': 'https://cdn.leonardo.ai/users/eb9a23b8-36c0-4667-b97f-64fdee85d14b/generations/6925535a-f249-474c-9347-36a4f233efc5/segments/2:4:1/Phoenix_Photorealistic_NFL_end_zone_topdown_flat_aerial_view_r_0.jpg',
+  } as Record<string, string>,
+  
   cities: {
     'Seattle': 'https://cdn.leonardo.ai/users/eb9a23b8-36c0-4667-b97f-64fdee85d14b/generations/1f736005-c2ed-4755-b762-4fc99e7062a1/segments/4:4:1/Phoenix_Seattle_Washington_skyline_at_dusk_Space_Needle_promin_0.jpg',
     'Pittsburgh': 'https://cdn.leonardo.ai/users/eb9a23b8-36c0-4667-b97f-64fdee85d14b/generations/cce31f27-1fb1-4762-9655-53e8949d1640/segments/3:4:1/Phoenix_Pittsburgh_Pennsylvania_skyline_three_rivers_confluenc_0.jpg',

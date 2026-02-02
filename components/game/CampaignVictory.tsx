@@ -1,15 +1,23 @@
 'use client'
 
 import { motion, AnimatePresence } from 'framer-motion'
+import { useRouter } from 'next/navigation'
 import { useGameStore, useVictoryModal } from '@/src/store/gameStore'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { GradientButton } from '@/components/ui/GradientButton'
+import { GhostButton } from '@/components/ui/GhostButton'
 import { StatDisplay } from '@/components/ui/StatDisplay'
 
 export function CampaignVictory() {
+  const router = useRouter()
   const { isOpen, type, stageId, stageName, bonusPoints } = useVictoryModal()
   const { score, wave, tackles } = useGameStore()
   const hideVictoryModal = useGameStore((s) => s.hideVictoryModal)
+  
+  const handleGiveaway = () => {
+    hideVictoryModal()
+    router.push('/v4/giveaway')
+  }
   
   const getTitle = () => {
     switch (type) {
@@ -243,11 +251,12 @@ export function CampaignVictory() {
                 </motion.div>
               )}
               
-              {/* Continue button */}
+              {/* Action buttons */}
               <motion.div
                 initial={{ y: 20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ delay: 0.7 }}
+                style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}
               >
                 <GradientButton
                   size="lg"
@@ -261,6 +270,15 @@ export function CampaignVictory() {
                 >
                   {type === 'super_bowl' ? 'Celebrate!' : 'Continue'}
                 </GradientButton>
+                
+                <GhostButton
+                  size="lg"
+                  fullWidth
+                  variant="green"
+                  onClick={handleGiveaway}
+                >
+                  🎁 Enter Giveaway
+                </GhostButton>
               </motion.div>
             </GlassCard>
           </motion.div>

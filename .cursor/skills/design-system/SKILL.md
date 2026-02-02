@@ -1,42 +1,62 @@
 ---
 name: design-system
-description: Seahawks Defense app design system with consistent buttons, spacing, typography, and layout patterns. Use when creating or editing UI components, styling pages, fixing layout issues, or adding new screens to ensure visual consistency.
+description: Dark Side Football design system with fluid typography, responsive spacing, and premium glassmorphic styling. Use when creating or editing UI components to ensure Nike-level visual consistency.
 ---
 
 # Dark Side Game Design System
 
-This skill ensures consistent styling across all UI components using established design tokens and proper spacing.
+Premium sports design system using fluid clamp() values for responsive scaling.
 
-## CRITICAL: 8-Point Grid System
+## FLUID TYPOGRAPHY SCALE
 
-**ALL spacing must use multiples of 8 pixels.** This is non-negotiable.
-
-| Size | Value | Use Case |
-|------|-------|----------|
-| 4px | Micro | Icon gaps only |
-| 8px | XS | Tight related elements |
-| 12px | SM | Small padding |
-| 16px | MD | Default button gaps, small sections |
-| 24px | LG | Section padding, modal headers |
-| 32px | XL | Major section breaks |
-| 40px | 2XL | Large gaps |
-| 48px | 3XL | Between stat groups |
-| 56px | 4XL | Very large gaps |
-
-## CRITICAL: Use Inline Styles for Spacing
-
-**DO NOT use Tailwind spacing classes like `space-y-4`, `gap-3`, `mb-6` for layout-critical spacing.**
-
-Instead, use explicit inline styles:
+Use CSS custom property tokens for all text:
 
 ```tsx
-// BAD - Tailwind classes are hard to debug and inconsistent
-<div className="space-y-3 mb-6 gap-4">
+// Semantic sizes (use these first)
+style={{ fontSize: 'var(--text-hero)' }}    // clamp(3rem, 2rem + 8vw, 7rem)
+style={{ fontSize: 'var(--text-title)' }}   // clamp(1.75rem, 1rem + 5vw, 3.5rem)
+style={{ fontSize: 'var(--text-subtitle)' }} // clamp(1rem, 0.75rem + 2vw, 1.75rem)
+style={{ fontSize: 'var(--text-body)' }}    // clamp(0.875rem, 0.8rem + 0.5vw, 1rem)
+style={{ fontSize: 'var(--text-caption)' }} // clamp(0.6875rem, ... 0.8125rem)
+style={{ fontSize: 'var(--text-micro)' }}   // clamp(0.5625rem, ... 0.6875rem)
 
-// GOOD - Explicit pixel values, easy to verify
-<div className="flex flex-col" style={{ gap: '16px' }}>
-<div style={{ marginBottom: '32px' }}>
-<div style={{ height: '24px' }} /> // Spacer
+// Modular scale (for precise control)
+style={{ fontSize: 'var(--step-0)' }}  // Base
+style={{ fontSize: 'var(--step-1)' }}  // 1.2x
+style={{ fontSize: 'var(--step-2)' }}  // 1.44x
+style={{ fontSize: 'var(--step-3)' }}  // 1.728x
+style={{ fontSize: 'var(--step-4)' }}  // 2.07x
+style={{ fontSize: 'var(--step-5)' }}  // 2.49x
+```
+
+## FLUID SPACING SCALE
+
+Responsive spacing that scales with viewport:
+
+```tsx
+// Fluid spacing (preferred for responsive layouts)
+style={{ padding: 'var(--space-fluid-xs)' }}  // clamp(0.5rem, 0.25rem + 1vw, 0.75rem)
+style={{ gap: 'var(--space-fluid-sm)' }}      // clamp(0.75rem, 0.5rem + 1.5vw, 1.25rem)
+style={{ margin: 'var(--space-fluid-md)' }}   // clamp(1rem, 0.75rem + 2vw, 1.75rem)
+style={{ padding: 'var(--space-fluid-lg)' }}  // clamp(1.5rem, 1rem + 3vw, 2.5rem)
+style={{ gap: 'var(--space-fluid-xl)' }}      // clamp(2rem, 1.5rem + 4vw, 4rem)
+style={{ margin: 'var(--space-fluid-2xl)' }}  // clamp(3rem, 2rem + 6vw, 6rem)
+
+// Static spacing (for fixed elements)
+style={{ gap: 'var(--space-2)' }}   // 8px
+style={{ gap: 'var(--space-4)' }}   // 16px
+style={{ gap: 'var(--space-6)' }}   // 24px
+style={{ gap: 'var(--space-8)' }}   // 32px
+```
+
+## CRITICAL: Use CSS Variables, Not Hardcoded Values
+
+```tsx
+// BAD - Hardcoded values
+style={{ fontSize: '24px', marginTop: '16px' }}
+
+// GOOD - CSS custom properties
+style={{ fontSize: 'var(--step-2)', marginTop: 'var(--space-4)' }}
 ```
 
 ## Full-Screen Page Layout

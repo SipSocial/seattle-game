@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createLeonardoClient } from '@/src/lib/leonardo'
+import { createLeonardoClient, MODELS } from '@/src/lib/leonardo'
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,7 +13,15 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { prompt, width = 512, height = 512, numImages = 1 } = body
+    const { 
+      prompt, 
+      negativePrompt,
+      modelId = MODELS.PHOENIX, // Default to Phoenix for photorealistic
+      width = 768, 
+      height = 1024, 
+      numImages = 1,
+      guidance = 7,
+    } = body
 
     if (!prompt) {
       return NextResponse.json(
@@ -22,12 +30,15 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Start generation
+    // Start generation with all parameters
     const generationId = await client.generateImages({
       prompt,
+      negativePrompt,
+      modelId,
       width,
       height,
       numImages,
+      guidance,
     })
 
     return NextResponse.json({

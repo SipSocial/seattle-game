@@ -162,6 +162,8 @@ export function CampaignMapV2({
   // Handle play button
   const handlePlay = useCallback(() => {
     if (selectedStage && isStageUnlocked(selectedStage.id)) {
+      // Close modal first, then trigger navigation
+      setSelectedStage(null)
       onSelectStage(selectedStage.id)
     }
   }, [selectedStage, isStageUnlocked, onSelectStage])
@@ -222,8 +224,12 @@ export function CampaignMapV2({
 
       {/* Header */}
       <header
-        className="relative z-20 px-4 pt-4"
-        style={{ paddingTop: 'max(16px, env(safe-area-inset-top))' }}
+        className="relative z-20"
+        style={{ 
+          paddingTop: 'calc(env(safe-area-inset-top, 0px) + 16px)',
+          paddingLeft: '16px',
+          paddingRight: '16px',
+        }}
       >
         <div className="flex items-center gap-4">
           {/* Back button */}
@@ -480,52 +486,96 @@ export function CampaignMapV2({
         ))}
       </div>
 
-      {/* Bottom Quick Play Panel - 64px bottom padding for audio bar (48px) + 16px gap */}
+      {/* Bottom Quick Play Panel */}
       <div
         className="absolute bottom-0 left-0 right-0 z-20"
-        style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px)' }}
+        style={{ 
+          paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 72px)', // Room for audio bar
+          paddingLeft: '16px',
+          paddingRight: '16px',
+        }}
       >
         <motion.div
           initial={{ y: 100, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 1.5, type: 'spring', stiffness: 200 }}
-          className="px-4"
         >
-          <GlassCard variant="green" padding="md">
-            <div className="flex items-center gap-4">
-              {/* Opponent icon */}
+          <div
+            className="rounded-2xl overflow-hidden"
+            style={{
+              background: 'rgba(0, 34, 68, 0.85)',
+              backdropFilter: 'blur(16px)',
+              WebkitBackdropFilter: 'blur(16px)',
+              border: '1px solid rgba(105, 190, 40, 0.3)',
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(105, 190, 40, 0.1) inset',
+            }}
+          >
+            <div 
+              className="flex items-center"
+              style={{ padding: '16px 20px', gap: '16px' }}
+            >
+              {/* Week Badge */}
               <div
-                className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
+                className="flex-shrink-0 flex items-center justify-center"
                 style={{
+                  width: '48px',
+                  height: '48px',
+                  borderRadius: '12px',
                   background: `linear-gradient(135deg, #${currentStage.visuals.opponent.primary
                     .toString(16)
                     .padStart(6, '0')} 0%, #${currentStage.visuals.opponent.accent
                     .toString(16)
                     .padStart(6, '0')} 100%)`,
+                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
                 }}
               >
-                <span className="text-white font-black text-sm">
+                <span 
+                  className="font-black text-white"
+                  style={{ 
+                    fontSize: '14px',
+                    fontFamily: 'var(--font-bebas), var(--font-oswald), sans-serif',
+                    letterSpacing: '0.05em',
+                  }}
+                >
                   {currentStage.weekLabel.replace('Week ', 'W')}
                 </span>
               </div>
 
-              {/* Info */}
+              {/* Game Info */}
               <div className="flex-1 min-w-0">
-                <div className="text-[10px] text-[#69BE28] uppercase tracking-wider font-bold">
+                <div 
+                  className="uppercase tracking-wider font-bold"
+                  style={{ 
+                    fontSize: '10px',
+                    color: '#69BE28',
+                    marginBottom: '4px',
+                  }}
+                >
                   Next Game
                 </div>
-                <div className="text-white font-bold truncate">
+                <div 
+                  className="font-bold truncate"
+                  style={{ 
+                    fontSize: '16px',
+                    color: '#FFFFFF',
+                    fontFamily: 'var(--font-oswald), sans-serif',
+                  }}
+                >
                   {currentStage.location.isHome ? 'vs' : '@'}{' '}
                   {currentStage.visuals.opponent.name.split(' ').slice(-1)[0]}
                 </div>
               </div>
 
-              {/* Play button */}
-              <GradientButton size="sm" onClick={() => setSelectedStage(currentStage)}>
+              {/* Play Button */}
+              <GradientButton 
+                size="sm" 
+                onClick={() => setSelectedStage(currentStage)}
+                style={{ flexShrink: 0 }}
+              >
                 Play
               </GradientButton>
             </div>
-          </GlassCard>
+          </div>
         </motion.div>
       </div>
 

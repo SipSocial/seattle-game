@@ -1156,6 +1156,629 @@ class AudioManagerClass {
       noiseNode.source.stop(t + 0.4)
     }
   }
+  
+  // ============================================
+  // V3 OFFENSE/DEFENSE GAME SOUNDS
+  // ============================================
+  
+  /**
+   * SNAP - Ball snapped, play starts
+   * Quick low thump
+   */
+  public playSnap(): void {
+    if (!this.canPlay()) return
+    this.trackSound('snap')
+    
+    const t = this.now()
+    
+    // Low thump
+    const thump = this.osc('sine')
+    if (thump) {
+      thump.o.frequency.setValueAtTime(100, t)
+      thump.o.frequency.exponentialRampToValueAtTime(50, t + 0.08)
+      
+      thump.g.gain.setValueAtTime(0.35, t)
+      thump.g.gain.exponentialRampToValueAtTime(0.001, t + 0.12)
+      
+      thump.o.start(t)
+      thump.o.stop(t + 0.12)
+    }
+    
+    // Trigger haptic
+    this.triggerHaptic('light')
+  }
+  
+  /**
+   * THROW - Ball thrown
+   * Whoosh sound
+   */
+  public playThrow(): void {
+    if (!this.canPlay()) return
+    this.trackSound('throw')
+    
+    const t = this.now()
+    
+    // Whoosh
+    const swoosh = this.osc('triangle')
+    if (swoosh) {
+      swoosh.o.frequency.setValueAtTime(400, t)
+      swoosh.o.frequency.exponentialRampToValueAtTime(800, t + 0.08)
+      swoosh.o.frequency.exponentialRampToValueAtTime(300, t + 0.2)
+      
+      swoosh.g.gain.setValueAtTime(0.15, t)
+      swoosh.g.gain.linearRampToValueAtTime(0.2, t + 0.05)
+      swoosh.g.gain.exponentialRampToValueAtTime(0.001, t + 0.25)
+      
+      swoosh.o.start(t)
+      swoosh.o.stop(t + 0.25)
+    }
+    
+    this.triggerHaptic('medium')
+  }
+  
+  /**
+   * CATCH - Ball caught by receiver
+   * Satisfying catch sound
+   */
+  public playCatch(): void {
+    if (!this.canPlay()) return
+    this.trackSound('catch')
+    
+    const t = this.now()
+    
+    // Pop sound
+    const pop = this.osc('sine')
+    if (pop) {
+      pop.o.frequency.setValueAtTime(600, t)
+      pop.o.frequency.exponentialRampToValueAtTime(300, t + 0.05)
+      
+      pop.g.gain.setValueAtTime(0.25, t)
+      pop.g.gain.exponentialRampToValueAtTime(0.001, t + 0.1)
+      
+      pop.o.start(t)
+      pop.o.stop(t + 0.1)
+    }
+    
+    // Slap layer
+    const slap = this.noise(0.08)
+    if (slap) {
+      slap.g.gain.setValueAtTime(0.1, t)
+      slap.g.gain.exponentialRampToValueAtTime(0.001, t + 0.08)
+      
+      slap.source.start(t)
+      slap.source.stop(t + 0.08)
+    }
+    
+    this.triggerHaptic('heavy')
+  }
+  
+  /**
+   * INCOMPLETE - Pass incomplete
+   * Negative buzz
+   */
+  public playIncomplete(): void {
+    if (!this.canPlay()) return
+    this.trackSound('incomplete')
+    
+    const t = this.now()
+    
+    // Low buzz
+    const buzz = this.osc('sawtooth')
+    if (buzz) {
+      buzz.o.frequency.setValueAtTime(200, t)
+      buzz.o.frequency.exponentialRampToValueAtTime(100, t + 0.2)
+      
+      buzz.g.gain.setValueAtTime(0.15, t)
+      buzz.g.gain.exponentialRampToValueAtTime(0.001, t + 0.25)
+      
+      buzz.o.start(t)
+      buzz.o.stop(t + 0.25)
+    }
+    
+    this.triggerHaptic('medium')
+  }
+  
+  /**
+   * INTERCEPTION - Turnover!
+   * Dramatic sting
+   */
+  public playInterception(): void {
+    if (!this.canPlay()) return
+    this.trackSound('interception')
+    
+    const t = this.now()
+    
+    // Dramatic descending chord
+    const freqs = [392, 311, 261] // G, Eb, C - diminished feel
+    
+    freqs.forEach((freq, i) => {
+      const node = this.osc('sawtooth')
+      if (!node) return
+      
+      const start = t + i * 0.05
+      
+      node.o.frequency.setValueAtTime(freq, start)
+      node.o.frequency.exponentialRampToValueAtTime(freq * 0.9, start + 0.3)
+      
+      node.g.gain.setValueAtTime(0.2, start)
+      node.g.gain.exponentialRampToValueAtTime(0.001, start + 0.4)
+      
+      node.o.start(start)
+      node.o.stop(start + 0.4)
+    })
+    
+    // Impact
+    const impact = this.osc('sine')
+    if (impact) {
+      impact.o.frequency.setValueAtTime(80, t)
+      impact.o.frequency.exponentialRampToValueAtTime(30, t + 0.15)
+      
+      impact.g.gain.setValueAtTime(0.4, t)
+      impact.g.gain.exponentialRampToValueAtTime(0.001, t + 0.2)
+      
+      impact.o.start(t)
+      impact.o.stop(t + 0.2)
+    }
+    
+    this.triggerHaptic('heavy')
+  }
+  
+  /**
+   * SACK - QB sacked
+   * Big crunch impact
+   */
+  public playSack(): void {
+    if (!this.canPlay()) return
+    this.trackSound('sack')
+    
+    const t = this.now()
+    
+    // Deep impact
+    const impact = this.osc('sine')
+    if (impact) {
+      impact.o.frequency.setValueAtTime(150, t)
+      impact.o.frequency.exponentialRampToValueAtTime(40, t + 0.15)
+      
+      impact.g.gain.setValueAtTime(0.5, t)
+      impact.g.gain.exponentialRampToValueAtTime(0.001, t + 0.2)
+      
+      impact.o.start(t)
+      impact.o.stop(t + 0.2)
+    }
+    
+    // Crunch
+    const crunch = this.noise(0.15)
+    if (crunch) {
+      crunch.g.gain.setValueAtTime(0.15, t)
+      crunch.g.gain.exponentialRampToValueAtTime(0.001, t + 0.15)
+      
+      crunch.source.start(t)
+      crunch.source.stop(t + 0.15)
+    }
+    
+    this.triggerHaptic('heavy')
+  }
+  
+  /**
+   * JUKE - Player juke move
+   * Quick swoosh
+   */
+  public playJuke(): void {
+    if (!this.canPlay()) return
+    this.trackSound('juke')
+    
+    const t = this.now()
+    
+    const swoosh = this.osc('sine')
+    if (swoosh) {
+      swoosh.o.frequency.setValueAtTime(300, t)
+      swoosh.o.frequency.exponentialRampToValueAtTime(600, t + 0.05)
+      swoosh.o.frequency.exponentialRampToValueAtTime(200, t + 0.12)
+      
+      swoosh.g.gain.setValueAtTime(0.15, t)
+      swoosh.g.gain.exponentialRampToValueAtTime(0.001, t + 0.15)
+      
+      swoosh.o.start(t)
+      swoosh.o.stop(t + 0.15)
+    }
+    
+    this.triggerHaptic('light')
+  }
+  
+  /**
+   * FIRST DOWN - Got a first down
+   * Positive ding
+   */
+  public playFirstDown(): void {
+    if (!this.canPlay()) return
+    this.trackSound('firstDown')
+    
+    const t = this.now()
+    
+    // Rising two-note
+    const notes = [523, 659] // C5, E5
+    
+    notes.forEach((freq, i) => {
+      const node = this.osc('sine')
+      if (!node) return
+      
+      const start = t + i * 0.08
+      
+      node.o.frequency.setValueAtTime(freq, start)
+      
+      node.g.gain.setValueAtTime(0.2, start)
+      node.g.gain.exponentialRampToValueAtTime(0.001, start + 0.15)
+      
+      node.o.start(start)
+      node.o.stop(start + 0.15)
+    })
+    
+    this.triggerHaptic('medium')
+  }
+  
+  /**
+   * COUNTDOWN TICK - Auto-snap countdown
+   * Clock tick sound
+   */
+  public playCountdownTick(): void {
+    if (!this.canPlay()) return
+    this.trackSound('countdownTick')
+    
+    const t = this.now()
+    
+    const tick = this.osc('triangle')
+    if (tick) {
+      tick.o.frequency.setValueAtTime(1000, t)
+      tick.o.frequency.exponentialRampToValueAtTime(500, t + 0.03)
+      
+      tick.g.gain.setValueAtTime(0.12, t)
+      tick.g.gain.exponentialRampToValueAtTime(0.001, t + 0.05)
+      
+      tick.o.start(t)
+      tick.o.stop(t + 0.05)
+    }
+    
+    this.triggerHaptic('light')
+  }
+  
+  /**
+   * HUT - Snap command
+   * Quick bark sound
+   */
+  public playHut(): void {
+    if (!this.canPlay()) return
+    this.trackSound('hut')
+    
+    const t = this.now()
+    
+    // Sharp attack
+    const hut = this.osc('square')
+    if (hut) {
+      hut.o.frequency.setValueAtTime(300, t)
+      hut.o.frequency.exponentialRampToValueAtTime(150, t + 0.06)
+      
+      hut.g.gain.setValueAtTime(0.2, t)
+      hut.g.gain.exponentialRampToValueAtTime(0.001, t + 0.1)
+      
+      hut.o.start(t)
+      hut.o.stop(t + 0.1)
+    }
+    
+    this.triggerHaptic('medium')
+  }
+  
+  // ============================================
+  // LAND OF THE 12s - REACTIVE CROWD SYSTEM
+  // ============================================
+  
+  private crowdAmbientSource: AudioBufferSourceNode | null = null
+  private crowdAmbientGain: GainNode | null = null
+  private crowdLevel: 'quiet' | 'normal' | 'loud' | 'deafening' = 'normal'
+  
+  /**
+   * Start ambient stadium crowd noise
+   * Call this when game starts
+   */
+  public startCrowdAmbience(): void {
+    if (!this.canPlay()) return
+    if (this.crowdAmbientSource) return // Already playing
+    
+    this.trackSound('crowdAmbience:start')
+    
+    // Create long noise buffer for ambient crowd
+    const duration = 10 // 10 second loop
+    const sampleRate = this.ctx!.sampleRate
+    const bufferSize = sampleRate * duration
+    const buffer = this.ctx!.createBuffer(2, bufferSize, sampleRate) // Stereo
+    
+    // Generate "crowd murmur" noise
+    for (let channel = 0; channel < 2; channel++) {
+      const data = buffer.getChannelData(channel)
+      let prev = 0
+      for (let i = 0; i < bufferSize; i++) {
+        // Low-pass filtered noise for ambient crowd sound
+        const noise = Math.random() * 2 - 1
+        prev = prev * 0.97 + noise * 0.03 // Very smooth
+        data[i] = prev + (Math.sin(i * 0.0001) * 0.1) // Add low frequency swell
+      }
+    }
+    
+    this.crowdAmbientSource = this.ctx!.createBufferSource()
+    this.crowdAmbientSource.buffer = buffer
+    this.crowdAmbientSource.loop = true
+    
+    this.crowdAmbientGain = this.ctx!.createGain()
+    this.crowdAmbientGain.gain.value = 0.03 // Start quiet
+    
+    // Bandpass filter for crowd-like sound
+    const filter = this.ctx!.createBiquadFilter()
+    filter.type = 'bandpass'
+    filter.frequency.value = 400
+    filter.Q.value = 0.5
+    
+    this.crowdAmbientSource.connect(filter)
+    filter.connect(this.crowdAmbientGain)
+    this.crowdAmbientGain.connect(this.masterGain!)
+    
+    this.crowdAmbientSource.start()
+    
+    log('Crowd ambience started')
+  }
+  
+  /**
+   * Stop ambient crowd noise
+   * Call this when game ends
+   */
+  public stopCrowdAmbience(): void {
+    if (this.crowdAmbientSource) {
+      try {
+        this.crowdAmbientSource.stop()
+      } catch (e) {
+        // Already stopped
+      }
+      this.crowdAmbientSource = null
+      this.crowdAmbientGain = null
+      log('Crowd ambience stopped')
+    }
+  }
+  
+  /**
+   * Set crowd intensity level
+   * Adjusts ambient volume and triggers reactions
+   */
+  public setCrowdLevel(level: 'quiet' | 'normal' | 'loud' | 'deafening'): void {
+    this.crowdLevel = level
+    
+    if (!this.crowdAmbientGain || !this.ctx) return
+    
+    const t = this.now()
+    const volumeMap = {
+      quiet: 0.02,
+      normal: 0.04,
+      loud: 0.08,
+      deafening: 0.15,
+    }
+    
+    this.crowdAmbientGain.gain.setTargetAtTime(volumeMap[level], t, 0.5)
+    log('Crowd level:', level)
+  }
+  
+  /**
+   * BIG PLAY REACTION - Crowd goes wild!
+   * Use for touchdowns, big catches, big stops
+   */
+  public playCrowdBigPlay(): void {
+    if (!this.canPlay()) return
+    this.trackSound('crowd:bigPlay')
+    
+    const t = this.now()
+    
+    // Temporarily boost ambient
+    if (this.crowdAmbientGain) {
+      const current = this.crowdAmbientGain.gain.value
+      this.crowdAmbientGain.gain.setValueAtTime(current, t)
+      this.crowdAmbientGain.gain.linearRampToValueAtTime(0.2, t + 0.2)
+      this.crowdAmbientGain.gain.linearRampToValueAtTime(0.12, t + 1.5)
+      this.crowdAmbientGain.gain.setTargetAtTime(current, t + 2, 0.8)
+    }
+    
+    // ROAR - layered noise swell
+    for (let i = 0; i < 3; i++) {
+      const noise = this.noise(2)
+      if (!noise) continue
+      
+      const filter = this.ctx!.createBiquadFilter()
+      filter.type = 'bandpass'
+      filter.frequency.value = 300 + i * 150
+      filter.Q.value = 1
+      
+      noise.g.disconnect()
+      noise.g.connect(filter)
+      filter.connect(this.masterGain!)
+      
+      const start = t + i * 0.05
+      noise.g.gain.setValueAtTime(0, start)
+      noise.g.gain.linearRampToValueAtTime(0.12, start + 0.15)
+      noise.g.gain.linearRampToValueAtTime(0.08, start + 0.8)
+      noise.g.gain.exponentialRampToValueAtTime(0.001, start + 1.8)
+      
+      noise.source.start(start)
+      noise.source.stop(start + 2)
+    }
+    
+    // Sub-bass rumble (stadium shake)
+    const rumble = this.osc('sine')
+    if (rumble) {
+      rumble.o.frequency.setValueAtTime(50, t)
+      rumble.o.frequency.linearRampToValueAtTime(35, t + 1)
+      
+      rumble.g.gain.setValueAtTime(0.25, t)
+      rumble.g.gain.linearRampToValueAtTime(0.15, t + 0.5)
+      rumble.g.gain.exponentialRampToValueAtTime(0.001, t + 1.5)
+      
+      rumble.o.start(t)
+      rumble.o.stop(t + 1.5)
+    }
+    
+    this.triggerHaptic('heavy')
+  }
+  
+  /**
+   * CROWD OOH - Near miss, close play
+   * Use for almost-catches, near interceptions
+   */
+  public playCrowdOoh(): void {
+    if (!this.canPlay()) return
+    this.trackSound('crowd:ooh')
+    
+    const t = this.now()
+    
+    // Descending "ooh" tone
+    const ooh = this.osc('triangle')
+    if (ooh) {
+      ooh.o.frequency.setValueAtTime(450, t)
+      ooh.o.frequency.exponentialRampToValueAtTime(280, t + 0.4)
+      
+      ooh.g.gain.setValueAtTime(0.08, t)
+      ooh.g.gain.exponentialRampToValueAtTime(0.001, t + 0.5)
+      
+      ooh.o.start(t)
+      ooh.o.stop(t + 0.5)
+    }
+    
+    // Brief crowd noise
+    const noise = this.noise(0.5)
+    if (noise) {
+      noise.g.gain.setValueAtTime(0.04, t)
+      noise.g.gain.exponentialRampToValueAtTime(0.001, t + 0.5)
+      
+      noise.source.start(t)
+      noise.source.stop(t + 0.5)
+    }
+  }
+  
+  /**
+   * CROWD GROAN - Bad play
+   * Use for sacks, interceptions, turnovers
+   */
+  public playCrowdGroan(): void {
+    if (!this.canPlay()) return
+    this.trackSound('crowd:groan')
+    
+    const t = this.now()
+    
+    // Descending disappointed sound
+    const groan = this.osc('triangle')
+    if (groan) {
+      groan.o.frequency.setValueAtTime(300, t)
+      groan.o.frequency.exponentialRampToValueAtTime(150, t + 0.6)
+      
+      groan.g.gain.setValueAtTime(0.1, t)
+      groan.g.gain.linearRampToValueAtTime(0.06, t + 0.3)
+      groan.g.gain.exponentialRampToValueAtTime(0.001, t + 0.8)
+      
+      groan.o.start(t)
+      groan.o.stop(t + 0.8)
+    }
+    
+    // Crowd murmur down
+    if (this.crowdAmbientGain) {
+      const current = this.crowdAmbientGain.gain.value
+      this.crowdAmbientGain.gain.setValueAtTime(current, t)
+      this.crowdAmbientGain.gain.linearRampToValueAtTime(current * 0.5, t + 0.3)
+      this.crowdAmbientGain.gain.setTargetAtTime(current, t + 1, 0.5)
+    }
+  }
+  
+  /**
+   * 12TH MAN ROAR - Ultimate crowd moment
+   * Use for game-winning TDs, big defensive stops
+   */
+  public play12thManRoar(): void {
+    if (!this.canPlay()) return
+    this.trackSound('12thMan:ROAR')
+    
+    const t = this.now()
+    
+    // Epic sustained roar
+    if (this.crowdAmbientGain) {
+      const current = this.crowdAmbientGain.gain.value
+      this.crowdAmbientGain.gain.setValueAtTime(current, t)
+      this.crowdAmbientGain.gain.linearRampToValueAtTime(0.25, t + 0.3)
+      this.crowdAmbientGain.gain.setValueAtTime(0.25, t + 2)
+      this.crowdAmbientGain.gain.linearRampToValueAtTime(0.15, t + 3)
+      this.crowdAmbientGain.gain.setTargetAtTime(current, t + 4, 1)
+    }
+    
+    // Stadium-shaking bass
+    const bass = this.osc('sine')
+    if (bass) {
+      bass.o.frequency.setValueAtTime(40, t)
+      bass.o.frequency.linearRampToValueAtTime(55, t + 1)
+      bass.o.frequency.linearRampToValueAtTime(35, t + 3)
+      
+      bass.g.gain.setValueAtTime(0.4, t)
+      bass.g.gain.linearRampToValueAtTime(0.3, t + 1.5)
+      bass.g.gain.exponentialRampToValueAtTime(0.001, t + 3.5)
+      
+      bass.o.start(t)
+      bass.o.stop(t + 3.5)
+    }
+    
+    // Layered noise walls
+    for (let i = 0; i < 5; i++) {
+      const noise = this.noise(4)
+      if (!noise) continue
+      
+      const filter = this.ctx!.createBiquadFilter()
+      filter.type = 'bandpass'
+      filter.frequency.value = 200 + i * 100
+      filter.Q.value = 0.8
+      
+      noise.g.disconnect()
+      noise.g.connect(filter)
+      filter.connect(this.masterGain!)
+      
+      const delay = i * 0.1
+      noise.g.gain.setValueAtTime(0, t + delay)
+      noise.g.gain.linearRampToValueAtTime(0.08, t + delay + 0.2)
+      noise.g.gain.setValueAtTime(0.08, t + delay + 2)
+      noise.g.gain.exponentialRampToValueAtTime(0.001, t + delay + 3.5)
+      
+      noise.source.start(t + delay)
+      noise.source.stop(t + delay + 4)
+    }
+    
+    // Heavy haptic pattern
+    this.triggerHaptic('heavy')
+    setTimeout(() => this.triggerHaptic('heavy'), 200)
+    setTimeout(() => this.triggerHaptic('heavy'), 400)
+  }
+
+  // ============================================
+  // HAPTIC FEEDBACK
+  // ============================================
+  
+  private triggerHaptic(intensity: 'light' | 'medium' | 'heavy'): void {
+    if (typeof navigator === 'undefined') return
+    if (!('vibrate' in navigator)) return
+    
+    try {
+      switch (intensity) {
+        case 'light':
+          navigator.vibrate(10)
+          break
+        case 'medium':
+          navigator.vibrate(25)
+          break
+        case 'heavy':
+          navigator.vibrate([30, 10, 30])
+          break
+      }
+    } catch (e) {
+      // Vibration API not supported or blocked
+    }
+  }
 }
 
 // Singleton
