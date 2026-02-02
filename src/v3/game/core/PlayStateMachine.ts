@@ -411,6 +411,15 @@ export class PlayStateMachine extends StateMachine<PlayState> {
   }
   
   /**
+   * QB sacked (called by scene when defender reaches QB)
+   */
+  qbSacked(): void {
+    if (this.getCurrentState() === 'READ' || this.getCurrentState() === 'DROPBACK') {
+      this.transition('SACKED', true)
+    }
+  }
+  
+  /**
    * Get the last catch result
    */
   getCatchResult(): CatchResult | null {

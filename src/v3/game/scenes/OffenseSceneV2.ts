@@ -13,7 +13,7 @@
 
 import Phaser from 'phaser'
 import { V3_CONFIG, getDifficultyForWeek, getPocketTime, getDefenderSpeed } from '../config/gameConfig'
-import { PlayStateMachine, PlayResolution } from '../core/PlayStateMachine'
+import { PlayStateMachine, PlayResolution, PlayState } from '../core/PlayStateMachine'
 import { CameraController } from '../systems/CameraController'
 import { RouteRunner, PLAY_BOOK, ThrowQuality, getThrowQualityConfig } from '../systems/RouteSystem'
 import { AudioManager } from '../../../game/systems/AudioManager'

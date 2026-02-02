@@ -284,10 +284,11 @@ export class DefenseScene extends Phaser.Scene {
     this.stateMachine.addStates(states)
     
     // Listen for state changes
-    this.stateMachine.on('stateChange', (data: { from: string | null, to: string }) => {
+    this.stateMachine.on('stateChange', ((...args: unknown[]) => {
+      const data = args[0] as { from: string | null, to: string }
       console.log(`[DefenseScene] State: ${data.from} -> ${data.to}`)
       this.emitGameState()
-    })
+    }))
   }
   
   // ============================================================================
@@ -602,15 +603,17 @@ export class DefenseScene extends Phaser.Scene {
   
   private setupControlEvents(): void {
     // Pre-snap: Tap to select defender
-    this.controls.on('preSnapTap', (data: { worldX: number, worldY: number }) => {
+    this.controls.on('preSnapTap', ((...args: unknown[]) => {
+      const data = args[0] as { worldX: number, worldY: number }
       const tappedIdx = this.findDefenderAt(data.worldX, data.worldY)
       if (tappedIdx >= 0) {
         this.setControlledDefender(tappedIdx)
       }
-    })
+    }))
     
     // Pre-snap: Drag defender
-    this.controls.on('preSnapDrag', (data: { defenderIndex: number, worldX: number, worldY: number }) => {
+    this.controls.on('preSnapDrag', ((...args: unknown[]) => {
+      const data = args[0] as { defenderIndex: number, worldX: number, worldY: number }
       const def = this.defenders[data.defenderIndex]
       if (def) {
         const maxDist = this.controls.getMaxAdjustDistance()
@@ -624,18 +627,20 @@ export class DefenseScene extends Phaser.Scene {
           def.container.setPosition(def.x, def.y)
         }
       }
-    })
+    }))
     
     // In play: Tap to switch control
-    this.controls.on('inPlayTap', (data: { worldX: number, worldY: number }) => {
+    this.controls.on('inPlayTap', ((...args: unknown[]) => {
+      const data = args[0] as { worldX: number, worldY: number }
       const tappedIdx = this.findDefenderAt(data.worldX, data.worldY)
       if (tappedIdx >= 0) {
         this.setControlledDefender(tappedIdx)
       }
-    })
+    }))
     
     // Rush moves (D-line)
-    this.controls.on('rushMove', (data: { move: string, speedBoost: number, duration: number }) => {
+    this.controls.on('rushMove', ((...args: unknown[]) => {
+      const data = args[0] as { move: string, speedBoost: number, duration: number }
       const def = this.defenders[this.controlledDefenderIndex]
       if (def) {
         // Visual feedback
@@ -650,10 +655,11 @@ export class DefenseScene extends Phaser.Scene {
         // Speed boost applied in update via controls
         this.events.emit('rushMoveActivated', data)
       }
-    })
+    }))
     
     // Coverage actions (jump/dive for INTs)
-    this.controls.on('coverageAction', (data: { action: string }) => {
+    this.controls.on('coverageAction', ((...args: unknown[]) => {
+      const data = args[0] as { action: string }
       const def = this.defenders[this.controlledDefenderIndex]
       if (def) {
         if (data.action === 'jump') {
@@ -674,7 +680,7 @@ export class DefenseScene extends Phaser.Scene {
           })
         }
       }
-    })
+    }))
   }
   
   // ============================================================================

@@ -1041,7 +1041,20 @@ export const useStatsStore = create<StatsState>()(
           
           if (error) throw error
           
-          const entries: LeaderboardEntry[] = (data || []).map((row, index) => ({
+          // Type the raw data from Supabase
+          interface GameScoreRow {
+            id: string
+            player_id: string
+            email: string
+            username: string | null
+            score: number
+            total_score: number
+            games_won: number
+            week: number
+            created_at: string
+          }
+          
+          const entries: LeaderboardEntry[] = ((data as GameScoreRow[] | null) || []).map((row, index) => ({
             id: row.id,
             rank: index + 1,
             playerId: row.player_id,
@@ -1096,7 +1109,10 @@ export const useStatsStore = create<StatsState>()(
         )
         
         try {
-          const { error } = await supabase.from('game_scores').insert({
+          // Use type assertion for untyped Supabase table
+          const { error } = await (supabase.from('game_scores') as unknown as {
+            insert: (data: Record<string, unknown>) => Promise<{ error: Error | null }>
+          }).insert({
             email,
             username,
             week: currentGame.weekId,
