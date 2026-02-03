@@ -323,8 +323,8 @@ export default function PlayerSelect({ gameMode, onSelect }: PlayerSelectProps) 
           ref={playerImageRef}
           className="relative w-full"
           style={{ 
-            maxWidth: 'clamp(380px, 100vw, 600px)',
-            height: '95vh',
+            maxWidth: 'clamp(450px, 110vw, 800px)',
+            height: '105vh',
             willChange: 'transform',
           }}
         >
@@ -335,7 +335,9 @@ export default function PlayerSelect({ gameMode, onSelect }: PlayerSelectProps) 
               alt={player.name}
               className="absolute inset-x-0 bottom-0 w-full h-full object-contain object-bottom"
               style={{
-                filter: `drop-shadow(0 0 60px ${modeColor}80) drop-shadow(0 25px 50px rgba(0,0,0,0.7))`,
+                filter: `drop-shadow(0 0 80px ${modeColor}90) drop-shadow(0 30px 60px rgba(0,0,0,0.8))`,
+                transform: 'scale(1.15)',
+                transformOrigin: 'bottom center',
               }}
               custom={direction}
               variants={slideVariants}
@@ -433,10 +435,10 @@ export default function PlayerSelect({ gameMode, onSelect }: PlayerSelectProps) 
             <span 
               className="font-black"
               style={{ 
-                fontSize: 'clamp(64px, 15vw, 120px)',
-                WebkitTextStroke: `2px ${modeColor}50`,
+                fontSize: 'clamp(80px, 20vw, 160px)',
+                WebkitTextStroke: `3px ${modeColor}60`,
                 color: 'transparent',
-                textShadow: `0 0 80px ${modeColor}30`,
+                textShadow: `0 0 100px ${modeColor}40`,
                 fontFamily: 'var(--font-oswald), sans-serif',
               }}
             >
