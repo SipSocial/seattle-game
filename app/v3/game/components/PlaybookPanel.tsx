@@ -1,7 +1,7 @@
 'use client'
 
-import { motion, AnimatePresence, PanInfo } from 'framer-motion'
-import { useCallback, useMemo } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { useCallback, useMemo, useRef } from 'react'
 
 // Haptic
 function haptic(type: 'light' | 'success' | 'error' = 'light') {
@@ -41,19 +41,19 @@ export const PLAYBOOK: PlayDefinition[] = [
 ]
 
 // Compact route icon
-function RouteIcon({ play, size = 40 }: { play: PlayDefinition; size?: number }) {
+function RouteIcon({ play, size = 48 }: { play: PlayDefinition; size?: number }) {
   const cat = CAT[play.category]
   return (
     <svg viewBox="0 0 100 100" style={{ width: size, height: size }}>
-      <rect x="0" y="0" width="100" height="100" rx="14" fill="rgba(0,30,0,0.85)" />
+      <rect x="0" y="0" width="100" height="100" rx="14" fill="rgba(0,30,0,0.9)" />
       <line x1="10" y1="82" x2="90" y2="82" stroke="rgba(105,190,40,0.5)" strokeWidth="2" />
       {play.routes.map((r, i) => (
         <g key={i}>
-          <path d={r.path} fill="none" stroke={cat.color} strokeWidth="3" strokeLinecap="round" />
-          <circle cx={r.startX} cy={r.startY} r="4" fill="#fff" />
+          <path d={r.path} fill="none" stroke={cat.color} strokeWidth="3.5" strokeLinecap="round" />
+          <circle cx={r.startX} cy={r.startY} r="5" fill="#fff" />
         </g>
       ))}
-      <circle cx="50" cy="90" r="5" fill="#69BE28" />
+      <circle cx="50" cy="90" r="6" fill="#69BE28" />
     </svg>
   )
 }
@@ -67,168 +67,228 @@ interface Props {
 }
 
 export function PlaybookPanel({ currentWeek, onSelectPlay, isVisible, gameState }: Props) {
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const isDragging = useRef(false)
+  const startX = useRef(0)
+  const scrollLeft = useRef(0)
+  
   const plays = useMemo(() => 
     PLAYBOOK.filter(p => p.unlockWeek <= currentWeek + 1), 
     [currentWeek]
   )
   
-  const handleTap = useCallback((play: PlayDefinition, e: React.PointerEvent | React.MouseEvent) => {
-    console.log('[PlaybookPanel] handleTap:', play.name, 'week:', currentWeek, 'unlockWeek:', play.unlockWeek)
+  // Native scroll handling for better mobile support
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    if (!scrollRef.current) return
+    isDragging.current = true
+    startX.current = e.pageX - scrollRef.current.offsetLeft
+    scrollLeft.current = scrollRef.current.scrollLeft
+  }, [])
+  
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (!isDragging.current || !scrollRef.current) return
     e.preventDefault()
-    e.stopPropagation()
+    const x = e.pageX - scrollRef.current.offsetLeft
+    const walk = (x - startX.current) * 1.5
+    scrollRef.current.scrollLeft = scrollLeft.current - walk
+  }, [])
+  
+  const handleMouseUp = useCallback(() => {
+    isDragging.current = false
+  }, [])
+  
+  const handlePlayClick = useCallback((play: PlayDefinition) => {
+    // Prevent if we were dragging
+    if (isDragging.current) {
+      console.log('[PlaybookPanel] Ignoring click - was dragging')
+      return
+    }
+    
+    console.log('[PlaybookPanel] Play clicked:', play.name, 'locked:', play.unlockWeek > currentWeek)
     
     if (play.unlockWeek > currentWeek) {
-      console.log('[PlaybookPanel] Play is locked')
       haptic('error')
       return
     }
+    
     haptic('success')
     const globalIdx = PLAYBOOK.findIndex(p => p.id === play.id)
     console.log('[PlaybookPanel] Calling onSelectPlay with index:', globalIdx)
     onSelectPlay(globalIdx)
   }, [currentWeek, onSelectPlay])
   
-  const handleDragEnd = useCallback((_: unknown, info: PanInfo) => {
-    // Just scrolling
+  // iOS Safari specific touch handler
+  const handleTouchStart = useCallback((play: PlayDefinition, e: React.TouchEvent) => {
+    e.stopPropagation()
+    // Mark that we started a touch (not a drag)
+    isDragging.current = false
   }, [])
+  
+  const handleTouchEnd = useCallback((play: PlayDefinition, e: React.TouchEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    
+    // Only trigger if it wasn't a drag
+    if (!isDragging.current) {
+      console.log('[PlaybookPanel] Touch end - triggering play:', play.name)
+      handlePlayClick(play)
+    }
+  }, [handlePlayClick])
   
   const state = gameState || { down: 1, yardsToGo: 10, yardLine: 25, quarter: 1, clock: '1:00' }
   const downText = ['1ST', '2ND', '3RD', '4TH'][state.down - 1] || '1ST'
-  
-  // Position panel based on field position
-  // As we get closer to goal (yardLine increases), panel moves UP on screen
-  // yardLine 20 (own territory) = bottom, yardLine 80+ (red zone) = higher
-  const fieldProgress = Math.min(1, Math.max(0, (state.yardLine - 20) / 60)) // 0-1
-  // Panel Y position: starts at ~55% from top, moves up to ~35%
-  const panelTop = 55 - (fieldProgress * 20) // 55% → 35%
   
   return (
     <AnimatePresence>
       {isVisible && (
         <motion.div
-          className="absolute inset-x-0 z-30 pointer-events-none"
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.9 }}
-          transition={{ type: 'spring', damping: 25, stiffness: 400 }}
+          className="fixed bottom-0 left-0 right-0"
+          initial={{ opacity: 0, y: 100 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 100 }}
+          transition={{ type: 'spring', damping: 25, stiffness: 300 }}
           style={{
-            top: `${panelTop}%`,
+            zIndex: 9999, // Maximum z-index to ensure it's on top
+            paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 8px)',
+            pointerEvents: 'auto', // Explicitly enable pointer events
           }}
         >
-          {/* Floating glass panel */}
+          {/* Glass panel container */}
           <div 
-            className="pointer-events-auto"
             style={{
-              margin: '0 12px',
-              background: 'rgba(5,15,25,0.85)',
-              backdropFilter: 'blur(16px)',
-              WebkitBackdropFilter: 'blur(16px)',
-              border: '1px solid rgba(255,255,255,0.12)',
-              borderRadius: '16px',
-              boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+              margin: '0 8px',
+              background: 'linear-gradient(180deg, rgba(10,25,40,0.95) 0%, rgba(5,15,30,0.98) 100%)',
+              backdropFilter: 'blur(20px)',
+              WebkitBackdropFilter: 'blur(20px)',
+              border: '1px solid rgba(105,190,40,0.25)',
+              borderRadius: '20px',
+              boxShadow: '0 -4px 30px rgba(0,0,0,0.5), 0 0 60px rgba(105,190,40,0.1)',
               overflow: 'hidden',
             }}
           >
-            {/* Down & distance header */}
+            {/* Header with down & distance */}
             <div style={{
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
-              padding: '8px 12px',
-              background: 'rgba(0,0,0,0.3)',
+              padding: '10px 16px',
+              background: 'rgba(0,0,0,0.4)',
               borderBottom: '1px solid rgba(255,255,255,0.08)',
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <span style={{ 
-                  fontSize: '14px', 
+                  fontSize: '16px', 
                   fontWeight: 800, 
                   color: '#69BE28',
                   fontFamily: 'var(--font-oswald)',
+                  letterSpacing: '0.02em',
                 }}>
                   {downText} & {state.yardsToGo}
                 </span>
-                <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)' }}>
-                  {state.yardLine > 50 ? `OPP ${100 - state.yardLine}` : state.yardLine}
+                <span style={{ 
+                  fontSize: '11px', 
+                  color: 'rgba(255,255,255,0.5)',
+                  background: 'rgba(255,255,255,0.08)',
+                  padding: '2px 8px',
+                  borderRadius: '10px',
+                }}>
+                  {state.yardLine > 50 ? `OPP ${100 - state.yardLine}` : `OWN ${state.yardLine}`}
                 </span>
               </div>
-              <span style={{ 
-                fontSize: '9px', 
-                color: 'rgba(255,255,255,0.35)',
-                letterSpacing: '0.08em',
-              }}>
-                TAP TO SNAP
-              </span>
+              <motion.span 
+                style={{ 
+                  fontSize: '11px', 
+                  color: '#69BE28',
+                  letterSpacing: '0.1em',
+                  fontWeight: 600,
+                }}
+                animate={{ opacity: [0.5, 1, 0.5] }}
+                transition={{ duration: 1.5, repeat: Infinity }}
+              >
+                SELECT PLAY
+              </motion.span>
             </div>
             
-            {/* Play cards - horizontal scroll */}
-            <div style={{ overflow: 'hidden', padding: '10px 0' }}>
-              <motion.div
-                drag="x"
-                dragConstraints={{ left: -(plays.length * 54 - 200), right: 0 }}
-                dragElastic={0.1}
-                onDragEnd={handleDragEnd}
-                style={{
-                  display: 'flex',
-                  gap: '8px',
-                  paddingLeft: '12px',
-                  paddingRight: '40px',
-                  cursor: 'grab',
-                }}
-              >
-                {plays.map((play) => {
-                  const locked = play.unlockWeek > currentWeek
-                  const cat = CAT[play.category]
-                  return (
-                    <motion.div
-                      key={play.id}
-                      onPointerDown={(e) => handleTap(play, e)}
-                      onTouchEnd={(e) => e.stopPropagation()}
-                      whileTap={{ scale: locked ? 1 : 0.9 }}
-                      style={{
-                        flexShrink: 0,
-                        cursor: locked ? 'not-allowed' : 'pointer',
-                        opacity: locked ? 0.35 : 1,
-                        touchAction: 'manipulation',
-                      }}
-                    >
+            {/* Play cards - native horizontal scroll */}
+            <div 
+              ref={scrollRef}
+              onMouseDown={handleMouseDown}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
+              onMouseLeave={handleMouseUp}
+              style={{ 
+                display: 'flex',
+                gap: '10px',
+                padding: '12px 12px 14px',
+                overflowX: 'auto',
+                overflowY: 'hidden',
+                WebkitOverflowScrolling: 'touch',
+                scrollbarWidth: 'none',
+                msOverflowStyle: 'none',
+                cursor: 'grab',
+              }}
+            >
+              {plays.map((play) => {
+                const locked = play.unlockWeek > currentWeek
+                const cat = CAT[play.category]
+                return (
+                  <div
+                    key={play.id}
+                    role="button"
+                    tabIndex={locked ? -1 : 0}
+                    onClick={() => !locked && handlePlayClick(play)}
+                    onTouchStart={(e) => handleTouchStart(play, e)}
+                    onTouchEnd={(e) => !locked && handleTouchEnd(play, e)}
+                    onKeyDown={(e) => e.key === 'Enter' && !locked && handlePlayClick(play)}
+                    aria-disabled={locked}
+                    style={{
+                      flexShrink: 0,
+                      cursor: locked ? 'not-allowed' : 'pointer',
+                      opacity: locked ? 0.4 : 1,
+                      touchAction: 'manipulation',
+                      WebkitTouchCallout: 'none',
+                      WebkitUserSelect: 'none',
+                      userSelect: 'none',
+                      background: locked ? 'rgba(50,50,50,0.5)' : `linear-gradient(135deg, ${cat.color}20 0%, ${cat.color}08 100%)`,
+                      border: `2px solid ${locked ? 'rgba(100,100,100,0.3)' : cat.color}`,
+                      borderRadius: '14px',
+                      padding: '10px 12px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: '6px',
+                      position: 'relative',
+                      boxShadow: locked ? 'none' : `0 4px 20px ${cat.color}30`,
+                      WebkitTapHighlightColor: 'transparent',
+                      minWidth: '70px',
+                    }}
+                  >
+                    <RouteIcon play={play} size={52} />
+                    <span style={{
+                      fontSize: '11px',
+                      fontWeight: 700,
+                      color: '#fff',
+                      letterSpacing: '0.03em',
+                      fontFamily: 'var(--font-oswald)',
+                    }}>
+                      {play.name}
+                    </span>
+                    {locked && (
                       <div style={{
-                        background: `${cat.color}15`,
-                        border: `1px solid ${cat.color}50`,
-                        borderRadius: '10px',
-                        padding: '6px',
+                        position: 'absolute',
+                        inset: 0,
+                        background: 'rgba(0,0,0,0.7)',
+                        borderRadius: '12px',
                         display: 'flex',
-                        flexDirection: 'column',
                         alignItems: 'center',
-                        gap: '3px',
-                        position: 'relative',
+                        justifyContent: 'center',
                       }}>
-                        <RouteIcon play={play} size={40} />
-                        <span style={{
-                          fontSize: '8px',
-                          fontWeight: 700,
-                          color: '#fff',
-                          letterSpacing: '0.02em',
-                        }}>
-                          {play.name}
-                        </span>
-                        {locked && (
-                          <div style={{
-                            position: 'absolute',
-                            inset: 0,
-                            background: 'rgba(0,0,0,0.6)',
-                            borderRadius: '10px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                          }}>
-                            <span style={{ fontSize: '12px' }}>🔒</span>
-                          </div>
-                        )}
+                        <span style={{ fontSize: '16px' }}>🔒</span>
                       </div>
-                    </motion.div>
-                  )
-                })}
-              </motion.div>
+                    )}
+                  </div>
+                )
+              })}
             </div>
           </div>
         </motion.div>

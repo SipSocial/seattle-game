@@ -805,16 +805,17 @@ export function getNextStage(currentStageId: number): CampaignStage | null {
 
 /**
  * Calculate difficulty modifier for game
+ * Returns 1.0 (easy) to 3.0+ (Super Bowl)
  */
 export function getDifficultyModifier(gameNumber: number): number {
   const stage = getStageByGame(gameNumber)
   const gameInStage = getGameInStage(gameNumber)
   
-  // Base difficulty from stage
-  const baseDifficulty = stage.difficulty * 0.1
+  // Base difficulty from stage (difficulty 1-10 → modifier 0.15-1.5)
+  const baseDifficulty = stage.difficulty * 0.15
   
-  // Slight increase for each game in stage
-  const gameModifier = (gameInStage - 1) * 0.02
+  // Increase for each game in stage (0.05 per game)
+  const gameModifier = (gameInStage - 1) * 0.05
   
   return 1 + baseDifficulty + gameModifier
 }

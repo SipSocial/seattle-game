@@ -6,32 +6,45 @@
  * Layout: 3-zone flex (sponsor / title / actions)
  * Typography: CSS clamp for fluid scaling
  * Spacing: 8px grid via CSS custom properties
+ * 
+ * NEW: Game type selection (QB Legend / Dark Side Defense)
  */
 
-import { useEffect, useState } from 'react'
-import Link from 'next/link'
-import { motion } from 'framer-motion'
+import { useEffect, useState, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
+import { motion, AnimatePresence } from 'framer-motion'
 import { VideoBackground } from '@/components/ui/VideoBackground'
-import { GradientButton } from '@/components/ui/GradientButton'
 import { SoundtrackPlayer } from '@/components/ui/SoundtrackPlayer'
 import { AudioManager } from '@/src/game/systems/AudioManager'
 import { SoundtrackManager } from '@/src/game/systems/SoundtrackManager'
 import { useSoundtrackStore } from '@/src/store/soundtrackStore'
+import { useGameStore } from '@/src/store/gameStore'
 
 const BACKGROUND_VIDEO = 'https://cdn.leonardo.ai/users/eb9a23b8-36c0-4667-b97f-64fdee85d14b/generations/4b5f0ad3-9f4e-413f-b44a-053e9af6240c/4b5f0ad3-9f4e-413f-b44a-053e9af6240c.mp4'
 const BACKGROUND_POSTER = 'https://cdn.leonardo.ai/users/eb9a23b8-36c0-4667-b97f-64fdee85d14b/generations/16412705-ca65-400e-bb78-80ff29be860a/segments/2:2:1/Phoenix_Empty_NFL_football_field_at_night_dramatic_billowing_s_0.jpg'
 
 const spring = { type: 'spring' as const, stiffness: 300, damping: 28 }
 
-const MapIcon = () => (
-  <svg className="w-full h-full" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+// Football icon for QB Legend
+const FootballIcon = () => (
+  <svg className="w-full h-full" viewBox="0 0 24 24" fill="currentColor">
+    <ellipse cx="12" cy="12" rx="10" ry="6" />
+    <path d="M7 12h10M12 9v6" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
+  </svg>
+)
+
+// Shield icon for Dark Side Defense
+const ShieldIcon = () => (
+  <svg className="w-full h-full" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M12 2L4 6v6c0 5.55 3.84 10.74 8 12 4.16-1.26 8-6.45 8-12V6l-8-4z" />
   </svg>
 )
 
 export default function Home() {
   const [mounted, setMounted] = useState(false)
   const musicEnabled = useSoundtrackStore((state) => state.musicEnabled)
+  const setPlayMode = useGameStore((state) => state.setPlayMode)
+  const router = useRouter()
 
   useEffect(() => {
     setMounted(true)
@@ -64,6 +77,20 @@ export default function Home() {
       document.removeEventListener('touchstart', handleInteraction)
     }
   }, [musicEnabled])
+  
+  // Handle game mode selection
+  const handleGameModeSelect = useCallback((mode: 'qb' | 'defense') => {
+    // Haptic feedback
+    if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+      navigator.vibrate([15, 30, 15])
+    }
+    
+    // Store the selected mode
+    setPlayMode(mode)
+    
+    // Navigate to campaign map
+    router.push('/campaign')
+  }, [setPlayMode, router])
 
   return (
     <div className="fixed inset-0" style={{ background: 'var(--seahawks-navy-dark)' }}>
@@ -188,13 +215,13 @@ export default function Home() {
           </motion.div>
         </main>
 
-        {/* === ZONE 3: Actions (fixed height) === */}
+        {/* === ZONE 3: Game Mode Selection === */}
         <footer
           className="flex-shrink-0"
           style={{
-            paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + var(--space-24))',
-            paddingLeft: 'var(--space-6)',
-            paddingRight: 'var(--space-6)',
+            paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + var(--space-16))',
+            paddingLeft: 'var(--space-5)',
+            paddingRight: 'var(--space-5)',
           }}
         >
           <motion.div
@@ -203,12 +230,114 @@ export default function Home() {
             animate={{ opacity: mounted ? 1 : 0, y: mounted ? 0 : 30 }}
             transition={{ ...spring, delay: 0.3 }}
           >
-            {/* Primary CTA - Road to Super Bowl */}
-            <Link href="/campaign" className="block">
-              <GradientButton size="lg" fullWidth radius="lg" icon={<MapIcon />} iconPosition="left">
-                Road to Super Bowl
-              </GradientButton>
-            </Link>
+            {/* Section Label */}
+            <p 
+              className="text-center"
+              style={{ 
+                marginBottom: 'var(--space-4)',
+                fontSize: '10px',
+                letterSpacing: '0.3em',
+                textTransform: 'uppercase',
+                color: 'rgba(255, 255, 255, 0.4)',
+              }}
+            >
+              Choose Your Game
+            </p>
+            
+            {/* Game Mode Buttons */}
+            <div style={{ display: 'flex', gap: 'var(--space-3)' }}>
+              {/* QB LEGEND Button */}
+              <motion.button
+                onClick={() => handleGameModeSelect('qb')}
+                whileTap={{ scale: 0.96 }}
+                whileHover={{ scale: 1.02 }}
+                style={{
+                  flex: 1,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 'var(--space-2)',
+                  padding: 'var(--space-5) var(--space-4)',
+                  borderRadius: '16px',
+                  border: '2px solid var(--seahawks-green)',
+                  background: 'linear-gradient(135deg, rgba(105, 190, 40, 0.15) 0%, rgba(105, 190, 40, 0.05) 100%)',
+                  backdropFilter: 'blur(12px)',
+                  WebkitBackdropFilter: 'blur(12px)',
+                  cursor: 'pointer',
+                  touchAction: 'manipulation',
+                  WebkitTapHighlightColor: 'transparent',
+                  boxShadow: '0 4px 24px rgba(105, 190, 40, 0.2)',
+                }}
+              >
+                <div style={{ width: '32px', height: '32px', color: 'var(--seahawks-green)' }}>
+                  <FootballIcon />
+                </div>
+                <span 
+                  className="font-display"
+                  style={{ 
+                    fontSize: 'clamp(1rem, 5vw, 1.25rem)',
+                    color: 'var(--seahawks-green)',
+                    letterSpacing: '0.02em',
+                  }}
+                >
+                  QB LEGEND
+                </span>
+                <span style={{ 
+                  fontSize: '9px', 
+                  color: 'rgba(255,255,255,0.5)',
+                  letterSpacing: '0.1em',
+                }}>
+                  THROW THE BALL
+                </span>
+              </motion.button>
+              
+              {/* DARK SIDE DEFENSE Button */}
+              <motion.button
+                onClick={() => handleGameModeSelect('defense')}
+                whileTap={{ scale: 0.96 }}
+                whileHover={{ scale: 1.02 }}
+                style={{
+                  flex: 1,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 'var(--space-2)',
+                  padding: 'var(--space-5) var(--space-4)',
+                  borderRadius: '16px',
+                  border: '2px solid var(--gold)',
+                  background: 'linear-gradient(135deg, rgba(255, 215, 0, 0.12) 0%, rgba(255, 215, 0, 0.04) 100%)',
+                  backdropFilter: 'blur(12px)',
+                  WebkitBackdropFilter: 'blur(12px)',
+                  cursor: 'pointer',
+                  touchAction: 'manipulation',
+                  WebkitTapHighlightColor: 'transparent',
+                  boxShadow: '0 4px 24px rgba(255, 215, 0, 0.15)',
+                }}
+              >
+                <div style={{ width: '32px', height: '32px', color: 'var(--gold)' }}>
+                  <ShieldIcon />
+                </div>
+                <span 
+                  className="font-display"
+                  style={{ 
+                    fontSize: 'clamp(1rem, 5vw, 1.25rem)',
+                    color: 'var(--gold)',
+                    letterSpacing: '0.02em',
+                  }}
+                >
+                  DARK SIDE
+                </span>
+                <span style={{ 
+                  fontSize: '9px', 
+                  color: 'rgba(255,255,255,0.5)',
+                  letterSpacing: '0.1em',
+                }}>
+                  STOP THE OFFENSE
+                </span>
+              </motion.button>
+            </div>
 
             {/* Disclaimer */}
             <p 

@@ -29,6 +29,7 @@ import {
   isInCoverage,
 } from '../systems/DefensePlaybook'
 import { StateMachine, StateConfig } from '../../../v3/game/core/StateMachine'
+import { getDifficultyForWeek } from '../config/defenseConfig'
 
 // ============================================================================
 // CONSTANTS
@@ -109,6 +110,8 @@ interface OffensivePlayer {
   sprite: Phaser.GameObjects.Arc
   x: number
   y: number
+  startX: number  // Starting position for route interpolation
+  startY: number
   jersey: number
   role: 'qb' | 'receiver' | 'lineman' | 'rb'
   routeProgress: number
@@ -170,6 +173,15 @@ export class DefenseScene extends Phaser.Scene {
   // Opponent colors (set via init)
   private oppColors = { primary: COLORS.opponent, accent: COLORS.opponentAccent }
   
+  // Difficulty scaling (based on week)
+  private weekId: number = 1
+  private difficulty = {
+    qbAccuracyMult: 1.0,
+    receiverSpeedMult: 1.0,
+    throwWindowMult: 1.0,
+    tackleRadiusMult: 1.0,
+  }
+  
   constructor() {
     super({ key: 'DefenseScene' })
   }
@@ -179,6 +191,10 @@ export class DefenseScene extends Phaser.Scene {
   // ============================================================================
   
   init(data: { weekId?: number, oppColors?: { primary: number, accent: number } } = {}): void {
+    // Set week and difficulty scaling
+    this.weekId = data.weekId ?? 1
+    this.difficulty = getDifficultyForWeek(this.weekId)
+    
     if (data.oppColors) {
       this.oppColors = data.oppColors
     }
@@ -393,7 +409,9 @@ export class DefenseScene extends Phaser.Scene {
   }
   
   private updateInPlay(delta: number, timeInState: number): void {
-    const routeProgress = Math.min(1, timeInState / TIMING.ROUTE_DURATION_MS)
+    // Apply difficulty scaling - faster receivers complete routes quicker
+    const scaledRouteDuration = TIMING.ROUTE_DURATION_MS / this.difficulty.receiverSpeedMult
+    const routeProgress = Math.min(1, timeInState / scaledRouteDuration)
     
     // Update receiver positions along routes
     this.updateReceiverRoutes(routeProgress)
@@ -896,6 +914,8 @@ export class DefenseScene extends Phaser.Scene {
       sprite,
       x,
       y,
+      startX: x,  // Starting position for route interpolation
+      startY: y,
       jersey,
       role,
       routeProgress: 0,
@@ -917,6 +937,9 @@ export class DefenseScene extends Phaser.Scene {
     
     receivers.forEach((rec, i) => {
       const route = routes[i % routes.length]
+      // Store start position for route interpolation
+      rec.startX = rec.x
+      rec.startY = rec.y
       rec.targetX = rec.x + route.dx
       rec.targetY = rec.y + route.dy
     })
@@ -927,8 +950,9 @@ export class DefenseScene extends Phaser.Scene {
     
     receivers.forEach(rec => {
       rec.routeProgress = progress
-      rec.x = Phaser.Math.Linear(rec.container.x, rec.targetX, progress * 0.05)
-      rec.y = Phaser.Math.Linear(rec.container.y, rec.targetY, progress * 0.05)
+      // Use startX/startY for interpolation (stored when routes started)
+      rec.x = Phaser.Math.Linear(rec.startX, rec.targetX, progress)
+      rec.y = Phaser.Math.Linear(rec.startY, rec.targetY, progress)
       rec.container.setPosition(rec.x, rec.y)
       
       // Check if open (simplified - based on defender distance)
@@ -1020,9 +1044,11 @@ export class DefenseScene extends Phaser.Scene {
     const qb = this.offensivePlayers.find(p => p.role === 'qb')
     if (!qb) return false
     
+    // Apply difficulty - larger tackle radius = easier sacks
+    const sackRadius = 20 * this.difficulty.tackleRadiusMult
     for (const def of this.defenders) {
       const dist = Phaser.Math.Distance.Between(qb.x, qb.y, def.x, def.y)
-      if (dist < 20) return true
+      if (dist < sackRadius) return true
     }
     
     return false
@@ -1065,9 +1091,11 @@ export class DefenseScene extends Phaser.Scene {
   }
   
   private checkForTackle(carrier: OffensivePlayer): boolean {
+    // Apply difficulty - larger tackle radius = easier defense
+    const tackleRadius = 18 * this.difficulty.tackleRadiusMult
     for (const def of this.defenders) {
       const dist = Phaser.Math.Distance.Between(carrier.x, carrier.y, def.x, def.y)
-      if (dist < 18) return true
+      if (dist < tackleRadius) return true
     }
     return false
   }

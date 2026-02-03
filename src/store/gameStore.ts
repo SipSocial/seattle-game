@@ -97,6 +97,17 @@ export interface ARModeState {
   cameraPermission: CameraPermission
 }
 
+// Per-stage completion tracking (dual mode)
+export interface StageProgress {
+  stageId: number
+  qbCompleted: boolean      // Completed in QB mode
+  defenseCompleted: boolean // Completed in Defense mode
+  qbHighScore: number
+  defenseHighScore: number
+  qbStars: 0 | 1 | 2 | 3   // Performance rating
+  defenseStars: 0 | 1 | 2 | 3
+}
+
 // Campaign progress tracking
 export interface CampaignProgress {
   currentGame: number // 1-51
@@ -105,6 +116,7 @@ export interface CampaignProgress {
   totalScore: number // Cumulative score across campaign
   stagesUnlocked: number[] // Array of unlocked stage IDs
   stageHighScores: Record<number, number> // Best score per stage
+  stageProgress: Record<number, StageProgress> // Dual mode progress per stage
   isCampaignComplete: boolean
   superBowlWon: boolean
 }
@@ -198,6 +210,12 @@ interface GameState {
   resetCampaign: () => void
   getCurrentStage: () => CampaignStage
   getCampaignDifficulty: () => number
+  
+  // Dual mode progress actions
+  completeStageQB: (stageId: number, score: number, stars: 0 | 1 | 2 | 3) => void
+  completeStageDefense: (stageId: number, score: number, stars: 0 | 1 | 2 | 3) => void
+  getStageProgress: (stageId: number) => StageProgress | null
+  isStageFullyComplete: (stageId: number) => boolean
   
   // Social engagement actions
   setFollowed: () => void
@@ -302,6 +320,7 @@ const INITIAL_CAMPAIGN_STATE: CampaignProgress = {
   totalScore: 0,
   stagesUnlocked: [1], // Stage 1 always unlocked
   stageHighScores: {},
+  stageProgress: {}, // Dual mode progress per stage
   isCampaignComplete: false,
   superBowlWon: false,
 }
@@ -479,6 +498,97 @@ export const useGameStore = create<GameState>()(
       getCampaignDifficulty: () => {
         const { campaign } = get()
         return getDifficultyModifier(campaign.currentGame)
+      },
+      
+      // Dual mode progress actions
+      completeStageQB: (stageId, score, stars) => {
+        const { campaign } = get()
+        const existing = campaign.stageProgress[stageId] || {
+          stageId,
+          qbCompleted: false,
+          defenseCompleted: false,
+          qbHighScore: 0,
+          defenseHighScore: 0,
+          qbStars: 0 as const,
+          defenseStars: 0 as const,
+        }
+        
+        const newStageProgress: StageProgress = {
+          ...existing,
+          qbCompleted: true,
+          qbHighScore: Math.max(existing.qbHighScore, score),
+          qbStars: Math.max(existing.qbStars, stars) as 0 | 1 | 2 | 3,
+        }
+        
+        // Unlock next stage if both modes not required, or if already unlocked
+        const stagesUnlocked = [...campaign.stagesUnlocked]
+        const nextStageId = stageId + 1
+        if (!stagesUnlocked.includes(nextStageId) && nextStageId <= TOTAL_STAGES) {
+          stagesUnlocked.push(nextStageId)
+        }
+        
+        set({
+          campaign: {
+            ...campaign,
+            stageProgress: {
+              ...campaign.stageProgress,
+              [stageId]: newStageProgress,
+            },
+            stagesUnlocked,
+            totalScore: campaign.totalScore + score,
+          },
+        })
+      },
+      
+      completeStageDefense: (stageId, score, stars) => {
+        const { campaign } = get()
+        const existing = campaign.stageProgress[stageId] || {
+          stageId,
+          qbCompleted: false,
+          defenseCompleted: false,
+          qbHighScore: 0,
+          defenseHighScore: 0,
+          qbStars: 0 as const,
+          defenseStars: 0 as const,
+        }
+        
+        const newStageProgress: StageProgress = {
+          ...existing,
+          defenseCompleted: true,
+          defenseHighScore: Math.max(existing.defenseHighScore, score),
+          defenseStars: Math.max(existing.defenseStars, stars) as 0 | 1 | 2 | 3,
+        }
+        
+        // Unlock next stage
+        const stagesUnlocked = [...campaign.stagesUnlocked]
+        const nextStageId = stageId + 1
+        if (!stagesUnlocked.includes(nextStageId) && nextStageId <= TOTAL_STAGES) {
+          stagesUnlocked.push(nextStageId)
+        }
+        
+        set({
+          campaign: {
+            ...campaign,
+            stageProgress: {
+              ...campaign.stageProgress,
+              [stageId]: newStageProgress,
+            },
+            stagesUnlocked,
+            totalScore: campaign.totalScore + score,
+          },
+        })
+      },
+      
+      getStageProgress: (stageId) => {
+        const { campaign } = get()
+        return campaign.stageProgress[stageId] || null
+      },
+      
+      isStageFullyComplete: (stageId) => {
+        const { campaign } = get()
+        const progress = campaign.stageProgress[stageId]
+        if (!progress) return false
+        return progress.qbCompleted && progress.defenseCompleted
       },
       
       // Social engagement actions
@@ -708,6 +818,10 @@ export const useCampaignProgress = () => useGameStore((state) => ({
   isComplete: state.campaign.isCampaignComplete,
   superBowlWon: state.campaign.superBowlWon,
 }))
+
+// Dual progress selector hooks
+export const useStageProgress = (stageId: number) => useGameStore((state) => state.campaign.stageProgress[stageId] || null)
+export const useAllStageProgress = () => useGameStore((state) => state.campaign.stageProgress)
 
 // UI Modal selector hooks
 export const useUpgradeModal = () => useGameStore((state) => state.upgradeModal)

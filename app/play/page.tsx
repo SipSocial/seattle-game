@@ -1,27 +1,26 @@
 'use client'
 
 /**
- * Play Page - Player Selection + Game Mode Flow
+ * Play Page - Simplified Player Selection
  * 
- * Flow:
- * 1. Player Selection (offense + defense)
- * 2. Game Mode Selection (QB Legend vs Dark Side Defense)
- * 3. Navigate to appropriate game
+ * NEW Flow (game type selected on homepage):
+ * 1. Read game mode from store (qb or defense)
+ * 2. Show only relevant players (offense for QB, defense for Defense)
+ * 3. Single selection, then navigate directly to game
  */
 
-import { Suspense, useState, useCallback, useEffect, useMemo } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import PlayerSelect from './components/PlayerSelect'
-import GameModeSelect from './components/GameModeSelect'
 import { LoadingSpinner, SoundtrackPlayer } from '@/components/ui'
 import { useGlobalAudioUnlock } from './hooks/useAudio'
 import { SoundtrackManager } from '@/src/game/systems/SoundtrackManager'
 import { useSoundtrackStore } from '@/src/store/soundtrackStore'
-import { OFFENSE_PLAYERS, DEFENSE_PLAYERS } from '@/src/game/data/playerRosters'
+import { useGameStore } from '@/src/store/gameStore'
 
 // Page states
-type PageState = 'player-select' | 'mode-select' | 'loading'
+type PageState = 'player-select' | 'loading'
 
 // Smooth page transition variants
 const pageVariants = {
@@ -38,25 +37,23 @@ const pageTransition = {
 export default function PlayPage() {
   const router = useRouter()
   const [pageState, setPageState] = useState<PageState>('player-select')
-  const [selections, setSelections] = useState<{ offense: number; defense: number } | null>(null)
   const musicEnabled = useSoundtrackStore((state) => state.musicEnabled)
   const closePlayer = useSoundtrackStore((state) => state.closePlayer)
+  
+  // Get the game mode that was selected on the homepage
+  const playMode = useGameStore((state) => state.playMode)
+  const setSelectedDefender = useGameStore((state) => state.setSelectedDefender)
+  const setSelectedOffense = useGameStore((state) => state.setSelectedOffense)
   
   // Initialize audio system and set up global unlock on first interaction
   useGlobalAudioUnlock()
   
-  // Get player names for display
-  const offensePlayerName = useMemo(() => {
-    if (!selections) return undefined
-    const player = OFFENSE_PLAYERS.find(p => p.jersey === selections.offense)
-    return player?.name
-  }, [selections])
-
-  const defensePlayerName = useMemo(() => {
-    if (!selections) return undefined
-    const player = DEFENSE_PLAYERS.find(p => p.jersey === selections.defense)
-    return player?.name
-  }, [selections])
+  // Redirect to homepage if no game mode selected
+  useEffect(() => {
+    if (!playMode) {
+      router.push('/')
+    }
+  }, [playMode, router])
   
   // Start player select music when entering this page
   useEffect(() => {
@@ -70,40 +67,19 @@ export default function PlayPage() {
     }
   }, [musicEnabled])
 
-  // Handle player selection complete - move to mode selection
-  const handlePlayerSelect = useCallback((playerSelections: { offense: number; defense: number }) => {
-    // Store selections
-    setSelections(playerSelections)
-    
-    // Store in localStorage for Phaser to read
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('selectedOffense', String(playerSelections.offense))
-      localStorage.setItem('selectedDefender', String(playerSelections.defense))
-      
-      // Update zustand store
-      try {
-        const { useGameStore } = require('../../src/store/gameStore')
-        useGameStore.getState().setSelectedDefender(playerSelections.defense)
-        useGameStore.getState().setSelectedOffense(playerSelections.offense)
-      } catch (e) {
-        // Store not available yet
-      }
-    }
-    
-    // Move to mode selection
-    setPageState('mode-select')
-  }, [])
-
-  // Handle game mode selection - navigate to game
-  const handleModeSelect = useCallback(async (mode: 'qb' | 'defense') => {
+  // Handle player selection complete - navigate directly to game
+  const handlePlayerSelect = useCallback(async (selectedJersey: number) => {
     setPageState('loading')
     
-    // Update store with play mode
-    try {
-      const { useGameStore } = require('../../src/store/gameStore')
-      useGameStore.getState().setPlayMode(mode)
-    } catch (e) {
-      // Store not available yet
+    // Store selection in localStorage for Phaser to read
+    if (typeof window !== 'undefined') {
+      if (playMode === 'qb') {
+        localStorage.setItem('selectedOffense', String(selectedJersey))
+        setSelectedOffense(selectedJersey)
+      } else {
+        localStorage.setItem('selectedDefender', String(selectedJersey))
+        setSelectedDefender(selectedJersey)
+      }
     }
     
     // Stop music with whistle transition
@@ -117,13 +93,22 @@ export default function PlayPage() {
       ? localStorage.getItem('currentWeekId') || '1'
       : '1'
     
-    // Navigate to appropriate game
-    if (mode === 'qb') {
-      router.push(`/v3/game?weekId=${weekId}`)
+    // Navigate to appropriate game based on mode selected on homepage
+    if (playMode === 'qb') {
+      router.push(`/v4/qb-game?weekId=${weekId}`)
     } else {
       router.push('/v4/defense')
     }
-  }, [closePlayer, router])
+  }, [playMode, closePlayer, router, setSelectedDefender, setSelectedOffense])
+  
+  // Don't render if no game mode
+  if (!playMode) {
+    return (
+      <div className="fixed inset-0 flex items-center justify-center bg-[#002244]">
+        <LoadingSpinner size="lg" />
+      </div>
+    )
+  }
 
   return (
     <AnimatePresence mode="wait">
@@ -150,24 +135,9 @@ export default function PlayPage() {
           transition={pageTransition}
           className="fixed inset-0"
         >
-          <PlayerSelect onComplete={handlePlayerSelect} />
-        </motion.div>
-      )}
-      
-      {pageState === 'mode-select' && (
-        <motion.div
-          key="mode-select"
-          variants={pageVariants}
-          initial="initial"
-          animate="animate"
-          exit="exit"
-          transition={pageTransition}
-          className="fixed inset-0"
-        >
-          <GameModeSelect 
-            onSelectMode={handleModeSelect}
-            offensePlayerName={offensePlayerName}
-            defensePlayerName={defensePlayerName}
+          <PlayerSelect 
+            gameMode={playMode}
+            onSelect={handlePlayerSelect} 
           />
         </motion.div>
       )}

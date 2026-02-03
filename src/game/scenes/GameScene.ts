@@ -20,21 +20,21 @@ const DEFENDER_RADIUS = 28
 const RUNNER_RADIUS = 14
 const POWER_UP_RADIUS = 20
 
-// Speeds - fast and responsive
-const BASE_RUNNER_SPEED = 70
-const SPEED_PER_WAVE = 10
-const MAX_RUNNER_SPEED = 220
-const DEFENDER_SPEED = 600      // Fast player movement
-const AI_DEFENDER_SPEED = 90
+// Speeds - HARDER: Faster runners, more challenging
+const BASE_RUNNER_SPEED = 95           // Was 70 - runners start faster
+const SPEED_PER_WAVE = 15              // Was 10 - speed ramps up faster
+const MAX_RUNNER_SPEED = 280           // Was 220 - higher ceiling for late game
+const DEFENDER_SPEED = 550             // Was 600 - slightly slower player for balance
+const AI_DEFENDER_SPEED = 85           // Was 90 - AI helpers slightly slower
 
-// Wave settings
-const BASE_SPAWN_INTERVAL = 900
-const MIN_SPAWN_INTERVAL = 200
-const SPAWN_REDUCTION_PER_WAVE = 50
-const BASE_WAVE_DURATION = 12000
-const WAVE_DURATION_INCREASE = 1500
-const MAX_WAVE_DURATION = 30000
-const STARTING_LIVES = 4
+// Wave settings - HARDER: More intense action
+const BASE_SPAWN_INTERVAL = 650        // Was 900 - enemies spawn faster
+const MIN_SPAWN_INTERVAL = 150         // Was 200 - gets really intense
+const SPAWN_REDUCTION_PER_WAVE = 60    // Was 50 - spawn rate increases faster
+const BASE_WAVE_DURATION = 15000       // Was 12000 - longer waves = more action
+const WAVE_DURATION_INCREASE = 2000    // Was 1500 - waves get longer faster
+const MAX_WAVE_DURATION = 45000        // Was 30000 - epic late-game waves
+const STARTING_LIVES = 3               // Was 4 - less margin for error
 
 // Defender movement restriction - defenders stay in bottom 33% of field
 // GAME_HEIGHT is 700, so 67% from top = 469px (defender can't go ABOVE this line)
@@ -92,13 +92,13 @@ interface RunnerDef {
   icon: string
 }
 
-// Default runner colors (used in endless mode)
+// Default runner colors (used in endless mode) - HARDER ENEMY TYPES
 const DEFAULT_RUNNER_TYPES: Record<RunnerType, RunnerDef> = {
-  NORMAL: { type: 'NORMAL', speedMult: 1, size: 1, points: 10, color: 0x888888, icon: '🏈' },
-  FAST: { type: 'FAST', speedMult: 1.8, size: 0.8, points: 15, color: 0xFFB300, icon: '⚡' },
-  TANK: { type: 'TANK', speedMult: 0.6, size: 1.4, points: 25, color: 0xE53935, icon: '🛡️' },
-  ZIGZAG: { type: 'ZIGZAG', speedMult: 1.2, size: 1, points: 20, color: 0x69BE28, icon: '🌀' },
-  BOSS: { type: 'BOSS', speedMult: 0.4, size: 2.2, points: 100, color: 0x800080, icon: '👑' },
+  NORMAL: { type: 'NORMAL', speedMult: 1.1, size: 1, points: 10, color: 0x888888, icon: '🏈' },     // Was 1.0 - slightly faster
+  FAST: { type: 'FAST', speedMult: 2.2, size: 0.75, points: 18, color: 0xFFB300, icon: '⚡' },      // Was 1.8 - much faster, smaller, more points
+  TANK: { type: 'TANK', speedMult: 0.7, size: 1.5, points: 30, color: 0xE53935, icon: '🛡️' },       // Was 0.6 - slightly faster, bigger, more points
+  ZIGZAG: { type: 'ZIGZAG', speedMult: 1.4, size: 0.95, points: 25, color: 0x69BE28, icon: '🌀' }, // Was 1.2 - faster zigzag
+  BOSS: { type: 'BOSS', speedMult: 0.5, size: 2.5, points: 150, color: 0x800080, icon: '👑' },     // Was 0.4 - faster boss, bigger, more points
 }
 
 // Will be set based on stage in campaign mode
@@ -1699,15 +1699,15 @@ export class GameScene extends Phaser.Scene {
     } else {
       const roll = Math.random()
       
-      // Apply difficulty modifier to special spawn chance
-      const baseSpecialChance = 0.2 + (wave * 0.05)
-      const specialChance = Math.min(0.75, baseSpecialChance * this.difficultyModifier)
+      // HARDER: Apply difficulty modifier to special spawn chance - more specials spawn
+      const baseSpecialChance = 0.3 + (wave * 0.08)  // Was 0.2 + wave*0.05
+      const specialChance = Math.min(0.85, baseSpecialChance * this.difficultyModifier)  // Was 0.75
       
       if (roll < specialChance) {
         const specialRoll = Math.random()
-        if (specialRoll < 0.35) {
+        if (specialRoll < 0.40) {         // Was 0.35 - more FAST runners
           runnerType = 'FAST'
-        } else if (specialRoll < 0.6) {
+        } else if (specialRoll < 0.70) {  // Was 0.60 - more ZIGZAG runners
           runnerType = 'ZIGZAG'
         } else {
           runnerType = 'TANK'
@@ -1715,10 +1715,16 @@ export class GameScene extends Phaser.Scene {
       }
     }
     
-    // Adjusted difficulty curve
+    // HARDER: Adjusted difficulty curve - special types appear earlier
     const effectiveWave = Math.floor(wave * this.difficultyModifier)
-    if (effectiveWave >= 5 && this.runnersThisWave % 4 === 0) runnerType = 'TANK'
-    if (effectiveWave >= 8 && this.runnersThisWave % 3 === 0) runnerType = 'FAST'
+    if (effectiveWave >= 3 && this.runnersThisWave % 3 === 0) runnerType = 'TANK'   // Was wave 5, every 4th
+    if (effectiveWave >= 5 && this.runnersThisWave % 2 === 0) runnerType = 'FAST'   // Was wave 8, every 3rd
+    if (effectiveWave >= 7 && this.runnersThisWave % 5 === 0) runnerType = 'ZIGZAG' // NEW: zigzag pattern
+    
+    // HARDER: Random boss spawns starting wave 4 - mini-bosses in regular waves
+    if (effectiveWave >= 4 && Math.random() < 0.03 + (effectiveWave * 0.01)) {
+      runnerType = 'BOSS'  // 3% + 1% per wave chance for surprise boss
+    }
     
     const typeDef = RUNNER_TYPES[runnerType]
     
@@ -1968,8 +1974,8 @@ export class GameScene extends Phaser.Scene {
     const currentRunners = this.runners.length
     
     if (this.spawnTimer >= spawnInterval && this.waveTimer < currentWaveDuration && currentRunners < maxRunners) {
-      // Limit burst count to prevent performance issues
-      const burstCount = Math.min(3, 1 + Math.floor(store.wave / 4)) // Reduced from 4 to 3, slower scaling
+      // HARDER: Increased burst count - more runners spawn at once
+      const burstCount = Math.min(4, 1 + Math.floor(store.wave / 3)) // Was /4, now /3 - faster scaling, max 4
       const runnersToSpawn = Math.min(burstCount, maxRunners - currentRunners)
       
       for (let i = 0; i < runnersToSpawn; i++) {
@@ -2408,9 +2414,10 @@ export class GameScene extends Phaser.Scene {
       AudioManager.playCrowdCheer()
     }
     
-    // Score with combo multiplier
-    const comboMultiplier = Math.min(3, 1 + (this.comboCount - 1) * 0.5)
-    const points = Math.floor(typeDef.points * comboMultiplier)
+    // Score with combo AND wave multipliers - higher waves = more points
+    const comboMultiplier = Math.min(4, 1 + (this.comboCount - 1) * 0.6)  // Was 3 max, 0.5 per - now 4 max, 0.6 per
+    const waveMultiplier = 1 + (store.wave - 1) * 0.15  // NEW: 15% more points per wave
+    const points = Math.floor(typeDef.points * comboMultiplier * waveMultiplier)
     
     this.showFloatingPoints(runner.sprite.x, runner.sprite.y, points, COLORS.green)
     
@@ -2438,8 +2445,12 @@ export class GameScene extends Phaser.Scene {
   }
   
   private showFloatingPoints(x: number, y: number, points: number, color: number): void {
-    const text = this.add.text(x, y, `+${points}`, {
-      fontSize: '20px',
+    // Handle both positive and negative points
+    const displayText = points >= 0 ? `+${points}` : `${points}`
+    const fontSize = points < 0 ? '24px' : '20px'  // Bigger for penalties
+    
+    const text = this.add.text(x, y, displayText, {
+      fontSize,
       color: hexToCSS(color),
       fontFamily: FONTS.display,
       stroke: hexToCSS(COLORS.navy),
@@ -2451,7 +2462,7 @@ export class GameScene extends Phaser.Scene {
       targets: text,
       y: y - 50,
       alpha: 0,
-      scale: 1.3,
+      scale: points < 0 ? 1.5 : 1.3,  // Bigger scale for penalties
       duration: 700,
       ease: 'Power2',
       onComplete: () => text.destroy(),
@@ -2521,8 +2532,22 @@ export class GameScene extends Phaser.Scene {
     this.stats.lives--
     this.updateLivesDisplay()
     
+    // HARDER: Reset combo and fan meter when runner scores - punishes missed tackles
+    this.comboCount = 0
+    this.consecutiveTackles = 0
+    this.comboText.setAlpha(0)
+    
+    // HARDER: Fan meter penalty - lose 25% of meter when runner scores
+    this.fanMeter = Math.max(0, this.fanMeter - 25)
+    
     AudioManager.playTouchdown()
     this.cameras.main.flash(200, 255, 0, 0)
+    
+    // HARDER: Stronger screen shake for missed runners
+    this.cameras.main.shake(150, 0.012)
+    
+    // Show penalty text
+    this.showFloatingPoints(GAME_WIDTH / 2, GAME_HEIGHT - 100, -50, 0xFF4444)
     
     if (this.stats.lives <= 0) {
       this.gameOver()

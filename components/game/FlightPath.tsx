@@ -14,6 +14,8 @@ interface FlightPathProps {
   airplaneImageUrl?: string | null
   showAirplane?: boolean
   onPlaneClick?: () => void
+  onDragToStage?: (stageId: number) => void // Called when plane is dragged to a stage
+  allowDragNavigation?: boolean // Enable Donkey Kong-style dragging to stages
 }
 
 export function FlightPath({
@@ -23,6 +25,8 @@ export function FlightPath({
   airplaneImageUrl,
   showAirplane = true,
   onPlaneClick,
+  onDragToStage,
+  allowDragNavigation = false,
 }: FlightPathProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const pathRef = useRef<SVGPathElement>(null)
@@ -30,6 +34,11 @@ export function FlightPath({
   const planeImageRef = useRef<HTMLDivElement>(null)
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 })
   const [isAnimating, setIsAnimating] = useState(false)
+  
+  // Drag navigation state
+  const [draggedStageId, setDraggedStageId] = useState<number | null>(null)
+  const dragStartPos = useRef({ x: 0, y: 0 })
+  const currentDragPos = useRef({ x: 0, y: 0 })
   
   // Touch/drag interaction refs (exactly like PlayerSelect)
   const targetX = useRef(0)
@@ -100,31 +109,93 @@ export function FlightPath({
   // Store touch start position for relative movement
   const touchStartRef = useRef({ x: 0, y: 0 })
   
+  // Find nearest unlocked stage to a position
+  const findNearestStage = useCallback((clientX: number, clientY: number): CampaignStage | null => {
+    if (!containerRef.current) return null
+    
+    const rect = containerRef.current.getBoundingClientRect()
+    const x = clientX - rect.left
+    const y = clientY - rect.top
+    
+    // Only consider unlocked stages
+    const unlockedStages = CAMPAIGN_STAGES.filter(
+      s => completedStageIds.includes(s.id) || s.id === currentStageId
+    )
+    
+    if (unlockedStages.length === 0) return null
+    
+    // Find nearest
+    let nearest: CampaignStage | null = null
+    let minDist = Infinity
+    
+    unlockedStages.forEach(stage => {
+      const stageX = stage.location.coordinates.x * dimensions.width
+      const stageY = stage.location.coordinates.y * dimensions.height
+      const dist = Math.sqrt(Math.pow(x - stageX, 2) + Math.pow(y - stageY, 2))
+      
+      if (dist < minDist && dist < 100) { // 100px snap threshold
+        minDist = dist
+        nearest = stage
+      }
+    })
+    
+    return nearest
+  }, [completedStageIds, currentStageId, dimensions])
+  
   // Touch/mouse handlers for plane interaction
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     isTouching.current = true
     setIsDragging(true)
     if (e.touches[0]) {
       touchStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }
+      dragStartPos.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }
     }
   }, [])
 
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
     if (!isTouching.current || !e.touches[0]) return
+    
+    currentDragPos.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }
+    
     // Calculate relative movement from start position
     const deltaX = (e.touches[0].clientX - touchStartRef.current.x) / 100
     const deltaY = (e.touches[0].clientY - touchStartRef.current.y) / 100
     // Clamp to -1 to 1 range
     targetX.current = Math.max(-1, Math.min(1, deltaX))
     targetY.current = Math.max(-1, Math.min(1, deltaY))
-  }, [])
+    
+    // If drag navigation is enabled, find nearest stage
+    if (allowDragNavigation) {
+      const nearestStage = findNearestStage(e.touches[0].clientX, e.touches[0].clientY)
+      if (nearestStage) {
+        setDraggedStageId(nearestStage.id)
+      } else {
+        setDraggedStageId(null)
+      }
+    }
+  }, [allowDragNavigation, findNearestStage])
 
   const handleTouchEnd = useCallback(() => {
+    // If we were dragging to a stage, navigate to it
+    if (allowDragNavigation && draggedStageId !== null && onDragToStage) {
+      // Calculate drag distance
+      const dragDist = Math.sqrt(
+        Math.pow(currentDragPos.current.x - dragStartPos.current.x, 2) +
+        Math.pow(currentDragPos.current.y - dragStartPos.current.y, 2)
+      )
+      
+      // Only trigger navigation if we actually dragged (not just a tap)
+      if (dragDist > 30) {
+        onDragToStage(draggedStageId)
+      }
+    }
+    
     isTouching.current = false
     setIsDragging(false)
+    setDraggedStageId(null)
     targetX.current = 0
     targetY.current = 0
-  }, [])
+  }, [allowDragNavigation, draggedStageId, onDragToStage])
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
     // Calculate position relative to element center

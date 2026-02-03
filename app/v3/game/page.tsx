@@ -152,6 +152,7 @@ function V3GameContent() {
     
     const initPhaser = async () => {
       try {
+        console.log('[V3Game] Initializing Phaser...')
         const Phaser = (await import('phaser')).default
         // Use the new V2 scene with full state machine
         const { OffenseSceneV2 } = await import('@/src/v3/game/scenes/OffenseSceneV2')
@@ -176,35 +177,53 @@ function V3GameContent() {
             antialias: true,
             pixelArt: false,
           },
+          // Prevent Phaser from capturing all input
+          input: {
+            touch: {
+              capture: false,
+            },
+          },
         }
         
         const game = new Phaser.Game(config)
         phaserGameRef.current = game
+        console.log('[V3Game] Phaser game created')
         
+        // Listen for scene creation
         game.events.once('ready', () => {
-          const scene = game.scene.getScene('OffenseSceneV2')
-          if (scene) {
-            // State updates
-            scene.events.on('gameStateUpdate', (state: any) => {
-              if (state.phase) {
-                setPhase(state.phase as GamePhase)
-                // Detect game end
-                if (state.phase === 'GAME_END') {
-                  setTimeout(() => {
-                    setGameWon(state.score?.home > state.score?.away)
-                    setShowResults(true)
-                  }, 1500)
+          console.log('[V3Game] Phaser ready event fired')
+          
+          // Start the offense scene with data
+          game.scene.start('OffenseSceneV2', { weekId })
+          
+          // Wait a moment for scene to fully initialize
+          setTimeout(() => {
+            const scene = game.scene.getScene('OffenseSceneV2')
+            console.log('[V3Game] Got scene after start:', !!scene)
+            
+            if (scene) {
+              // State updates
+              scene.events.on('gameStateUpdate', (state: any) => {
+                console.log('[V3Game] gameStateUpdate:', state.phase)
+                if (state.phase) {
+                  setPhase(state.phase as GamePhase)
+                  // Detect game end
+                  if (state.phase === 'GAME_END') {
+                    setTimeout(() => {
+                      setGameWon(state.score?.home > state.score?.away)
+                      setShowResults(true)
+                    }, 1500)
+                  }
                 }
-              }
-              if (state.down) setDown(state.down)
-              if (state.yardsToGo) setYardsToGo(state.yardsToGo)
-              if (state.score) setScore(state.score)
-              // Calculate yard line from lineOfScrimmage (Y: 900=own 20, 100=opp goal)
-              if (state.lineOfScrimmage) {
-                const yl = Math.round((900 - state.lineOfScrimmage) / 8) // Convert to yards
-                setYardLine(Math.max(1, Math.min(99, yl)))
-              }
-            })
+                if (state.down) setDown(state.down)
+                if (state.yardsToGo) setYardsToGo(state.yardsToGo)
+                if (state.score) setScore(state.score)
+                // Calculate yard line from lineOfScrimmage (Y: 900=own 20, 100=opp goal)
+                if (state.lineOfScrimmage) {
+                  const yl = Math.round((900 - state.lineOfScrimmage) / 8) // Convert to yards
+                  setYardLine(Math.max(1, Math.min(99, yl)))
+                }
+              })
             
             // Game end event
             scene.events.on('gameEnd', (data: { won: boolean }) => {
@@ -304,15 +323,23 @@ function V3GameContent() {
               // Clear result after animation
               setTimeout(() => setCatchResult(null), 1000)
             })
+            
+            console.log('[V3Game] All event listeners attached, setting phase to PRE_SNAP')
+            setPhase('PRE_SNAP')
+          } else {
+            console.warn('[V3Game] Scene not found after start!')
           }
-          
-          setTimeout(() => setPhase('PRE_SNAP'), 500)
+        }, 300) // Give scene time to initialize
         })
         
-        // Fallback
+        // Fallback in case ready event doesn't fire
         setTimeout(() => {
-          if (phase === 'loading') setPhase('PRE_SNAP')
-        }, 2000)
+          console.log('[V3Game] Fallback timer - phase:', phase)
+          if (phase === 'loading') {
+            console.log('[V3Game] Using fallback to set PRE_SNAP')
+            setPhase('PRE_SNAP')
+          }
+        }, 2500)
         
       } catch (error) {
         console.error('Failed to init Phaser:', error)
@@ -334,33 +361,72 @@ function V3GameContent() {
   const handleSelectPlay = useCallback((playIndex: number) => {
     console.log(`[V3Game] handleSelectPlay(${playIndex}) - phase: ${phase}`)
     
+    // Haptic feedback immediately
+    if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+      navigator.vibrate([15, 50, 25])
+    }
+    
     if (!phaserGameRef.current) {
-      console.warn('[V3Game] No Phaser game reference')
+      console.error('[V3Game] No Phaser game reference!')
       return
     }
     
     const play = PLAYBOOK[playIndex]
     if (!play) {
-      console.warn('[V3Game] Invalid play index')
+      console.error('[V3Game] Invalid play index:', playIndex)
       return
     }
     
-    // Instantly start the play - no double tap needed
-    const scene = phaserGameRef.current.scene.getScene('OffenseSceneV2') as any
-    console.log('[V3Game] Got scene:', !!scene, 'has selectPlay:', !!(scene?.selectPlay))
+    // Get the scene - try multiple ways
+    let scene = phaserGameRef.current.scene.getScene('OffenseSceneV2') as any
     
-    if (scene && scene.selectPlay) {
+    // If scene not found, try getting it from scenes array
+    if (!scene) {
+      const scenes = phaserGameRef.current.scene.getScenes(true)
+      console.log('[V3Game] Active scenes:', scenes.map(s => s.sys.settings.key))
+      scene = scenes.find(s => s.sys.settings.key === 'OffenseSceneV2')
+    }
+    
+    console.log('[V3Game] Got scene:', !!scene)
+    
+    if (scene && typeof scene.selectPlay === 'function') {
+      console.log('[V3Game] Calling scene.selectPlay with index:', playIndex)
+      
+      // Get current state from scene
+      const sceneState = scene.getState?.()
+      console.log('[V3Game] Scene state:', sceneState?.phase)
+      
       setSelectedPlayId(play.id)
-      scene.selectPlay(playIndex)
-      setPhase('SNAP')
-      setLastEvent(null)
+      
+      try {
+        scene.selectPlay(playIndex)
+        setPhase('SNAP')
+        setLastEvent(null)
+        console.log('[V3Game] Play started successfully!')
+      } catch (e) {
+        console.error('[V3Game] Error calling selectPlay:', e)
+      }
       
       // Reset selection after play starts
       setTimeout(() => setSelectedPlayId(null), 500)
     } else {
-      console.warn('[V3Game] Scene or selectPlay not available')
+      console.error('[V3Game] Scene not available or selectPlay not a function')
+      console.log('[V3Game] Scene:', scene)
+      console.log('[V3Game] selectPlay:', scene?.selectPlay)
+      
+      // Try to start the scene if it's not active
+      if (phaserGameRef.current.scene) {
+        console.log('[V3Game] Attempting to start OffenseSceneV2...')
+        try {
+          phaserGameRef.current.scene.start('OffenseSceneV2', { weekId })
+          // Retry after a delay
+          setTimeout(() => handleSelectPlay(playIndex), 500)
+        } catch (e) {
+          console.error('[V3Game] Failed to start scene:', e)
+        }
+      }
     }
-  }, [phase])
+  }, [phase, weekId])
   
   // Haptic feedback utility
   const triggerHaptic = useCallback((type: 'light' | 'medium' | 'heavy' | 'success' | 'error' = 'light') => {
@@ -467,62 +533,78 @@ function V3GameContent() {
     router.push('/v4/giveaway')
   }, [router])
   
+  // Determine if Phaser canvas should receive touch events
+  // Only enable during READ phase when we need to tap receivers
+  const canvasReceivesTouch = phase === 'READ' || phase === 'BALL_FLIGHT' || phase === 'THROW'
+  
   return (
-    <div className="fixed inset-0 bg-black overflow-hidden no-overscroll touch-manipulation">
+    <div className="fixed inset-0 bg-black overflow-hidden">
       {/* FULL SCREEN GAME CANVAS */}
+      {/* CRITICAL: pointerEvents controlled by phase to allow React buttons to work */}
       <div 
         ref={gameContainerRef}
         className="absolute inset-0"
-        style={{ touchAction: 'pan-y pinch-zoom' }}
+        style={{ 
+          zIndex: 1,
+          pointerEvents: canvasReceivesTouch ? 'auto' : 'none',
+          touchAction: 'none',
+        }}
       />
       
       {/* ================================================================ */}
-      {/* ESPN-STYLE SCORE BUG - Top Center */}
+      {/* ESPN-STYLE SCORE BUG - Top Center - FIXED POSITIONING */}
       {/* ================================================================ */}
       <div 
-        className="absolute top-0 inset-x-0 z-20 pointer-events-none"
+        className="fixed top-0 left-0 right-0 z-20 pointer-events-none"
         style={{ 
-          padding: 'calc(env(safe-area-inset-top, 0px) + 8px) 16px 0',
+          paddingTop: 'calc(env(safe-area-inset-top, 0px) + 8px)',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
         }}
       >
         <motion.div 
-          className="flex items-center justify-center gap-4 mx-auto"
           initial={{ y: -50, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.3, type: 'spring' }}
-          style={{
-            maxWidth: '300px',
-          }}
         >
           {/* Score Container */}
           <div 
-            className="flex items-center"
             style={{
-              background: 'rgba(0, 0, 0, 0.85)',
+              display: 'flex',
+              alignItems: 'center',
+              background: 'rgba(0, 0, 0, 0.9)',
               backdropFilter: 'blur(16px)',
-              borderRadius: '8px',
-              border: '1px solid rgba(255,255,255,0.1)',
+              WebkitBackdropFilter: 'blur(16px)',
+              borderRadius: '12px',
+              border: '1px solid rgba(255,255,255,0.15)',
               overflow: 'hidden',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
             }}
           >
             {/* Home Team */}
             <div 
-              className="flex items-center gap-2 px-3 py-1.5"
-              style={{ borderRight: '1px solid rgba(255,255,255,0.1)' }}
+              style={{ 
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '8px 14px',
+                borderRight: '1px solid rgba(255,255,255,0.1)',
+              }}
             >
               <div 
                 style={{ 
-                  width: '6px', 
-                  height: '6px', 
+                  width: '8px', 
+                  height: '8px', 
                   borderRadius: '50%', 
                   background: '#69BE28',
-                  boxShadow: '0 0 8px #69BE28',
+                  boxShadow: '0 0 10px #69BE28',
                 }} 
               />
               <span style={{ 
-                fontSize: '11px', 
-                color: 'rgba(255,255,255,0.7)', 
-                fontWeight: 600,
+                fontSize: '12px', 
+                color: 'rgba(255,255,255,0.8)', 
+                fontWeight: 700,
                 fontFamily: 'var(--font-oswald)',
               }}>
                 DS
@@ -532,10 +614,10 @@ function V3GameContent() {
                 initial={{ scale: 1.3, color: '#69BE28' }}
                 animate={{ scale: 1, color: '#FFFFFF' }}
                 style={{ 
-                  fontSize: '20px', 
+                  fontSize: '24px', 
                   fontWeight: 800, 
                   fontFamily: 'var(--font-bebas)',
-                  minWidth: '24px',
+                  minWidth: '28px',
                   textAlign: 'center',
                 }}
               >
@@ -544,20 +626,26 @@ function V3GameContent() {
             </div>
             
             {/* Clock */}
-            <div className="px-3 py-1.5 text-center" style={{ minWidth: '60px' }}>
+            <div style={{ 
+              padding: '6px 16px',
+              textAlign: 'center',
+              minWidth: '70px',
+            }}>
               <div style={{ 
-                fontSize: '16px', 
+                fontSize: '20px', 
                 fontWeight: 700, 
                 color: 'white',
                 fontFamily: 'var(--font-bebas)',
                 letterSpacing: '0.05em',
+                lineHeight: 1,
               }}>
                 {clock}
               </div>
               <div style={{ 
-                fontSize: '8px', 
-                color: 'rgba(255,255,255,0.4)',
-                marginTop: '-2px',
+                fontSize: '10px', 
+                color: 'rgba(255,255,255,0.5)',
+                fontWeight: 600,
+                marginTop: '2px',
               }}>
                 Q{quarter}
               </div>
@@ -565,25 +653,30 @@ function V3GameContent() {
             
             {/* Away Team */}
             <div 
-              className="flex items-center gap-2 px-3 py-1.5"
-              style={{ borderLeft: '1px solid rgba(255,255,255,0.1)' }}
+              style={{ 
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '8px 14px',
+                borderLeft: '1px solid rgba(255,255,255,0.1)',
+              }}
             >
               <span 
                 style={{ 
-                  fontSize: '20px', 
+                  fontSize: '24px', 
                   fontWeight: 800, 
-                  color: 'rgba(255,255,255,0.9)',
+                  color: 'rgba(255,255,255,0.7)',
                   fontFamily: 'var(--font-bebas)',
-                  minWidth: '24px',
+                  minWidth: '28px',
                   textAlign: 'center',
                 }}
               >
                 {score.away}
               </span>
               <span style={{ 
-                fontSize: '11px', 
+                fontSize: '12px', 
                 color: 'rgba(255,255,255,0.5)', 
-                fontWeight: 600,
+                fontWeight: 700,
                 fontFamily: 'var(--font-oswald)',
               }}>
                 {teamAsset?.abbreviation || 'OPP'}
@@ -594,21 +687,22 @@ function V3GameContent() {
         
         {/* Down & Distance Pill */}
         <motion.div 
-          className="flex justify-center mt-2"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.5 }}
+          style={{ marginTop: '8px' }}
         >
           <div style={{
-            fontSize: '11px',
+            fontSize: '12px',
             fontWeight: 700,
             color: '#FFD700',
-            background: 'rgba(0,0,0,0.7)',
-            padding: '3px 12px',
-            borderRadius: '10px',
-            border: '1px solid rgba(255,215,0,0.3)',
+            background: 'rgba(0,0,0,0.8)',
+            padding: '4px 14px',
+            borderRadius: '12px',
+            border: '1px solid rgba(255,215,0,0.4)',
             fontFamily: 'var(--font-oswald)',
             letterSpacing: '0.05em',
+            boxShadow: '0 2px 10px rgba(0,0,0,0.3)',
           }}>
             {downText} & {yardsToGo}
           </div>
@@ -712,6 +806,29 @@ function V3GameContent() {
           </motion.div>
         )}
       </AnimatePresence>
+      
+      {/* ================================================================ */}
+      {/* DEBUG BANNER - Shows current phase (remove in production) */}
+      {/* ================================================================ */}
+      <div 
+        style={{
+          position: 'fixed',
+          top: 'calc(env(safe-area-inset-top, 0px) + 80px)',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          background: phase === 'PRE_SNAP' ? 'rgba(105,190,40,0.9)' : 'rgba(255,100,100,0.9)',
+          color: '#000',
+          padding: '6px 16px',
+          borderRadius: '20px',
+          fontSize: '12px',
+          fontWeight: 700,
+          zIndex: 99999,
+          pointerEvents: 'none',
+          fontFamily: 'monospace',
+        }}
+      >
+        PHASE: {phase} | Canvas: {canvasReceivesTouch ? 'ON' : 'OFF'}
+      </div>
       
       {/* ================================================================ */}
       {/* PLAYBOOK CONTROL PANEL - Madden-style at bottom */}
@@ -1073,32 +1190,35 @@ function V3GameContent() {
       </AnimatePresence>
       
       {/* ================================================================ */}
-      {/* PAUSE BUTTON */}
+      {/* PAUSE BUTTON - Fixed position, top left */}
       {/* ================================================================ */}
       {phase !== 'loading' && !showResults && (
         <motion.button
           onClick={handlePause}
-          className="absolute z-30"
+          className="fixed z-30"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           style={{
-            top: 'calc(env(safe-area-inset-top, 0px) + 12px)',
-            left: '16px',
-            width: '36px',
-            height: '36px',
-            background: 'rgba(0,0,0,0.5)',
-            border: '1px solid rgba(255,255,255,0.15)',
-            borderRadius: '10px',
-            color: 'rgba(255,255,255,0.6)',
+            top: 'calc(env(safe-area-inset-top, 0px) + 10px)',
+            left: '12px',
+            width: '40px',
+            height: '40px',
+            background: 'rgba(0,0,0,0.7)',
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)',
+            border: '1px solid rgba(255,255,255,0.2)',
+            borderRadius: '12px',
+            color: 'rgba(255,255,255,0.7)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             cursor: 'pointer',
+            boxShadow: '0 2px 10px rgba(0,0,0,0.3)',
           }}
-          whileHover={{ background: 'rgba(0,0,0,0.7)' }}
+          whileHover={{ background: 'rgba(0,0,0,0.85)', scale: 1.05 }}
           whileTap={{ scale: 0.9 }}
         >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
             <rect x="6" y="4" width="4" height="16" rx="1" />
             <rect x="14" y="4" width="4" height="16" rx="1" />
           </svg>

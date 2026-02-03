@@ -9,7 +9,7 @@ import { GhostButton } from '@/components/ui/GhostButton'
 import { FlightPath } from './FlightPath'
 import { CityMarker } from './CityMarker'
 import { CityPreview } from './CityPreview'
-import { useGameStore } from '@/src/store/gameStore'
+import { useGameStore, useAllStageProgress, StageProgress } from '@/src/store/gameStore'
 import { CAMPAIGN_STAGES, CampaignStage } from '@/src/game/data/campaign'
 import { PLACEHOLDER_ASSETS, getCityAsset } from '@/src/game/data/campaignAssets'
 import { AudioManager } from '@/src/game/systems/AudioManager'
@@ -43,6 +43,77 @@ interface CampaignMapV2Props {
   airplaneUrl?: string | null
 }
 
+// Dual completion badge component
+const CompletionBadges = ({ stageProgress }: { stageProgress: StageProgress | null }) => {
+  if (!stageProgress) return null
+  
+  const { qbCompleted, defenseCompleted, qbStars, defenseStars } = stageProgress
+  
+  if (!qbCompleted && !defenseCompleted) return null
+  
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        top: '-8px',
+        right: '-8px',
+        display: 'flex',
+        gap: '2px',
+        zIndex: 10,
+      }}
+    >
+      {/* QB Badge */}
+      {qbCompleted && (
+        <motion.div
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          style={{
+            width: '16px',
+            height: '16px',
+            borderRadius: '50%',
+            background: 'linear-gradient(135deg, #69BE28 0%, #4a9a1c 100%)',
+            border: '1.5px solid #002244',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: '0 2px 6px rgba(105,190,40,0.4)',
+          }}
+          title={`QB: ${qbStars} stars`}
+        >
+          <svg width="8" height="8" viewBox="0 0 24 24" fill="#fff">
+            <ellipse cx="12" cy="12" rx="9" ry="5" />
+          </svg>
+        </motion.div>
+      )}
+      
+      {/* Defense Badge */}
+      {defenseCompleted && (
+        <motion.div
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ delay: 0.1 }}
+          style={{
+            width: '16px',
+            height: '16px',
+            borderRadius: '50%',
+            background: 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)',
+            border: '1.5px solid #002244',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: '0 2px 6px rgba(255,215,0,0.4)',
+          }}
+          title={`Defense: ${defenseStars} stars`}
+        >
+          <svg width="8" height="8" viewBox="0 0 24 24" fill="#002244">
+            <path d="M12 2L4 6v6c0 5.55 3.84 10.74 8 12 4.16-1.26 8-6.45 8-12V6l-8-4z" />
+          </svg>
+        </motion.div>
+      )}
+    </div>
+  )
+}
+
 export function CampaignMapV2({
   onSelectStage,
   onBack,
@@ -51,6 +122,7 @@ export function CampaignMapV2({
   airplaneUrl,
 }: CampaignMapV2Props) {
   const campaign = useGameStore((s) => s.campaign)
+  const allStageProgress = useAllStageProgress()
   const mapContainerRef = useRef<HTMLDivElement>(null)
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 })
   const [selectedStage, setSelectedStage] = useState<CampaignStage | null>(null)
@@ -318,13 +390,21 @@ export function CampaignMapV2({
         className="absolute inset-0 z-0"
         style={{ top: 120, bottom: 100 }}
       >
-        {/* Flight Path with Airplane */}
+        {/* Flight Path with Airplane - Draggable like Donkey Kong */}
         <FlightPath
           currentStageId={campaign.currentStageId}
           completedStageIds={completedStageIds}
           onArrival={handlePlaneArrival}
           airplaneImageUrl={airplaneUrl}
           showAirplane={true}
+          allowDragNavigation={true}
+          onDragToStage={(stageId) => {
+            // Find the stage and show its preview
+            const stage = CAMPAIGN_STAGES.find(s => s.id === stageId)
+            if (stage) {
+              setSelectedStage(stage)
+            }
+          }}
         />
 
         {/* Unique Location Markers (no overlaps) - z-index above plane (35) */}
@@ -365,6 +445,13 @@ export function CampaignMapV2({
               }
               transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
             />
+
+            {/* Dual completion badges */}
+            {location.primaryStage && allStageProgress && (
+              <CompletionBadges 
+                stageProgress={allStageProgress[location.primaryStage.id] || null} 
+              />
+            )}
 
             {/* Main marker */}
             <motion.div
