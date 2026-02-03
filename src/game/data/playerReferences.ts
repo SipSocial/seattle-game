@@ -161,6 +161,18 @@ export const PLAYER_REFERENCES: PlayerReference[] = [
     physicalDescription: '6-1, 193 lbs, rangy athletic frame, dark skin, clean-shaven, ball hawk instincts',
     poseStyle: 'intercepting a pass, jumping with arms extended, making the big play',
   },
+  {
+    jersey: 3,
+    name: 'Nick Emmanwori',
+    position: 'S',
+    height: '6-3',
+    heightInches: 75,
+    weight: 220,
+    build: 'athletic',
+    headshotUrl: 'https://static.www.nfl.com/image/upload/t_player_profile_landscape/f_auto/league/nick-emmanwori-seahawks-2025',
+    physicalDescription: '6-3, 220 lbs, tall rangy athletic frame, dark brown skin, clean-shaven, intense focus, Rookie of the Week 2025, 55 tackles, 2.5 sacks, 1 INT',
+    poseStyle: 'attacking the line of scrimmage, explosive tackle form, Legion of Boom energy',
+  },
 ]
 
 /**

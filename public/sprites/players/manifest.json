@@ -78,5 +78,10 @@
     "playerId": "def-99",
     "playerName": "Leonard Williams",
     "localPath": "/sprites/players/defense-99-leonard-williams.png"
+  },
+  {
+    "playerId": "def-3",
+    "playerName": "Nick Emmanwori",
+    "localPath": "/sprites/players/defense-3-nick-emmanwori.png"
   }
 ]
