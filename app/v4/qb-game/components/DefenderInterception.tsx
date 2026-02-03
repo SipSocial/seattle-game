@@ -242,7 +242,8 @@ function getDefenderAnimation(phase: AnimationPhase, x: number) {
         scale: 1,
         x: x > 0 ? -30 : 30, // Sprint from opposite direction
         y: 20,
-        transition: { duration: 0.3, ease: 'easeOut' },
+        rotate: 0,
+        transition: { duration: 0.3, ease: 'easeOut' as const },
       }
     case 'dive':
       return {
@@ -251,7 +252,7 @@ function getDefenderAnimation(phase: AnimationPhase, x: number) {
         x: 0,
         y: 0,
         rotate: x > 0 ? -30 : 30, // Dive angle
-        transition: { duration: 0.4, ease: 'easeInOut' },
+        transition: { duration: 0.4, ease: 'easeInOut' as const },
       }
     case 'catch':
       return {
@@ -260,7 +261,7 @@ function getDefenderAnimation(phase: AnimationPhase, x: number) {
         x: 0,
         y: 0,
         rotate: 0,
-        transition: { duration: 0.2, ease: 'easeOut' },
+        transition: { duration: 0.2, ease: 'easeOut' as const },
       }
     case 'celebrate':
       return {
@@ -269,7 +270,7 @@ function getDefenderAnimation(phase: AnimationPhase, x: number) {
         x: 0,
         y: -10,
         rotate: 0,
-        transition: { duration: 0.3, ease: 'easeOut' },
+        transition: { duration: 0.3, ease: 'easeOut' as const },
       }
     default:
       return { opacity: 1, scale: 1, x: 0, y: 0, rotate: 0 }
@@ -282,22 +283,24 @@ function getBodyAnimation(phase: AnimationPhase) {
       return {
         scaleX: 1.3,
         scaleY: 0.8,
-        transition: { duration: 0.3 },
+        y: 0,
+        transition: { duration: 0.3, type: 'tween' as const },
       }
     case 'catch':
       return {
         scaleX: 1.1,
         scaleY: 1.1,
-        transition: { duration: 0.15, type: 'spring', stiffness: 500 },
+        y: 0,
+        transition: { duration: 0.15, type: 'spring' as const, stiffness: 500 },
       }
     case 'celebrate':
       return {
         scaleX: 1,
         scaleY: 1,
         y: [0, -5, 0],
-        transition: { duration: 0.4, repeat: 2 },
+        transition: { duration: 0.4, type: 'tween' as const, repeat: 2 },
       }
     default:
-      return { scaleX: 1, scaleY: 1 }
+      return { scaleX: 1, scaleY: 1, y: 0, transition: { duration: 0.1 } }
   }
 }
