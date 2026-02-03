@@ -170,7 +170,7 @@ export const PLAYER_REFERENCES: PlayerReference[] = [
     weight: 220,
     build: 'athletic',
     headshotUrl: 'https://static.www.nfl.com/image/upload/t_player_profile_landscape/f_auto/league/nick-emmanwori-seahawks-2025',
-    physicalDescription: '6-3, 220 lbs, tall rangy athletic frame, dark brown skin, clean-shaven, intense focus, Rookie of the Week 2025, 55 tackles, 2.5 sacks, 1 INT',
+    physicalDescription: '6-3, 220 lbs, tall rangy athletic frame, dark brown skin, clean-shaven, intense focus, Rookie of the Week 2025, 81 tackles, 11 PD, 2.5 sacks, 1 INT, PFF 84.8 grade',
     poseStyle: 'attacking the line of scrimmage, explosive tackle form, Legion of Boom energy',
   },
 ]

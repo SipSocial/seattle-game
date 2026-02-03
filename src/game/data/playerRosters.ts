@@ -157,7 +157,7 @@ export const DEFENSE_PLAYERS: PlayerData[] = [
     jersey: 3,
     name: 'Nick Emmanwori',
     position: 'S',
-    stats: { tackles: 55, sacks: 2.5, interceptions: 1 },
+    stats: { tackles: 81, passDefended: 11, sacks: 2.5 },
     imageFront: '/sprites/players/defense-3-nick-emmanwori.png',
     side: 'defense',
   },

@@ -129,7 +129,7 @@ const SAFETIES: Defender[] = [
   { 
     jersey: 3, name: 'Nick Emmanwori', position: 'S', positionGroup: 'DB',
     isStarter: true,
-    stats2025: { tackles: 55, sacks: 2.5, interceptions: 1 }
+    stats2025: { tackles: 81, sacks: 2.5, interceptions: 1, forcedFumbles: 0 }
   },
   { 
     jersey: 39, name: 'Ty Okada', position: 'S', positionGroup: 'DB',
