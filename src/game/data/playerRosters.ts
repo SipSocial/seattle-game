@@ -153,6 +153,14 @@ export const DEFENSE_PLAYERS: PlayerData[] = [
     imageFront: '/sprites/players/defense-8-coby-bryant.png',
     side: 'defense',
   },
+  {
+    jersey: 3,
+    name: 'Nick Emmanwori',
+    position: 'S',
+    stats: { tackles: 55, sacks: 2.5, interceptions: 1 },
+    imageFront: '/sprites/players/defense-3-nick-emmanwori.png',
+    side: 'defense',
+  },
 ]
 
 // ============================================================================
