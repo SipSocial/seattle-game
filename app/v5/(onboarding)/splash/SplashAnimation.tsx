@@ -388,17 +388,17 @@ function SceneIntro({ time }: { time: number }) {
 }
 
 // ============================================================================
-// SCENE 2: MAP FLIGHT - Plane flies Seattle (top-left) → San Francisco (down-right)
+// SCENE 2: MAP FLIGHT - Plane flies New York (east) → San Francisco (west)
 // ============================================================================
 function SceneMapFlight({ time }: { time: number }) {
   const localTime = time - SCENES.mapFlight.start
   const duration = SCENES.mapFlight.end - SCENES.mapFlight.start
   
   const progress = interpolate(localTime, [0, duration], [0, 1])
-  // Plane flies diagonally: top-left to bottom-right (Seattle → SF)
-  const planeX = interpolate(progress, [0, 1], [-200, 180])   // left to right
-  const planeY = interpolate(progress, [0, 1], [-120, 80])    // top to bottom (DOWN)
-  const planeScale = 0.8 + 0.3 * progress
+  // Plane flies from East Coast (right) to West Coast (left)
+  const planeX = interpolate(progress, [0, 1], [220, -200])   // RIGHT to LEFT
+  const planeY = interpolate(progress, [0, 1], [-60, 50])     // slight descent (NY is north, SF more south)
+  const planeScale = 0.75 + 0.35 * progress
   const textOpacity = interpolate(localTime, [0.5, 1], [0, 1])
   
   return (
@@ -409,7 +409,7 @@ function SceneMapFlight({ time }: { time: number }) {
       
       <SmokeOverlay intensity={0.4} time={time} />
       
-      {/* Plane - flies top-left to bottom-right, nose tilted down-right */}
+      {/* Plane - flies east to west, nose pointing left (direction of travel) */}
       <AbsoluteFill style={{ justifyContent: 'center', alignItems: 'center' }}>
         <img
           src={ASSETS.plane}
@@ -417,8 +417,8 @@ function SceneMapFlight({ time }: { time: number }) {
           style={{
             width: 'clamp(180px, 45vw, 300px)',
             height: 'auto',
-            // Rotate +15deg so nose points in direction of travel (down-right)
-            transform: `translate(${planeX}px, ${planeY}px) scale(${planeScale}) rotate(15deg)`,
+            // scaleX(-1) flips plane to face LEFT, rotate tilts nose slightly down
+            transform: `translate(${planeX}px, ${planeY}px) scaleX(-1) scale(${planeScale}) rotate(-12deg)`,
             filter: `drop-shadow(0 40px 80px rgba(0,0,0,0.6)) drop-shadow(0 0 40px ${DESIGN.colors.green}30)`,
             willChange: 'transform',
           }}
