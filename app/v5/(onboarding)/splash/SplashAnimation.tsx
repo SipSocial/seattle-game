@@ -1,55 +1,65 @@
 'use client'
 
 /**
- * DARK SIDE FOOTBALL — SPLASH ANIMATION v2
+ * DARK SIDE FOOTBALL — REACT SPLASH ANIMATION
  * 
- * BUTTERY SMOOTH • PIXEL PERFECT • ACCESSIBLE
+ * Premium 60fps React + Framer Motion version
+ * Replaces video for crisp, native resolution rendering
  * 
- * Key improvements:
- * - Dark text shadows for readability over any background
- * - Simplified animation math for smooth 60fps
- * - Proper z-indexing and layering
- * - Larger, more accessible typography
- * - Fixed phone/text positioning relationships
+ * Duration: 32 seconds (production-tuned for cinematic pacing)
+ * Resolution: Native device resolution (not fixed 1080p)
  */
 
-import React, { useEffect, useState, useRef, useCallback } from 'react'
+import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence, useAnimationFrame } from 'framer-motion'
-import { Volume2, VolumeX, ChevronRight } from 'lucide-react'
+import Image from 'next/image'
+import { Volume2, VolumeX, SkipForward, ChevronRight } from 'lucide-react'
 
 // ============================================================================
-// DESIGN TOKENS
+// DESIGN SYSTEM - Matching North Star exactly
 // ============================================================================
-const COLORS = {
-  navy: '#002244',
-  green: '#69BE28',
-  gold: '#FFD700',
-  white: '#FFFFFF',
-  black: '#000000',
+const DESIGN = {
+  colors: {
+    navy: '#002244',        // Primary background
+    green: '#69BE28',       // Primary accent, CTAs
+    gold: '#FFD700',        // Sponsor, prizes
+    ink: 'rgba(255,255,255,0.9)',  // Primary text
+    inkDim: 'rgba(255,255,255,0.5)', // Secondary/labels
+    inkMuted: 'rgba(255,255,255,0.2)', // Very muted
+    grey: '#A5ACAF',        // Muted text
+    bg: '#002244',          // Using navy as bg (not pure black)
+  },
+  fonts: {
+    hero: 'var(--font-bebas, "Bebas Neue"), var(--font-oswald, "Oswald"), sans-serif',
+    title: 'var(--font-oswald, "Oswald"), "Arial Black", sans-serif',
+    body: '"Inter", "Helvetica Neue", Arial, sans-serif',
+  },
+  // 8px grid spacing
+  space: {
+    xxs: 4,   // Tight heading-to-body
+    xs: 8,    // Small gaps
+    sm: 12,   // Default gaps
+    md: 16,   // Medium gaps
+    lg: 24,   // Large gaps
+    xl: 32,   // Extra large
+    '2xl': 48,
+  },
+  // Letter spacing by element
+  tracking: {
+    tight: '-0.02em',   // Hero text
+    normal: '0',        // Body
+    wide: '0.1em',      // Titles
+    wider: '0.15em',    // Subtitles
+    widest: '0.2em',    // Labels/captions
+  },
 }
 
-// Text shadow for READABILITY (dark shadow + optional glow)
-const TEXT_SHADOW = {
-  // Primary readable shadow - ALWAYS use this
-  readable: '0 2px 4px rgba(0,0,0,0.9), 0 4px 12px rgba(0,0,0,0.7), 0 8px 24px rgba(0,0,0,0.5)',
-  // With green glow
-  glowGreen: `0 2px 4px rgba(0,0,0,0.9), 0 4px 12px rgba(0,0,0,0.7), 0 0 40px ${COLORS.green}50`,
-  // With gold glow
-  glowGold: `0 2px 4px rgba(0,0,0,0.9), 0 4px 12px rgba(0,0,0,0.7), 0 0 40px ${COLORS.gold}50`,
-  // Subtle for small text
-  subtle: '0 1px 3px rgba(0,0,0,0.8), 0 2px 8px rgba(0,0,0,0.5)',
-}
-
-const FONTS = {
-  hero: 'var(--font-bebas, "Bebas Neue"), var(--font-oswald, "Oswald"), "Arial Black", sans-serif',
-  title: 'var(--font-oswald, "Oswald"), "Arial Black", sans-serif',
-  body: '"Inter", "Helvetica Neue", Arial, sans-serif',
-}
-
-// DrinkSip logo
+// ============================================================================
+// ASSETS
+// ============================================================================
+// DrinkSip SVG logo from CDN (per design system)
 const DRINKSIP_LOGO = 'https://cdn.shopify.com/s/files/1/0407/8580/5468/files/DrinkSip_Logo_SVG.svg?v=1759624477'
 
-// Assets
 const ASSETS = {
   stadium: 'https://cdn.leonardo.ai/users/eb9a23b8-36c0-4667-b97f-64fdee85d14b/generations/16412705-ca65-400e-bb78-80ff29be860a/segments/2:2:1/Phoenix_Empty_NFL_football_field_at_night_dramatic_billowing_s_0.jpg',
   usMap: 'https://cdn.leonardo.ai/users/eb9a23b8-36c0-4667-b97f-64fdee85d14b/generations/2561ee31-7e9b-4de3-9cf2-536e5facde5a/segments/2:4:1/Phoenix_Stylized_3D_US_map_at_night_dark_tactical_military_the_0.jpg',
@@ -75,59 +85,77 @@ const HERO_PLAYERS = [
 ]
 
 // ============================================================================
-// TIMING - Simplified scene structure
+// TIMING (in seconds) - Production-tuned for cinematic pacing
 // ============================================================================
-const TOTAL_DURATION = 28 // Shorter, punchier
+const TOTAL_DURATION = 32
 const SCENES = {
-  intro: { start: 0, end: 5 },
-  mapFlight: { start: 5, end: 7.5 },
-  gameHub: { start: 7.5, end: 10 },
-  picks: { start: 10, end: 12 },
-  live: { start: 12, end: 14 },
-  scanWin: { start: 14, end: 16 },
-  features: { start: 16, end: 18 },
-  giveaway: { start: 18, end: 20 },
-  players: { start: 20, end: 25 },
-  cta: { start: 25, end: 28 },
+  intro: { start: 0, end: 5.5 },         // +0.5s for better hold
+  mapFlight: { start: 5.5, end: 8 },     // +0.5s for readability
+  gameHub: { start: 8, end: 10.5 },      // +0.5s for phone settle
+  picks: { start: 10.5, end: 12.5 },     // 2s
+  live: { start: 12.5, end: 14.5 },      // 2s
+  scanWin: { start: 14.5, end: 16.5 },   // 2s
+  features: { start: 16.5, end: 18.5 },  // 2s
+  giveaway: { start: 18.5, end: 20.5 },  // 2s
+  players: { start: 20.5, end: 27.5 },   // 7s for player showcase
+  cta: { start: 27.5, end: 32 },         // 4.5s for strong CTA hold
 }
 
 // ============================================================================
-// ANIMATION HOOK - Simplified for smooth 60fps
+// HOOKS
 // ============================================================================
 function useAnimationTime(isPlaying: boolean) {
   const [time, setTime] = useState(0)
-  const startRef = useRef<number | null>(null)
+  const startTimeRef = useRef<number | null>(null)
   
   useAnimationFrame((t) => {
     if (!isPlaying) {
-      startRef.current = null
+      startTimeRef.current = null
       return
     }
-    if (startRef.current === null) startRef.current = t
-    const elapsed = (t - startRef.current) / 1000
-    setTime(Math.min(elapsed, TOTAL_DURATION))
+    if (startTimeRef.current === null) {
+      startTimeRef.current = t
+    }
+    const elapsed = (t - startTimeRef.current) / 1000 // Convert to seconds
+    setTime(Math.min(elapsed, TOTAL_DURATION)) // Cap at total duration
   })
   
   return time
 }
 
+function useDeviceCapability() {
+  const [isHighEnd, setIsHighEnd] = useState(true)
+  
+  useEffect(() => {
+    const cores = navigator.hardwareConcurrency || 4
+    const memory = (navigator as any).deviceMemory || 4
+    setIsHighEnd(cores >= 4 && memory >= 4)
+  }, [])
+  
+  return { isHighEnd }
+}
+
 // ============================================================================
-// UTILITIES - Smooth easing functions
+// UTILITIES
 // ============================================================================
-function lerp(a: number, b: number, t: number): number {
-  return a + (b - a) * Math.max(0, Math.min(1, t))
+function interpolate(value: number, inputRange: [number, number], outputRange: [number, number], clamp = true): number {
+  const [inMin, inMax] = inputRange
+  const [outMin, outMax] = outputRange
+  const ratio = (value - inMin) / (inMax - inMin)
+  const result = outMin + ratio * (outMax - outMin)
+  if (clamp) {
+    return Math.min(Math.max(result, Math.min(outMin, outMax)), Math.max(outMin, outMax))
+  }
+  return result
 }
 
-function easeOutCubic(t: number): number {
-  return 1 - Math.pow(1 - t, 3)
-}
-
-function easeInOutCubic(t: number): number {
-  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
-}
-
-function smoothstep(t: number): number {
-  return t * t * (3 - 2 * t)
+function hexToRgba(hex: string, a: number): string {
+  const h = hex.replace('#', '')
+  const bigint = parseInt(h, 16)
+  const r = (bigint >> 16) & 255
+  const g = (bigint >> 8) & 255
+  const b = bigint & 255
+  return `rgba(${r},${g},${b},${a})`
 }
 
 // ============================================================================
@@ -135,13 +163,26 @@ function smoothstep(t: number): number {
 // ============================================================================
 function AbsoluteFill({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
   return (
-    <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', ...style }}>
+    <div
+      style={{
+        position: 'absolute',
+        inset: 0,
+        display: 'flex',
+        flexDirection: 'column',
+        ...style,
+      }}
+    >
       {children}
     </div>
   )
 }
 
-function PhoneMockup({ screen, scale = 1.2 }: { screen: string; scale?: number }) {
+function PhoneMockup({ screen, scale = 1.4, tilt = 0, glowColor = DESIGN.colors.green }: {
+  screen: string
+  scale?: number
+  tilt?: number
+  glowColor?: string
+}) {
   return (
     <div
       style={{
@@ -149,14 +190,16 @@ function PhoneMockup({ screen, scale = 1.2 }: { screen: string; scale?: number }
         width: 220 * scale,
         height: 460 * scale,
         borderRadius: 32 * scale,
-        background: 'linear-gradient(145deg, #0a1628, #0a0a1a)',
-        border: '2px solid rgba(105,190,40,0.4)',
+        background: `linear-gradient(145deg, ${DESIGN.colors.navy}, #0a0a1e)`,
+        border: `2px solid rgba(105,190,40,0.3)`,
         boxShadow: `
-          0 0 0 1px rgba(255,255,255,0.05),
-          0 20px 60px rgba(0,0,0,0.8),
-          0 0 80px rgba(105,190,40,0.3)
+          0 40px 80px rgba(0,0,0,0.6),
+          0 0 60px ${hexToRgba(glowColor, 0.4)},
+          inset 0 0 0 1px rgba(255,255,255,0.08)
         `,
         overflow: 'hidden',
+        transform: `perspective(1200px) rotateY(${tilt}deg)`,
+        willChange: 'transform',
       }}
     >
       <div
@@ -168,7 +211,15 @@ function PhoneMockup({ screen, scale = 1.2 }: { screen: string; scale?: number }
           background: '#000',
         }}
       >
-        <img src={screen} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        <img
+          src={screen}
+          alt=""
+          style={{
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+          }}
+        />
       </div>
       {/* Dynamic Island */}
       <div
@@ -187,86 +238,121 @@ function PhoneMockup({ screen, scale = 1.2 }: { screen: string; scale?: number }
   )
 }
 
-function DarkOverlay({ intensity = 0.7 }: { intensity?: number }) {
+function SmokeOverlay({ intensity = 0.5, time }: { intensity?: number; time: number }) {
+  const drift = Math.sin(time * 0.5) * 30
+  const pulse = 0.85 + 0.15 * Math.sin(time * 1.5)
+  
   return (
     <AbsoluteFill style={{ pointerEvents: 'none' }}>
-      {/* Top gradient - stronger for text readability */}
-      <div 
-        style={{ 
-          position: 'absolute', 
-          inset: 0,
-          background: `linear-gradient(180deg, 
-            rgba(0,0,0,${0.8 * intensity}) 0%, 
-            rgba(0,0,0,${0.3 * intensity}) 25%,
-            transparent 50%,
-            rgba(0,0,0,${0.3 * intensity}) 75%,
-            rgba(0,0,0,${0.9 * intensity}) 100%
-          )`,
-        }} 
+      <div
+        style={{
+          position: 'absolute',
+          inset: '-30%',
+          background: `radial-gradient(ellipse 140% 60% at ${50 + drift * 0.5}% 100%, rgba(255,255,255,${0.1 * intensity * pulse}), transparent 50%)`,
+          filter: 'blur(100px)',
+          willChange: 'transform',
+        }}
       />
-      {/* Vignette */}
-      <div 
-        style={{ 
-          position: 'absolute', 
-          inset: 0, 
-          background: 'radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.6) 100%)',
-        }} 
+      <div
+        style={{
+          position: 'absolute',
+          inset: '-20%',
+          background: `radial-gradient(ellipse 100% 40% at ${50 - drift * 0.3}% 100%, rgba(105,190,40,${0.08 * intensity}), transparent 45%)`,
+          filter: 'blur(120px)',
+        }}
+      />
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          background: `radial-gradient(ellipse 80% 30% at 50% 0%, rgba(0,34,68,${0.3 * intensity}), transparent 40%)`,
+          filter: 'blur(80px)',
+        }}
       />
     </AbsoluteFill>
   )
 }
 
+function Vignette() {
+  return (
+    <AbsoluteFill style={{ pointerEvents: 'none' }}>
+      <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse 100% 100% at 50% 50%, transparent 40%, rgba(0,0,0,0.75) 100%)' }} />
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 80, background: 'linear-gradient(180deg, rgba(0,0,0,0.7) 0%, transparent 100%)' }} />
+      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 160, background: 'linear-gradient(0deg, rgba(0,0,0,0.9) 0%, transparent 100%)' }} />
+    </AbsoluteFill>
+  )
+}
+
 // ============================================================================
-// SCENE 1: INTRO
+// SCENE 1: INTRO - DrinkSip Presents + Dark Side Title
 // ============================================================================
 function SceneIntro({ time }: { time: number }) {
-  // Phase 1: DrinkSip logo (0-2.5s)
-  const logoProgress = smoothstep(Math.min(time / 0.8, 1))
-  const logoFadeOut = time > 2 ? smoothstep((time - 2) / 0.5) : 0
-  const logoOpacity = logoProgress * (1 - logoFadeOut)
-  const presentsOpacity = time > 0.8 ? smoothstep((time - 0.8) / 0.6) * (1 - logoFadeOut) : 0
+  const localTime = time
   
-  // Phase 2: Dark Side title (2.5-5s)
-  const titleProgress = time > 2.5 ? smoothstep((time - 2.5) / 0.8) : 0
-  const subtitleProgress = time > 3.2 ? smoothstep((time - 3.2) / 0.6) : 0
-  const taglineProgress = time > 3.8 ? smoothstep((time - 3.8) / 0.6) : 0
+  // Phase 1: DrinkSip (0-3s) - slower, more dramatic
+  const logoOpacity = interpolate(localTime, [0, 0.8], [0, 1]) * interpolate(localTime, [2.5, 3.2], [1, 0])
+  const logoScale = 0.9 + 0.1 * interpolate(localTime, [0, 1.0], [0, 1])
+  const presentsOpacity = interpolate(localTime, [1.0, 1.8], [0, 1])
+  
+  // Phase 2: Dark Side (3-5.5s) - extended fades for readability
+  const titleOpacity = interpolate(localTime, [2.8, 3.6], [0, 1])
+  const titleScale = 0.85 + 0.15 * interpolate(localTime, [2.8, 3.5], [0, 1])
+  const subtitleOpacity = interpolate(localTime, [3.7, 4.4], [0, 1])
+  const playFromHomeOpacity = interpolate(localTime, [4.5, 5.2], [0, 1])
   
   return (
-    <AbsoluteFill style={{ background: COLORS.navy }}>
-      {/* Stadium bg - very dark */}
+    <AbsoluteFill style={{ backgroundColor: DESIGN.colors.bg }}>
+      {/* Stadium background */}
       <AbsoluteFill>
-        <img 
-          src={ASSETS.stadium} 
-          alt="" 
-          style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'brightness(0.15) saturate(0.8)' }} 
-        />
+        <img src={ASSETS.stadium} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'brightness(0.15) blur(6px)' }} />
       </AbsoluteFill>
       
-      <DarkOverlay intensity={0.6} />
+      <SmokeOverlay intensity={0.4} time={time} />
+      <Vignette />
       
-      {/* Phase 1: DrinkSip */}
-      <AbsoluteFill style={{ justifyContent: 'center', alignItems: 'center', opacity: logoOpacity }}>
-        <div style={{ textAlign: 'center', transform: `scale(${0.9 + 0.1 * logoProgress})` }}>
+      {/* Phase 1: DrinkSip - Perfectly centered */}
+      <AbsoluteFill 
+        style={{ 
+          justifyContent: 'center', 
+          alignItems: 'center', 
+          opacity: logoOpacity,
+        }}
+      >
+        <div 
+          style={{ 
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            textAlign: 'center', 
+            transform: `scale(${logoScale})`,
+            width: '100%',
+            padding: `0 ${DESIGN.space.lg}px`,
+          }}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={DRINKSIP_LOGO}
             alt="DrinkSip"
             style={{ 
               height: 'clamp(56px, 14vw, 80px)', 
-              width: 'auto',
-              filter: 'drop-shadow(0 4px 20px rgba(0,0,0,0.5))',
+              width: 'auto', 
+              display: 'block',
+              margin: '0 auto',
+              opacity: 0.9,
             }}
           />
           <div
             style={{
-              marginTop: 16,
-              fontFamily: FONTS.title,
-              fontWeight: 600,
-              fontSize: 'clamp(14px, 4vw, 20px)',
-              letterSpacing: '0.25em',
-              color: COLORS.gold,
-              textShadow: TEXT_SHADOW.subtle,
-              textTransform: 'uppercase',
+              marginTop: DESIGN.space.md,
+              fontFamily: DESIGN.fonts.title,
+              fontWeight: 500,
+              fontSize: 'clamp(16px, 4vw, 22px)',
+              letterSpacing: DESIGN.tracking.widest,
+              color: DESIGN.colors.gold,
               opacity: presentsOpacity,
+              textAlign: 'center',
+              textTransform: 'uppercase',
             }}
           >
             PRESENTS
@@ -275,48 +361,46 @@ function SceneIntro({ time }: { time: number }) {
       </AbsoluteFill>
       
       {/* Phase 2: Dark Side */}
-      <AbsoluteFill style={{ justifyContent: 'center', alignItems: 'center', opacity: titleProgress }}>
-        <div style={{ textAlign: 'center', transform: `scale(${0.85 + 0.15 * titleProgress})` }}>
-          <h1
+      <AbsoluteFill style={{ justifyContent: 'center', alignItems: 'center', opacity: titleOpacity }}>
+        <div style={{ textAlign: 'center', transform: `scale(${titleScale})` }}>
+          <div
             style={{
-              fontFamily: FONTS.hero,
+              fontFamily: DESIGN.fonts.hero,
               fontWeight: 400,
-              fontSize: 'clamp(64px, 20vw, 120px)',
+              fontSize: 'clamp(56px, 18vw, 100px)',
               lineHeight: 0.9,
-              letterSpacing: '-0.02em',
-              color: COLORS.white,
-              textShadow: TEXT_SHADOW.glowGreen,
-              margin: 0,
+              letterSpacing: DESIGN.tracking.tight,
+              color: DESIGN.colors.ink,
+              textShadow: `0 0 80px ${DESIGN.colors.green}`,
             }}
           >
             DARK SIDE
-          </h1>
+          </div>
           <div
             style={{
-              marginTop: 8,
-              fontFamily: FONTS.title,
-              fontWeight: 500,
-              fontSize: 'clamp(14px, 4vw, 22px)',
-              letterSpacing: '0.2em',
-              color: 'rgba(255,255,255,0.7)',
-              textShadow: TEXT_SHADOW.subtle,
+              marginTop: DESIGN.space.xs,
+              fontFamily: DESIGN.fonts.title,
+              fontWeight: 400,
+              fontSize: 'clamp(12px, 3.5vw, 18px)',
+              letterSpacing: DESIGN.tracking.wider,
+              color: DESIGN.colors.inkDim,
+              opacity: subtitleOpacity,
               textTransform: 'uppercase',
-              opacity: subtitleProgress,
             }}
           >
             THE FOOTBALL GAME
           </div>
           <div
             style={{
-              marginTop: 12,
-              fontFamily: FONTS.title,
+              marginTop: DESIGN.space.xs,
+              fontFamily: DESIGN.fonts.title,
               fontWeight: 600,
-              fontSize: 'clamp(12px, 3vw, 16px)',
-              letterSpacing: '0.15em',
-              color: COLORS.green,
-              textShadow: TEXT_SHADOW.glowGreen,
+              fontSize: 'clamp(10px, 2.5vw, 14px)',
+              letterSpacing: DESIGN.tracking.wider,
+              color: DESIGN.colors.green,
+              opacity: playFromHomeOpacity,
+              textShadow: `0 0 30px ${DESIGN.colors.green}`,
               textTransform: 'uppercase',
-              opacity: taglineProgress,
             }}
           >
             PLAY FROM HOME
@@ -328,74 +412,65 @@ function SceneIntro({ time }: { time: number }) {
 }
 
 // ============================================================================
-// SCENE 2: MAP FLIGHT
+// SCENE 2: MAP FLIGHT - Plane ASCENDS from center up to top (flies away)
 // ============================================================================
 function SceneMapFlight({ time }: { time: number }) {
   const localTime = time - SCENES.mapFlight.start
   const duration = SCENES.mapFlight.end - SCENES.mapFlight.start
-  const progress = easeInOutCubic(Math.min(localTime / duration, 1))
   
-  // Plane ascends from center to top
-  const planeY = 50 - 150 * progress // % from center
-  const planeScale = 1 - 0.4 * progress
-  const planeRotate = 5 - 15 * progress
-  
-  const textOpacity = smoothstep(Math.min(localTime / 0.8, 1))
+  // Reverse of CTA - ascend from center up to top (flying away)
+  const progress = interpolate(localTime, [0, duration], [0, 1])
+  const easedProgress = progress * progress * (3 - 2 * progress) // smoothstep
+  const planeY = 100 - 450 * easedProgress // 100 to -350 (ascend UP the screen)
+  const planeScale = 1.0 - 0.6 * easedProgress // 1.0 to 0.4 (shrinks as it flies away)
+  const planeRotate = 5 - 20 * easedProgress // 5 to -15 (nose tilts up as it climbs)
+  const textOpacity = interpolate(localTime, [0.2, 0.9], [0, 1]) // Earlier fade-in for readability
   
   return (
-    <AbsoluteFill style={{ background: COLORS.navy }}>
+    <AbsoluteFill style={{ backgroundColor: DESIGN.colors.bg }}>
       <AbsoluteFill>
-        <img 
-          src={ASSETS.usMap} 
-          alt="" 
-          style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'brightness(0.5) contrast(1.1)' }} 
-        />
+        <img src={ASSETS.usMap} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'brightness(0.5) contrast(1.1)' }} />
       </AbsoluteFill>
       
-      <DarkOverlay intensity={0.5} />
+      <SmokeOverlay intensity={0.4} time={time} />
       
-      {/* Plane */}
-      <AbsoluteFill style={{ justifyContent: 'center', alignItems: 'center' }}>
+      {/* Plane - ascends from center up (flying away, no flip - text readable) */}
+      <AbsoluteFill style={{ justifyContent: 'flex-start', alignItems: 'center' }}>
         <img
           src={ASSETS.plane}
           alt=""
           style={{
             width: 'clamp(180px, 45vw, 300px)',
             height: 'auto',
-            transform: `translateY(${planeY}%) scale(${planeScale}) rotate(${planeRotate}deg)`,
-            filter: 'drop-shadow(0 20px 40px rgba(0,0,0,0.6))',
+            // No flip - text stays readable, rotate for climb angle
+            transform: `translateY(${planeY}px) scale(${planeScale}) rotate(${planeRotate}deg)`,
+            filter: `drop-shadow(0 40px 80px rgba(0,0,0,0.6)) drop-shadow(0 0 40px ${DESIGN.colors.green}30)`,
+            willChange: 'transform',
           }}
         />
       </AbsoluteFill>
       
-      {/* Text - BOTTOM with readable shadows */}
-      <AbsoluteFill 
-        style={{ 
-          justifyContent: 'flex-end', 
-          alignItems: 'center', 
-          paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 15%)',
-          opacity: textOpacity,
-        }}
-      >
+      <Vignette />
+      
+      {/* Text - Premium styling, no dark shadows */}
+      <AbsoluteFill style={{ justifyContent: 'flex-end', alignItems: 'center', paddingBottom: '18%', opacity: textOpacity }}>
         <div style={{ textAlign: 'center' }}>
           <div style={{ 
-            fontFamily: FONTS.title, 
+            fontFamily: DESIGN.fonts.title, 
             fontWeight: 600, 
-            fontSize: 'clamp(14px, 4vw, 20px)', 
+            fontSize: 'clamp(14px, 4vw, 22px)', 
             letterSpacing: '0.2em', 
-            color: 'rgba(255,255,255,0.8)',
-            textShadow: TEXT_SHADOW.readable,
-            textTransform: 'uppercase',
+            color: 'rgba(255,255,255,0.7)',
           }}>
             ROAD TO
           </div>
           <div style={{ 
-            fontFamily: FONTS.hero, 
-            fontWeight: 400, 
-            fontSize: 'clamp(36px, 12vw, 60px)', 
-            letterSpacing: '-0.01em', 
-            color: COLORS.gold, 
-            textShadow: TEXT_SHADOW.glowGold,
+            fontFamily: DESIGN.fonts.hero, 
+            fontWeight: 900, 
+            fontSize: 'clamp(32px, 10vw, 52px)', 
+            letterSpacing: '0.02em', 
+            color: DESIGN.colors.gold, 
+            textShadow: `0 0 60px ${DESIGN.colors.gold}`,
             marginTop: 4,
           }}>
             SAN FRANCISCO
@@ -407,321 +482,305 @@ function SceneMapFlight({ time }: { time: number }) {
 }
 
 // ============================================================================
-// SCENE 3-6: PHONE SHOWCASE SCENES
+// SCENE 3: GAME HUB - Premium styling, no dark shadows
 // ============================================================================
-function PhoneScene({ 
-  time, 
-  sceneStart, 
-  screen, 
-  title, 
-  subtitle, 
-  titleColor = COLORS.white,
-  subtitleColor = COLORS.green,
-  textPosition = 'bottom',
-}: { 
-  time: number
-  sceneStart: number
-  screen: string
-  title: string
-  subtitle: string
-  titleColor?: string
-  subtitleColor?: string
-  textPosition?: 'top' | 'bottom'
-}) {
-  const localTime = time - sceneStart
-  const phoneProgress = easeOutCubic(Math.min(localTime / 0.6, 1))
-  const textProgress = smoothstep(Math.max(0, Math.min((localTime - 0.4) / 0.5, 1)))
-  
-  const phoneY = 30 * (1 - phoneProgress)
-  const phoneScale = 0.9 + 0.1 * phoneProgress
+function SceneGameHub({ time }: { time: number }) {
+  const localTime = time - SCENES.gameHub.start
+  // Slower phone entry for more impact
+  const phoneScale = 0.85 + 0.2 * interpolate(localTime, [0, 0.8], [0, 1])
+  const phoneY = 50 - 50 * interpolate(localTime, [0, 0.8], [0, 1])
+  const textOpacity = interpolate(localTime, [0.7, 1.4], [0, 1]) // Delay until phone settles
   
   return (
-    <AbsoluteFill style={{ background: COLORS.navy }}>
+    <AbsoluteFill style={{ backgroundColor: DESIGN.colors.bg }}>
       <AbsoluteFill>
-        <img 
-          src={ASSETS.stadium} 
-          alt="" 
-          style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'brightness(0.25)' }} 
-        />
+        <img src={ASSETS.stadium} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'brightness(0.3)' }} />
       </AbsoluteFill>
       
-      <DarkOverlay intensity={0.6} />
+      <SmokeOverlay intensity={0.5} time={time} />
+      <Vignette />
       
-      {/* Phone - centered */}
       <AbsoluteFill style={{ justifyContent: 'center', alignItems: 'center' }}>
-        <div style={{ 
-          transform: `translateY(${phoneY}px) scale(${phoneScale})`,
-          opacity: phoneProgress,
-        }}>
-          <PhoneMockup screen={screen} scale={1.15} />
+        <div style={{ transform: `translateY(${phoneY}px) scale(${phoneScale})`, willChange: 'transform' }}>
+          <PhoneMockup screen={SCREENS.gameHub} scale={1.2} />
         </div>
       </AbsoluteFill>
       
-      {/* Text */}
-      <AbsoluteFill 
-        style={{ 
-          justifyContent: textPosition === 'top' ? 'flex-start' : 'flex-end', 
-          alignItems: 'center',
-          padding: 24,
-          paddingTop: textPosition === 'top' ? 'calc(env(safe-area-inset-top, 0px) + 10%)' : 24,
-          paddingBottom: textPosition === 'bottom' ? 'calc(env(safe-area-inset-bottom, 0px) + 12%)' : 24,
-          opacity: textProgress,
-        }}
-      >
-        <div style={{ textAlign: 'center', maxWidth: 340 }}>
-          <h2 style={{ 
-            fontFamily: FONTS.hero, 
-            fontWeight: 400, 
-            fontSize: 'clamp(32px, 11vw, 52px)', 
-            color: titleColor, 
-            letterSpacing: '-0.01em', 
-            textShadow: TEXT_SHADOW.glowGreen,
-            margin: 0,
-            lineHeight: 1,
-          }}>
-            {title}
-          </h2>
-          <p style={{ 
-            marginTop: 8, 
-            fontFamily: FONTS.title, 
-            fontWeight: 500, 
-            fontSize: 'clamp(11px, 3vw, 14px)', 
-            color: subtitleColor, 
-            letterSpacing: '0.15em',
-            textShadow: TEXT_SHADOW.subtle,
-            textTransform: 'uppercase',
-          }}>
-            {subtitle}
-          </p>
+      <AbsoluteFill style={{ padding: DESIGN.space.lg, paddingTop: '12%', justifyContent: 'flex-start', opacity: textOpacity }}>
+        <div style={{ 
+          fontFamily: DESIGN.fonts.hero, 
+          fontWeight: 400, 
+          fontSize: 'clamp(28px, 9vw, 44px)', 
+          color: DESIGN.colors.green, 
+          letterSpacing: DESIGN.tracking.tight, 
+          textShadow: `0 0 40px ${DESIGN.colors.green}`,
+        }}>
+          PLAY THE GAME
+        </div>
+        <div style={{ 
+          marginTop: 6, 
+          fontFamily: DESIGN.fonts.title, 
+          fontWeight: 400, 
+          fontSize: 'clamp(11px, 2.5vw, 14px)', 
+          color: DESIGN.colors.inkDim, 
+          letterSpacing: DESIGN.tracking.wider,
+          textTransform: 'uppercase',
+        }}>
+          Earn entries from home
         </div>
       </AbsoluteFill>
     </AbsoluteFill>
   )
 }
 
-function SceneGameHub({ time }: { time: number }) {
-  return (
-    <PhoneScene
-      time={time}
-      sceneStart={SCENES.gameHub.start}
-      screen={SCREENS.gameHub}
-      title="PLAY THE GAME"
-      subtitle="Earn entries from home"
-      titleColor={COLORS.green}
-      textPosition="top"
-    />
-  )
-}
-
+// ============================================================================
+// SCENE 4: PICKS - Premium styling, glow shadows only
+// ============================================================================
 function ScenePicks({ time }: { time: number }) {
-  return (
-    <PhoneScene
-      time={time}
-      sceneStart={SCENES.picks.start}
-      screen={SCREENS.picksHub}
-      title="PROP PICKS"
-      subtitle="25 props • Win a signed jersey"
-      textPosition="bottom"
-    />
-  )
-}
-
-function SceneLive({ time }: { time: number }) {
-  const localTime = time - SCENES.live.start
-  const badgeOpacity = smoothstep(Math.min(localTime / 0.6, 1))
-  const pulse = 0.6 + 0.4 * Math.sin(time * 3)
+  const localTime = time - SCENES.picks.start
+  const phoneScale = 0.9 + 0.15 * interpolate(localTime, [0, 0.6], [0, 1])
+  const phoneY = 35 - 35 * interpolate(localTime, [0, 0.6], [0, 1])
+  const textOpacity = interpolate(localTime, [0.5, 1.2], [0, 1]) // Fade in text
   
   return (
-    <AbsoluteFill style={{ background: COLORS.navy }}>
+    <AbsoluteFill style={{ backgroundColor: DESIGN.colors.bg }}>
       <AbsoluteFill>
-        <img 
-          src={ASSETS.stadium} 
-          alt="" 
-          style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'brightness(0.25)' }} 
-        />
+        <img src={ASSETS.stadium} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'brightness(0.3)' }} />
       </AbsoluteFill>
       
-      <DarkOverlay intensity={0.6} />
+      <SmokeOverlay intensity={0.5} time={time} />
+      <Vignette />
       
-      {/* Phone */}
       <AbsoluteFill style={{ justifyContent: 'center', alignItems: 'center' }}>
-        <div style={{ 
-          transform: `scale(${0.9 + 0.1 * badgeOpacity})`,
-          opacity: badgeOpacity,
-        }}>
-          <PhoneMockup screen={SCREENS.live} scale={1.15} />
+        <div style={{ transform: `scale(${phoneScale}) translateY(${phoneY}px)`, willChange: 'transform' }}>
+          <PhoneMockup screen={SCREENS.picksHub} scale={1.2} />
         </div>
       </AbsoluteFill>
       
-      {/* LIVE badge - TOP */}
-      <AbsoluteFill 
-        style={{ 
-          padding: 24, 
-          paddingTop: 'calc(env(safe-area-inset-top, 0px) + 10%)',
-          justifyContent: 'flex-start', 
-          alignItems: 'center',
-          opacity: badgeOpacity,
-        }}
-      >
+      <AbsoluteFill style={{ padding: DESIGN.space.lg, justifyContent: 'flex-end', paddingBottom: '14%', opacity: textOpacity }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ 
+            fontFamily: DESIGN.fonts.hero, 
+            fontWeight: 400, 
+            fontSize: 'clamp(32px, 11vw, 52px)', 
+            color: DESIGN.colors.ink, 
+            letterSpacing: DESIGN.tracking.tight, 
+            textShadow: `0 0 60px ${DESIGN.colors.green}`,
+          }}>
+            PROP PICKS
+          </div>
+          <div style={{ 
+            marginTop: 6, 
+            fontFamily: DESIGN.fonts.title, 
+            fontWeight: 400, 
+            fontSize: 'clamp(10px, 2.5vw, 13px)', 
+            color: DESIGN.colors.green, 
+            letterSpacing: DESIGN.tracking.wider,
+            textTransform: 'uppercase',
+          }}>
+            25 props • Win a signed jersey
+          </div>
+        </div>
+      </AbsoluteFill>
+    </AbsoluteFill>
+  )
+}
+
+// ============================================================================
+// SCENE 5: LIVE - Premium styling, glow shadows only
+// ============================================================================
+function SceneLive({ time }: { time: number }) {
+  const localTime = time - SCENES.live.start
+  const phoneScale = 0.9 + 0.15 * interpolate(localTime, [0, 0.6], [0, 1])
+  const pulse = 0.6 + 0.4 * Math.sin(time * 3)
+  const badgeOpacity = interpolate(localTime, [0.4, 1.1], [0, 1]) // Fade in badge
+  
+  return (
+    <AbsoluteFill style={{ backgroundColor: DESIGN.colors.bg }}>
+      <AbsoluteFill>
+        <img src={ASSETS.stadium} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'brightness(0.3)' }} />
+      </AbsoluteFill>
+      
+      <SmokeOverlay intensity={0.5} time={time} />
+      <Vignette />
+      
+      <AbsoluteFill style={{ justifyContent: 'center', alignItems: 'center' }}>
+        <div style={{ transform: `scale(${phoneScale})`, willChange: 'transform' }}>
+          <PhoneMockup screen={SCREENS.live} scale={1.2} glowColor="#FF4444" />
+        </div>
+      </AbsoluteFill>
+      
+      {/* LIVE badge - GlassCard style */}
+      <AbsoluteFill style={{ padding: DESIGN.space.lg, justifyContent: 'flex-start', paddingTop: '12%', opacity: badgeOpacity }}>
         <div
           style={{
             display: 'inline-flex',
             alignItems: 'center',
-            gap: 10,
-            padding: '10px 18px',
-            background: 'rgba(0,0,0,0.6)',
-            backdropFilter: 'blur(12px)',
+            gap: DESIGN.space.xs,
+            padding: '10px 16px',
+            background: 'rgba(255,68,68,0.1)',
+            backdropFilter: 'blur(10px)',
+            WebkitBackdropFilter: 'blur(10px)',
             borderRadius: 100,
-            border: '1px solid rgba(255,68,68,0.4)',
+            border: '1px solid rgba(255,68,68,0.3)',
+            width: 'fit-content',
           }}
         >
           <div style={{ 
-            width: 10, 
-            height: 10, 
+            width: 8, 
+            height: 8, 
             borderRadius: '50%', 
             background: '#FF4444', 
             boxShadow: `0 0 ${10 + 8 * pulse}px #FF4444`,
           }} />
           <span style={{ 
-            fontFamily: FONTS.title, 
-            fontWeight: 600, 
-            fontSize: 13, 
+            fontFamily: DESIGN.fonts.title, 
+            fontWeight: 500, 
+            fontSize: 12, 
             color: '#FF6666', 
-            letterSpacing: '0.15em',
+            letterSpacing: DESIGN.tracking.wider,
             textTransform: 'uppercase',
-            textShadow: TEXT_SHADOW.subtle,
           }}>
             LIVE GAMEDAY
           </span>
         </div>
       </AbsoluteFill>
       
-      {/* Text - BOTTOM */}
-      <AbsoluteFill 
-        style={{ 
-          padding: 24, 
-          paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 12%)',
-          justifyContent: 'flex-end', 
-          alignItems: 'center',
-          opacity: badgeOpacity,
-        }}
-      >
+      <AbsoluteFill style={{ padding: DESIGN.space.lg, justifyContent: 'flex-end', paddingBottom: '14%' }}>
         <div style={{ textAlign: 'center' }}>
-          <h2 style={{ 
-            fontFamily: FONTS.hero, 
+          <div style={{ 
+            fontFamily: DESIGN.fonts.hero, 
             fontWeight: 400, 
-            fontSize: 'clamp(32px, 11vw, 52px)', 
-            color: COLORS.white, 
-            textShadow: TEXT_SHADOW.glowGreen,
-            margin: 0,
+            fontSize: 'clamp(28px, 9vw, 44px)', 
+            color: DESIGN.colors.ink, 
+            letterSpacing: DESIGN.tracking.tight,
+            textShadow: `0 0 60px ${DESIGN.colors.green}`,
           }}>
             PREDICT PLAYS
-          </h2>
-          <p style={{ 
-            marginTop: 8, 
-            fontFamily: FONTS.title, 
-            fontWeight: 500, 
-            fontSize: 'clamp(11px, 3vw, 14px)', 
-            color: COLORS.green, 
-            letterSpacing: '0.15em',
-            textShadow: TEXT_SHADOW.subtle,
+          </div>
+          <div style={{ 
+            marginTop: 6, 
+            fontFamily: DESIGN.fonts.title, 
+            fontWeight: 400, 
+            fontSize: 'clamp(10px, 2.5vw, 13px)', 
+            color: DESIGN.colors.green, 
+            letterSpacing: DESIGN.tracking.wider,
             textTransform: 'uppercase',
           }}>
             Answer fast • Earn bonus entries
-          </p>
+          </div>
         </div>
       </AbsoluteFill>
     </AbsoluteFill>
   )
 }
 
+// ============================================================================
+// SCENE 6: SCAN & WIN - Premium styling
+// ============================================================================
 function SceneScanWin({ time }: { time: number }) {
+  const localTime = time - SCENES.scanWin.start
+  const phoneScale = 0.9 + 0.15 * interpolate(localTime, [0, 0.6], [0, 1])
+  const phoneY = 25 - 25 * interpolate(localTime, [0, 0.6], [0, 1])
+  const sparkle = 0.7 + 0.3 * Math.sin(time * 3)
+  const textOpacity = interpolate(localTime, [0.5, 1.2], [0, 1]) // Fade in text
+  
   return (
-    <PhoneScene
-      time={time}
-      sceneStart={SCENES.scanWin.start}
-      screen={SCREENS.scratchCard}
-      title="SCAN & WIN"
-      subtitle="Daily prizes • Bonus entries"
-      titleColor={COLORS.gold}
-      subtitleColor="rgba(255,255,255,0.7)"
-      textPosition="top"
-    />
+    <AbsoluteFill style={{ backgroundColor: DESIGN.colors.bg }}>
+      <AbsoluteFill>
+        <img src={ASSETS.stadium} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'brightness(0.3)' }} />
+      </AbsoluteFill>
+      
+      <SmokeOverlay intensity={0.5} time={time} />
+      <Vignette />
+      
+      <AbsoluteFill style={{ justifyContent: 'center', alignItems: 'center' }}>
+        <div style={{ transform: `scale(${phoneScale}) translateY(${phoneY}px)`, willChange: 'transform' }}>
+          <PhoneMockup screen={SCREENS.scratchCard} scale={1.2} glowColor={DESIGN.colors.gold} />
+        </div>
+      </AbsoluteFill>
+      
+      <AbsoluteFill style={{ padding: DESIGN.space.lg, justifyContent: 'flex-start', paddingTop: '12%', opacity: textOpacity }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ 
+            fontFamily: DESIGN.fonts.hero, 
+            fontWeight: 400, 
+            fontSize: 'clamp(32px, 11vw, 52px)', 
+            color: DESIGN.colors.gold, 
+            letterSpacing: DESIGN.tracking.tight,
+            textShadow: `0 0 ${40 + 20 * sparkle}px ${DESIGN.colors.gold}`,
+          }}>
+            SCAN & WIN
+          </div>
+          <div style={{ 
+            marginTop: 6, 
+            fontFamily: DESIGN.fonts.title, 
+            fontWeight: 400, 
+            fontSize: 'clamp(10px, 2.5vw, 13px)', 
+            color: DESIGN.colors.inkDim, 
+            letterSpacing: DESIGN.tracking.wider,
+            textTransform: 'uppercase',
+          }}>
+            Daily prizes • Bonus entries
+          </div>
+        </div>
+      </AbsoluteFill>
+    </AbsoluteFill>
   )
 }
 
 // ============================================================================
-// SCENE 7: FEATURES (Two phones)
+// SCENE 7: FEATURES (Leaderboard + Profile) - Premium styling
 // ============================================================================
 function SceneFeatures({ time }: { time: number }) {
   const localTime = time - SCENES.features.start
-  const phone1Progress = easeOutCubic(Math.min(localTime / 0.6, 1))
-  const phone2Progress = easeOutCubic(Math.max(0, Math.min((localTime - 0.2) / 0.6, 1)))
-  const textProgress = smoothstep(Math.max(0, Math.min((localTime - 0.5) / 0.5, 1)))
+  const phone1Progress = interpolate(localTime, [0, 0.7], [0, 1])  // Slower
+  const phone2Progress = interpolate(localTime, [0.3, 1.0], [0, 1]) // Slower
+  const textOpacity = interpolate(localTime, [0.7, 1.4], [0, 1]) // Fade in text after phones
   
   return (
-    <AbsoluteFill style={{ background: COLORS.navy }}>
+    <AbsoluteFill style={{ backgroundColor: DESIGN.colors.bg }}>
       <AbsoluteFill>
-        <img 
-          src={ASSETS.stadium} 
-          alt="" 
-          style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'brightness(0.25)' }} 
-        />
+        <img src={ASSETS.stadium} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'brightness(0.3)' }} />
       </AbsoluteFill>
       
-      <DarkOverlay intensity={0.6} />
+      <SmokeOverlay intensity={0.5} time={time} />
+      <Vignette />
       
-      {/* Two phones */}
       <AbsoluteFill style={{ justifyContent: 'center', alignItems: 'center' }}>
-        <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
-          <div style={{ 
-            transform: `translateX(${-20 + 20 * phone1Progress}px) rotate(-4deg)`, 
-            opacity: phone1Progress,
-          }}>
-            <PhoneMockup screen={SCREENS.leaderboard} scale={0.75} />
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+          <div style={{ transform: `translateX(${-30 + 30 * phone1Progress}px) rotate(-4deg)`, opacity: phone1Progress }}>
+            <PhoneMockup screen={SCREENS.leaderboard} scale={0.8} tilt={6} />
           </div>
-          <div style={{ 
-            transform: `translateX(${20 - 20 * phone2Progress}px) rotate(4deg)`, 
-            opacity: phone2Progress,
-          }}>
-            <PhoneMockup screen={SCREENS.profile} scale={0.75} />
+          <div style={{ transform: `translateX(${30 - 30 * phone2Progress}px) rotate(4deg)`, opacity: phone2Progress }}>
+            <PhoneMockup screen={SCREENS.profile} scale={0.8} tilt={-6} />
           </div>
         </div>
       </AbsoluteFill>
       
-      {/* Text - BOTTOM */}
-      <AbsoluteFill 
-        style={{ 
-          padding: 24, 
-          paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 12%)',
-          justifyContent: 'flex-end', 
-          alignItems: 'center',
-          opacity: textProgress,
-        }}
-      >
+      <AbsoluteFill style={{ padding: DESIGN.space.lg, justifyContent: 'flex-end', paddingBottom: '14%', opacity: textOpacity }}>
         <div style={{ textAlign: 'center' }}>
-          <h2 style={{ 
-            fontFamily: FONTS.hero, 
-            fontWeight: 400, 
-            fontSize: 'clamp(28px, 9vw, 44px)', 
-            color: COLORS.green, 
-            textShadow: TEXT_SHADOW.glowGreen,
-            margin: 0,
+          <div style={{ 
+            fontFamily: DESIGN.fonts.hero, 
+            fontWeight: 400,
+            fontSize: 'clamp(26px, 8vw, 40px)', 
+            color: DESIGN.colors.green, 
+            letterSpacing: DESIGN.tracking.tight,
+            textShadow: `0 0 40px ${DESIGN.colors.green}`,
           }}>
             COMPETE & CLIMB
-          </h2>
-          <p style={{ 
-            marginTop: 8, 
-            fontFamily: FONTS.title, 
-            fontWeight: 500, 
-            fontSize: 'clamp(11px, 3vw, 14px)', 
-            color: 'rgba(255,255,255,0.7)', 
-            letterSpacing: '0.15em',
-            textShadow: TEXT_SHADOW.subtle,
+          </div>
+          <div style={{ 
+            fontSize: 'clamp(10px, 2.5vw, 13px)', 
+            color: DESIGN.colors.inkDim, 
+            marginTop: 6, 
+            fontFamily: DESIGN.fonts.title, 
+            fontWeight: 400,
+            letterSpacing: DESIGN.tracking.wider,
             textTransform: 'uppercase',
           }}>
             Track your entries • Climb the ranks
-          </p>
+          </div>
         </div>
       </AbsoluteFill>
     </AbsoluteFill>
@@ -729,103 +788,91 @@ function SceneFeatures({ time }: { time: number }) {
 }
 
 // ============================================================================
-// SCENE 8: GIVEAWAY
+// SCENE 8: GIVEAWAY - Premium styling
 // ============================================================================
 function SceneGiveaway({ time }: { time: number }) {
   const localTime = time - SCENES.giveaway.start
-  const contentProgress = easeOutCubic(Math.min(localTime / 0.8, 1))
-  const sweepX = -200 + 400 * (localTime / 2)
+  const duration = SCENES.giveaway.end - SCENES.giveaway.start
+  
+  const zoom = interpolate(localTime, [0, duration], [1.1, 1])
+  const cardScale = 0.9 + 0.1 * interpolate(localTime, [0.5, 1.2], [0, 1]) // Slower
+  const cardOpacity = interpolate(localTime, [0.3, 1.0], [0, 1]) // Fade in
+  const sweepX = interpolate(localTime, [0, duration], [-250, 250])
   
   return (
-    <AbsoluteFill style={{ background: COLORS.navy }}>
+    <AbsoluteFill style={{ backgroundColor: DESIGN.colors.bg }}>
       <AbsoluteFill>
-        <img 
-          src={ASSETS.sanFrancisco} 
-          alt="" 
-          style={{ 
-            width: '100%', 
-            height: '100%', 
-            objectFit: 'cover', 
-            filter: 'brightness(0.4) contrast(1.1)',
-            transform: `scale(${1.1 - 0.1 * contentProgress})`,
-          }} 
-        />
+        <img src={ASSETS.sanFrancisco} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', transform: `scale(${zoom})`, filter: 'brightness(0.5) contrast(1.1)' }} />
       </AbsoluteFill>
       
-      <DarkOverlay intensity={0.5} />
+      <SmokeOverlay intensity={0.5} time={time} />
+      <Vignette />
       
-      {/* Content */}
-      <AbsoluteFill 
-        style={{ 
-          justifyContent: 'center', 
-          alignItems: 'center', 
-          opacity: contentProgress,
-        }}
-      >
-        <div style={{ textAlign: 'center', transform: `scale(${0.9 + 0.1 * contentProgress})` }}>
-          <h2 style={{ 
-            fontFamily: FONTS.hero, 
+      <AbsoluteFill style={{ justifyContent: 'center', alignItems: 'center', opacity: cardOpacity }}>
+        <div style={{ textAlign: 'center', transform: `scale(${cardScale})` }}>
+          <div style={{ 
+            fontFamily: DESIGN.fonts.hero, 
             fontWeight: 400, 
-            fontSize: 'clamp(56px, 18vw, 90px)', 
-            color: COLORS.white, 
-            textShadow: TEXT_SHADOW.glowGold,
-            margin: 0,
+            fontSize: 'clamp(50px, 16vw, 80px)', 
+            color: DESIGN.colors.ink, 
+            letterSpacing: DESIGN.tracking.tight,
+            textShadow: `0 0 60px ${DESIGN.colors.gold}`,
           }}>
             WIN
-          </h2>
+          </div>
           
-          {/* Ticket card */}
+          {/* Premium ticket card */}
           <div
             style={{
               position: 'relative',
-              width: 'clamp(260px, 75vw, 380px)',
-              padding: '24px 32px',
-              marginTop: 16,
-              background: `linear-gradient(135deg, ${COLORS.gold} 0%, #C4960E 100%)`,
-              borderRadius: 16,
-              boxShadow: `0 0 60px rgba(255,215,0,0.4), 0 20px 40px rgba(0,0,0,0.3)`,
+              width: 'clamp(240px, 70vw, 360px)',
+              padding: `${DESIGN.space.lg}px ${DESIGN.space.xl}px`,
+              background: `linear-gradient(135deg, ${DESIGN.colors.gold} 0%, #C4960E 100%)`,
+              borderRadius: DESIGN.space.md,
+              boxShadow: `0 0 60px ${hexToRgba(DESIGN.colors.gold, 0.4)}`,
               transform: 'rotate(-1deg)',
               overflow: 'hidden',
+              margin: '0 auto',
             }}
           >
-            {/* Shine */}
+            {/* Shine sweep */}
             <div
               style={{
                 position: 'absolute',
-                inset: -60,
+                inset: -50,
                 transform: `translateX(${sweepX}px) rotate(15deg)`,
-                background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent)',
-                width: 100,
+                background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)',
+                willChange: 'transform',
               }}
             />
-            <div style={{ position: 'relative', zIndex: 1 }}>
+            <div style={{ position: 'relative', zIndex: 1, textAlign: 'center' }}>
               <div style={{ 
-                fontFamily: FONTS.title, 
-                fontWeight: 600, 
+                fontFamily: DESIGN.fonts.title, 
+                fontWeight: 500, 
                 fontSize: 11, 
-                letterSpacing: '0.25em', 
-                color: COLORS.navy,
+                letterSpacing: DESIGN.tracking.widest, 
+                color: DESIGN.colors.navy,
                 textTransform: 'uppercase',
               }}>
                 THE BIG GAME GIVEAWAY
               </div>
               <div style={{ 
-                fontFamily: FONTS.hero, 
+                fontFamily: DESIGN.fonts.hero, 
                 fontWeight: 400, 
-                fontSize: 'clamp(32px, 10vw, 48px)', 
-                color: COLORS.navy, 
-                lineHeight: 1.1,
-                marginTop: 4,
+                fontSize: 'clamp(28px, 9vw, 42px)', 
+                color: DESIGN.colors.navy, 
+                lineHeight: 1,
+                letterSpacing: DESIGN.tracking.tight,
               }}>
                 2 TICKETS
               </div>
               <div style={{ 
-                marginTop: 8, 
-                fontFamily: FONTS.body, 
-                fontWeight: 600, 
+                marginTop: DESIGN.space.xs, 
+                fontFamily: DESIGN.fonts.body, 
+                fontWeight: 500, 
                 fontSize: 11, 
-                color: 'rgba(0,34,68,0.7)',
-                letterSpacing: '0.1em',
+                color: 'rgba(0,34,68,0.6)',
+                letterSpacing: DESIGN.tracking.wide,
               }}>
                 Drawing Saturday • San Francisco
               </div>
@@ -838,104 +885,124 @@ function SceneGiveaway({ time }: { time: number }) {
 }
 
 // ============================================================================
-// SCENE 9: PLAYERS - Simplified for buttery smooth transitions
+// SCENE 9: PLAYERS - Premium styling, glow only
 // ============================================================================
 function ScenePlayerShowcase({ time }: { time: number }) {
   const localTime = time - SCENES.players.start
   const duration = SCENES.players.end - SCENES.players.start
-  const playerDuration = duration / HERO_PLAYERS.length
+  const framesPerPlayer = duration / 4
+  const idx = Math.min(Math.floor(localTime / framesPerPlayer), HERO_PLAYERS.length - 1)
+  const segmentTime = localTime - idx * framesPerPlayer
   
-  // Current player index
-  const playerIndex = Math.min(Math.floor(localTime / playerDuration), HERO_PLAYERS.length - 1)
-  const player = HERO_PLAYERS[playerIndex]
+  const player = HERO_PLAYERS[idx]
   
-  // Time within current player
-  const segmentTime = localTime - playerIndex * playerDuration
+  // Smooth easing function
+  const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3)
+  const easeInCubic = (t: number) => t * t * t
   
-  // Simple crossfade - no complex math
-  const fadeIn = easeOutCubic(Math.min(segmentTime / 0.5, 1))
-  const fadeOut = segmentTime > playerDuration - 0.4 
-    ? 1 - easeOutCubic((segmentTime - (playerDuration - 0.4)) / 0.4) 
-    : 1
+  // Buttery smooth transitions with easing
+  const fadeInProgress = Math.min(segmentTime / 0.8, 1) // 0.8s fade in
+  const fadeOutProgress = Math.max((segmentTime - (framesPerPlayer - 0.6)) / 0.6, 0) // 0.6s fade out
+  const fadeIn = easeOutCubic(fadeInProgress)
+  const fadeOut = 1 - easeInCubic(fadeOutProgress)
   const opacity = fadeIn * fadeOut
   
-  const slideUp = 30 * (1 - fadeIn)
+  const scaleProgress = segmentTime / framesPerPlayer
+  const scale = 1 + 0.05 * easeOutCubic(scaleProgress) // Subtle zoom
+  
+  const moveProgress = Math.min(segmentTime / 1.0, 1) // 1s movement
+  const playerY = 40 * (1 - easeOutCubic(moveProgress)) // Smooth slide up
+  
+  const glowPulse = 0.7 + 0.3 * Math.sin(segmentTime * 1.5)
   
   return (
-    <AbsoluteFill style={{ background: COLORS.navy }}>
+    <AbsoluteFill style={{ backgroundColor: DESIGN.colors.bg }}>
       <AbsoluteFill>
         <img 
           src={ASSETS.stadium} 
           alt="" 
-          style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'brightness(0.2) blur(2px)' }} 
+          style={{ 
+            width: '100%', 
+            height: '100%', 
+            objectFit: 'cover', 
+            transform: `scale(${scale})`, 
+            filter: 'brightness(0.25) blur(2px)',
+            transition: 'transform 0.3s ease-out',
+          }} 
         />
       </AbsoluteFill>
       
-      <DarkOverlay intensity={0.5} />
+      <SmokeOverlay intensity={0.7} time={time} />
       
-      {/* Player image */}
-      <AbsoluteFill style={{ justifyContent: 'flex-end', alignItems: 'center' }}>
+      {/* Player - with smooth CSS transitions */}
+      <AbsoluteFill style={{ justifyContent: 'flex-end', alignItems: 'center', opacity, transition: 'opacity 0.15s ease-out' }}>
         <img
-          key={player.id}
           src={player.image}
           alt={player.lastName}
           style={{
             width: '100%',
             height: 'auto',
-            maxHeight: '70%',
+            maxHeight: '75%',
             objectFit: 'contain',
             objectPosition: 'bottom center',
-            opacity,
-            transform: `translateY(${slideUp}px)`,
-            filter: `drop-shadow(0 0 40px ${COLORS.green}60)`,
+            transform: `translateY(${playerY}px) scale(${scale})`,
+            filter: `drop-shadow(0 0 ${50 * glowPulse}px ${DESIGN.colors.green})`,
+            willChange: 'transform, opacity, filter',
           }}
         />
       </AbsoluteFill>
       
-      {/* Player name - BOTTOM LEFT */}
-      <AbsoluteFill 
-        style={{ 
-          padding: 24, 
-          paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 12%)',
-          justifyContent: 'flex-end', 
-          alignItems: 'flex-start',
-          opacity,
-        }}
-      >
-        <div>
-          <h2 style={{ 
-            fontFamily: FONTS.hero, 
+      {/* Hero glow */}
+      <AbsoluteFill style={{ pointerEvents: 'none', opacity: opacity * glowPulse * 0.4 }}>
+        <div
+          style={{
+            position: 'absolute',
+            bottom: '5%',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            width: '80%',
+            height: '60%',
+            background: `radial-gradient(ellipse at center bottom, ${DESIGN.colors.green}40 0%, transparent 50%)`,
+            filter: 'blur(100px)',
+          }}
+        />
+      </AbsoluteFill>
+      
+      <Vignette />
+      
+      {/* Player name - glow only */}
+      <AbsoluteFill style={{ padding: DESIGN.space.lg, paddingBottom: '14%', justifyContent: 'flex-end', opacity }}>
+        <div style={{ 
+          fontFamily: DESIGN.fonts.hero, 
+          fontWeight: 400, 
+          fontSize: 'clamp(40px, 14vw, 64px)', 
+          lineHeight: 0.9, 
+          color: DESIGN.colors.ink, 
+          textShadow: `0 0 50px ${DESIGN.colors.green}`,
+          letterSpacing: DESIGN.tracking.tight,
+        }}>
+          {player.lastName}
+        </div>
+        <div style={{ marginTop: 6, display: 'flex', gap: DESIGN.space.sm, alignItems: 'center' }}>
+          <span style={{ 
+            fontFamily: DESIGN.fonts.hero, 
             fontWeight: 400, 
-            fontSize: 'clamp(44px, 15vw, 72px)', 
-            lineHeight: 0.9, 
-            color: COLORS.white, 
-            textShadow: TEXT_SHADOW.glowGreen,
-            margin: 0,
+            fontSize: 'clamp(24px, 8vw, 36px)', 
+            color: DESIGN.colors.green, 
+            textShadow: `0 0 30px ${DESIGN.colors.green}`,
           }}>
-            {player.lastName}
-          </h2>
-          <div style={{ marginTop: 8, display: 'flex', gap: 12, alignItems: 'center' }}>
-            <span style={{ 
-              fontFamily: FONTS.hero, 
-              fontWeight: 400, 
-              fontSize: 'clamp(28px, 9vw, 44px)', 
-              color: COLORS.green, 
-              textShadow: TEXT_SHADOW.glowGreen,
-            }}>
-              #{player.jersey}
-            </span>
-            <span style={{ 
-              fontFamily: FONTS.title, 
-              fontWeight: 500, 
-              fontSize: 'clamp(16px, 5vw, 22px)', 
-              color: 'rgba(255,255,255,0.7)', 
-              letterSpacing: '0.15em',
-              textShadow: TEXT_SHADOW.subtle,
-              textTransform: 'uppercase',
-            }}>
-              {player.position}
-            </span>
-          </div>
+            #{player.jersey}
+          </span>
+          <span style={{ 
+            fontFamily: DESIGN.fonts.title, 
+            fontWeight: 400, 
+            fontSize: 'clamp(14px, 4vw, 20px)', 
+            color: DESIGN.colors.inkDim, 
+            letterSpacing: DESIGN.tracking.wider,
+            textTransform: 'uppercase',
+          }}>
+            {player.position}
+          </span>
         </div>
       </AbsoluteFill>
     </AbsoluteFill>
@@ -943,107 +1010,100 @@ function ScenePlayerShowcase({ time }: { time: number }) {
 }
 
 // ============================================================================
-// SCENE 10: CTA
+// SCENE 10: CTA - Plane descends fully into center
 // ============================================================================
 function SceneCTA({ time }: { time: number }) {
   const localTime = time - SCENES.cta.start
   const duration = SCENES.cta.end - SCENES.cta.start
-  const progress = easeInOutCubic(Math.min(localTime / duration, 1))
   
-  // Plane descends into frame
-  const planeY = -300 + 450 * progress
-  const planeScale = 0.4 + 0.6 * progress
-  const planeRotate = -12 + 15 * progress
-  
-  const textOpacity = smoothstep(Math.max(0, Math.min((localTime - 0.5) / 0.6, 1)))
-  const pulse = 0.7 + 0.3 * Math.sin(time * 2.5)
+  // Plane descends from top to CENTER of mobile screen (where the field is)
+  // Extended flight path for dramatic landing
+  const progress = interpolate(localTime, [0, duration], [0, 1])
+  const easedProgress = progress * progress * (3 - 2 * progress) // smoothstep for smooth decel
+  // Y goes from -400 (off top) to 380 (center of mobile screen)
+  const planeY = -400 + 780 * easedProgress // -400 to 380
+  const planeScale = 0.3 + 0.8 * easedProgress // 0.3 to 1.1
+  const planeRotate = -15 + 20 * easedProgress // -15 to 5 (nose down to level)
+  const textScale = 0.9 + 0.12 * interpolate(localTime, [1.0, 2.0], [0, 1]) // Delayed for impact
+  const textOpacity = interpolate(localTime, [0.8, 1.6], [0, 1]) // Fade in text
+  const pulse = 0.6 + 0.4 * Math.sin(time * 2.5)
   
   return (
-    <AbsoluteFill style={{ background: COLORS.navy }}>
+    <AbsoluteFill style={{ backgroundColor: DESIGN.colors.bg }}>
       <AbsoluteFill>
-        <img 
-          src={ASSETS.seattle} 
-          alt="" 
-          style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'brightness(0.35)' }} 
-        />
+        <img src={ASSETS.seattle} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'brightness(0.35)' }} />
       </AbsoluteFill>
       
-      <DarkOverlay intensity={0.6} />
+      <SmokeOverlay intensity={0.5} time={time} />
       
-      {/* Plane */}
-      <AbsoluteFill style={{ justifyContent: 'flex-start', alignItems: 'center', paddingTop: '10%' }}>
+      {/* Plane - descends into center of screen (no flip - text readable) */}
+      <AbsoluteFill style={{ justifyContent: 'flex-start', alignItems: 'center' }}>
         <img
           src={ASSETS.plane}
           alt=""
           style={{
             width: 'clamp(160px, 40vw, 260px)',
             height: 'auto',
+            // No flip - plane text stays readable, rotate for descent angle
             transform: `translateY(${planeY}px) scale(${planeScale}) rotate(${planeRotate}deg)`,
-            filter: 'drop-shadow(0 20px 40px rgba(0,0,0,0.5))',
+            filter: `drop-shadow(0 40px 80px rgba(0,0,0,0.5)) drop-shadow(0 0 40px ${DESIGN.colors.green}30)`,
+            willChange: 'transform',
           }}
         />
       </AbsoluteFill>
       
-      {/* CTA */}
-      <AbsoluteFill 
-        style={{ 
-          justifyContent: 'flex-end', 
-          alignItems: 'center', 
-          paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 14%)',
-          padding: 24,
-          opacity: textOpacity,
-        }}
-      >
-        <div style={{ textAlign: 'center' }}>
-          <h2 style={{ 
-            fontFamily: FONTS.hero, 
+      <Vignette />
+      
+      {/* CTA - Premium styling */}
+      <AbsoluteFill style={{ justifyContent: 'flex-end', alignItems: 'center', paddingBottom: '16%', opacity: textOpacity }}>
+        <div style={{ textAlign: 'center', transform: `scale(${textScale})` }}>
+          <div style={{ 
+            fontFamily: DESIGN.fonts.hero, 
             fontWeight: 400, 
-            fontSize: 'clamp(48px, 16vw, 80px)', 
-            color: COLORS.white, 
-            textShadow: TEXT_SHADOW.glowGreen,
-            margin: 0,
+            fontSize: 'clamp(40px, 14vw, 72px)', 
+            color: DESIGN.colors.ink, 
+            letterSpacing: DESIGN.tracking.tight,
+            textShadow: `0 0 ${50 + 30 * pulse}px ${DESIGN.colors.green}`,
           }}>
             ENTER NOW
-          </h2>
+          </div>
           
-          {/* CTA Button */}
           <div
             style={{
-              marginTop: 24,
+              marginTop: DESIGN.space.lg,
               display: 'inline-flex',
               alignItems: 'center',
               justifyContent: 'center',
-              height: 56,
-              paddingLeft: 36,
-              paddingRight: 36,
+              height: 52,
+              paddingLeft: 32,
+              paddingRight: 32,
               borderRadius: 100,
-              background: `linear-gradient(135deg, ${COLORS.green} 0%, #5CBF3A 100%)`,
-              boxShadow: `0 0 ${25 + 15 * pulse}px ${COLORS.green}`,
+              background: `linear-gradient(135deg, ${DESIGN.colors.green} 0%, #5CBF3A 100%)`,
+              boxShadow: `0 0 ${30 + 20 * pulse}px ${DESIGN.colors.green}`,
             }}
           >
             <span style={{ 
-              fontFamily: FONTS.hero, 
+              fontFamily: DESIGN.fonts.hero, 
               fontWeight: 400, 
-              fontSize: 'clamp(20px, 6vw, 28px)', 
-              color: COLORS.navy, 
-              letterSpacing: '-0.01em',
+              fontSize: 'clamp(18px, 5vw, 24px)', 
+              color: DESIGN.colors.navy, 
+              letterSpacing: DESIGN.tracking.tight,
             }}>
               game.drinksip.com
             </span>
           </div>
           
-          <p style={{ 
-            marginTop: 16, 
-            fontFamily: FONTS.title, 
-            fontWeight: 500, 
-            fontSize: 12, 
-            color: 'rgba(255,255,255,0.6)', 
-            letterSpacing: '0.15em',
-            textShadow: TEXT_SHADOW.subtle,
+          <div style={{ 
+            marginTop: DESIGN.space.sm, 
+            fontFamily: DESIGN.fonts.title, 
+            fontWeight: 400, 
+            fontSize: 11, 
+            color: DESIGN.colors.inkDim, 
+            letterSpacing: DESIGN.tracking.wider,
             textTransform: 'uppercase',
           }}>
             Drawing Saturday • San Francisco
-          </p>
+          </div>
         </div>
       </AbsoluteFill>
     </AbsoluteFill>
@@ -1065,10 +1125,11 @@ export default function SplashAnimation({ onComplete, onSkip, muted = true, onMu
   const [showSkip, setShowSkip] = useState(false)
   const audioRef = useRef<HTMLAudioElement>(null)
   const time = useAnimationTime(isPlaying)
+  const { isHighEnd } = useDeviceCapability()
   
-  // Show skip after 2s
+  // Show skip button after 3s
   useEffect(() => {
-    const timer = setTimeout(() => setShowSkip(true), 2000)
+    const timer = setTimeout(() => setShowSkip(true), 3000)
     return () => clearTimeout(timer)
   }, [])
   
@@ -1085,13 +1146,13 @@ export default function SplashAnimation({ onComplete, onSkip, muted = true, onMu
     if (audioRef.current) {
       audioRef.current.muted = muted
       if (isPlaying && time < TOTAL_DURATION) {
-        audioRef.current.currentTime = time + 10
+        audioRef.current.currentTime = time + 10 // Start at hype section (10s in)
         audioRef.current.play().catch(() => {})
       }
     }
   }, [muted, isPlaying])
   
-  // Scene router
+  // Determine which scene to show
   const getCurrentScene = () => {
     if (time < SCENES.intro.end) return <SceneIntro time={time} />
     if (time < SCENES.mapFlight.end) return <SceneMapFlight time={time} />
@@ -1110,24 +1171,26 @@ export default function SplashAnimation({ onComplete, onSkip, muted = true, onMu
       style={{
         position: 'fixed',
         inset: 0,
-        background: COLORS.navy,
+        background: DESIGN.colors.bg,
         overflow: 'hidden',
       }}
     >
       {/* Audio */}
       <audio ref={audioRef} src="/audio/music/land-of-the-12s.mp4" loop={false} preload="auto" />
       
-      {/* Current scene */}
+      {/* Scene */}
       {getCurrentScene()}
       
-      {/* Progress bar */}
+      {/* ========== ULTRA-MINIMAL CONTROLS ========== */}
+      
+      {/* Tiny bottom progress line */}
       <div
         style={{
           position: 'absolute',
           bottom: 0,
           left: 0,
           right: 0,
-          height: 3,
+          height: 2,
           background: 'rgba(255,255,255,0.1)',
           zIndex: 100,
         }}
@@ -1136,46 +1199,48 @@ export default function SplashAnimation({ onComplete, onSkip, muted = true, onMu
           style={{
             height: '100%',
             width: `${(time / TOTAL_DURATION) * 100}%`,
-            background: COLORS.green,
-            transition: 'width 0.1s linear',
+            background: DESIGN.colors.green,
+            transition: 'width 0.15s linear',
           }}
         />
       </div>
       
-      {/* Controls */}
+      {/* Corner controls - icon only */}
       <div
         style={{
           position: 'absolute',
-          bottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)',
+          bottom: 'calc(env(safe-area-inset-bottom, 0px) + 12px)',
           right: 16,
           display: 'flex',
           alignItems: 'center',
-          gap: 10,
+          gap: 8,
           zIndex: 100,
         }}
       >
-        {/* Mute toggle */}
+        {/* Sound toggle - icon only */}
         <motion.button
           onClick={onMuteToggle}
           whileTap={{ scale: 0.95 }}
           style={{
-            width: 40,
-            height: 40,
+            width: 36,
+            height: 36,
             borderRadius: '50%',
-            background: 'rgba(0,0,0,0.5)',
-            backdropFilter: 'blur(12px)',
-            border: '1px solid rgba(255,255,255,0.15)',
-            color: muted ? 'rgba(255,255,255,0.5)' : COLORS.green,
+            background: 'rgba(0,0,0,0.4)',
+            backdropFilter: 'blur(10px)',
+            WebkitBackdropFilter: 'blur(10px)',
+            border: '1px solid rgba(255,255,255,0.1)',
+            color: muted ? 'rgba(255,255,255,0.5)' : DESIGN.colors.green,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             cursor: 'pointer',
+            WebkitTapHighlightColor: 'transparent',
           }}
         >
-          {muted ? <VolumeX size={18} /> : <Volume2 size={18} />}
+          {muted ? <VolumeX size={16} /> : <Volume2 size={16} />}
         </motion.button>
         
-        {/* Skip */}
+        {/* Skip - compact pill */}
         <AnimatePresence>
           {showSkip && (
             <motion.button
@@ -1188,27 +1253,29 @@ export default function SplashAnimation({ onComplete, onSkip, muted = true, onMu
                 onSkip?.()
               }}
               style={{
-                height: 40,
-                paddingLeft: 16,
-                paddingRight: 12,
+                height: 36,
+                paddingLeft: 14,
+                paddingRight: 10,
                 borderRadius: 100,
-                background: 'rgba(0,0,0,0.5)',
-                backdropFilter: 'blur(12px)',
-                border: '1px solid rgba(255,255,255,0.15)',
+                background: 'rgba(0,0,0,0.4)',
+                backdropFilter: 'blur(10px)',
+                WebkitBackdropFilter: 'blur(10px)',
+                border: '1px solid rgba(255,255,255,0.1)',
                 color: 'rgba(255,255,255,0.9)',
-                fontSize: 12,
-                fontFamily: FONTS.title,
-                fontWeight: 600,
+                fontSize: 11,
+                fontFamily: 'var(--font-oswald), "Oswald", sans-serif',
+                fontWeight: 500,
                 letterSpacing: '0.1em',
                 textTransform: 'uppercase',
                 display: 'flex',
                 alignItems: 'center',
-                gap: 6,
+                gap: 4,
                 cursor: 'pointer',
+                WebkitTapHighlightColor: 'transparent',
               }}
             >
               Skip
-              <ChevronRight size={16} />
+              <ChevronRight size={14} />
             </motion.button>
           )}
         </AnimatePresence>
