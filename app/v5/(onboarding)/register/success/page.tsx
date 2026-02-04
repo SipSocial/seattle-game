@@ -70,7 +70,7 @@ function EntryMethodCard({
   title, 
   onClick 
 }: { 
-  icon: React.ComponentType<{ size?: number; color?: string }>
+  icon: React.ElementType
   title: string
   onClick: () => void
 }) {
