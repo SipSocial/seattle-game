@@ -4,19 +4,44 @@
  * Dark Side Football - Premium Game Entry Splash
  * 
  * TWO PHASES:
- * 1. TRAILER PHASE: Full-screen cinematic video (30 seconds)
+ * 1. ANIMATION PHASE: 60fps React animation (30 seconds) - native resolution
  * 2. CAPTURE PHASE: Immersive game-like entry experience
  * 
  * Design: Epic Games / Rockstar style - feels like entering a AAA game
+ * 
+ * V2: Uses live React + Framer Motion instead of compressed video
+ *     for crystal-clear 60fps native resolution rendering
  */
 
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Play, Trophy, SkipForward, Volume2, VolumeX } from 'lucide-react'
+import { Play, Trophy } from 'lucide-react'
+import dynamic from 'next/dynamic'
+
+// Lazy load animation component for faster initial load
+const SplashAnimation = dynamic(() => import('./SplashAnimation'), {
+  ssr: false,
+  loading: () => (
+    <div className="fixed inset-0 bg-black flex items-center justify-center">
+      <div className="text-center">
+        <div 
+          className="w-16 h-16 mx-auto mb-4 rounded-full"
+          style={{
+            border: '3px solid rgba(105, 190, 40, 0.2)',
+            borderTopColor: '#69BE28',
+            animation: 'spin 1s linear infinite',
+          }}
+        />
+        <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '10px', letterSpacing: '0.2em' }}>
+          LOADING EXPERIENCE
+        </p>
+      </div>
+    </div>
+  ),
+})
 
 // === ASSETS ===
-const TRAILER_VIDEO = '/video/trailer.mp4?v=9'
 const BACKGROUND_VIDEO = 'https://cdn.leonardo.ai/users/eb9a23b8-36c0-4667-b97f-64fdee85d14b/generations/4b5f0ad3-9f4e-413f-b44a-053e9af6240c/4b5f0ad3-9f4e-413f-b44a-053e9af6240c.mp4'
 const BACKGROUND_POSTER = 'https://cdn.leonardo.ai/users/eb9a23b8-36c0-4667-b97f-64fdee85d14b/generations/16412705-ca65-400e-bb78-80ff29be860a/segments/2:2:1/Phoenix_Empty_NFL_football_field_at_night_dramatic_billowing_s_0.jpg'
 const DRINKSHIP_LOGO = 'https://cdn.shopify.com/s/files/1/0407/8580/5468/files/DrinkSip_Logo_SVG.svg?v=1759624477'
@@ -39,78 +64,16 @@ type Phase = 'trailer' | 'capture'
 
 export default function SplashPage() {
   const router = useRouter()
-  const trailerRef = useRef<HTMLVideoElement>(null)
   const ambientRef = useRef<HTMLVideoElement>(null)
   
   const [phase, setPhase] = useState<Phase>('trailer')
   const [mounted, setMounted] = useState(false)
-  const [trailerReady, setTrailerReady] = useState(false)
-  const [trailerProgress, setTrailerProgress] = useState(0)
   const [muted, setMuted] = useState(true)
-  const [showSkip, setShowSkip] = useState(false)
 
   // Initialize
   useEffect(() => {
     setMounted(true)
-    const hasSeenTrailer = localStorage.getItem('darkside_trailer_seen')
-    if (hasSeenTrailer === 'true') setShowSkip(true)
-    const skipTimer = setTimeout(() => setShowSkip(true), 3000)
-    return () => clearTimeout(skipTimer)
   }, [])
-
-  // Trailer video setup
-  useEffect(() => {
-    const video = trailerRef.current
-    if (!video || phase !== 'trailer') return
-
-    const playVideo = () => {
-      video.play()
-        .then(() => setTrailerReady(true))
-        .catch(() => {
-          video.muted = true
-          setMuted(true)
-          video.play()
-            .then(() => setTrailerReady(true))
-            .catch(() => setTrailerReady(false))
-        })
-    }
-
-    const handleCanPlay = () => playVideo()
-    const handleTimeUpdate = () => {
-      if (video.duration) setTrailerProgress(video.currentTime / video.duration)
-    }
-    const handleEnded = () => {
-      localStorage.setItem('darkside_trailer_seen', 'true')
-      setPhase('capture')
-    }
-    const handleError = () => setPhase('capture')
-
-    video.addEventListener('canplay', handleCanPlay)
-    video.addEventListener('timeupdate', handleTimeUpdate)
-    video.addEventListener('ended', handleEnded)
-    video.addEventListener('error', handleError)
-
-    if (video.readyState >= 3) playVideo()
-
-    const handleInteraction = () => {
-      playVideo()
-      if (video.muted) {
-        video.muted = false
-        setMuted(false)
-      }
-    }
-    document.addEventListener('touchstart', handleInteraction, { once: true })
-    document.addEventListener('click', handleInteraction, { once: true })
-
-    return () => {
-      video.removeEventListener('canplay', handleCanPlay)
-      video.removeEventListener('timeupdate', handleTimeUpdate)
-      video.removeEventListener('ended', handleEnded)
-      video.removeEventListener('error', handleError)
-      document.removeEventListener('touchstart', handleInteraction)
-      document.removeEventListener('click', handleInteraction)
-    }
-  }, [phase])
 
   // Ambient video for capture phase
   useEffect(() => {
@@ -122,17 +85,18 @@ export default function SplashPage() {
     })
   }, [phase])
 
+  const handleAnimationComplete = useCallback(() => {
+    localStorage.setItem('darkside_trailer_seen', 'true')
+    setPhase('capture')
+  }, [])
+
   const handleSkip = useCallback(() => {
     localStorage.setItem('darkside_trailer_seen', 'true')
     setPhase('capture')
   }, [])
 
   const handleToggleMute = useCallback(() => {
-    const video = trailerRef.current
-    if (video) {
-      video.muted = !video.muted
-      setMuted(video.muted)
-    }
+    setMuted(prev => !prev)
   }, [])
 
   const handleEnterGiveaway = useCallback(() => {
@@ -143,7 +107,8 @@ export default function SplashPage() {
     <div className="fixed inset-0 overflow-hidden" style={{ background: '#000' }}>
       <AnimatePresence mode="wait">
         {/* ============================================ */}
-        {/* PHASE 1: TRAILER */}
+        {/* PHASE 1: ANIMATION - 60fps React Animation */}
+        {/* Crystal clear, native resolution rendering */}
         {/* ============================================ */}
         {phase === 'trailer' && (
           <motion.div
@@ -153,91 +118,12 @@ export default function SplashPage() {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.8 }}
           >
-            <video
-              ref={trailerRef}
-              autoPlay
-              playsInline
-              preload="auto"
+            <SplashAnimation
+              onComplete={handleAnimationComplete}
+              onSkip={handleSkip}
               muted={muted}
-              poster={BACKGROUND_POSTER}
-              className="absolute inset-0 w-full h-full"
-              style={{ objectFit: 'cover', objectPosition: 'center center' }}
-            >
-              <source src={TRAILER_VIDEO} type="video/mp4" />
-            </video>
-
-            {!trailerReady && (
-              <div className="absolute inset-0 flex items-center justify-center" style={{ background: '#000' }}>
-                <motion.div className="text-center" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}>
-                  <div 
-                    className="w-16 h-16 mx-auto mb-4 rounded-full"
-                    style={{
-                      border: '3px solid rgba(105, 190, 40, 0.2)',
-                      borderTopColor: '#69BE28',
-                      animation: 'spin 1s linear infinite',
-                    }}
-                  />
-                  <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '10px', letterSpacing: '0.2em' }}>
-                    LOADING EXPERIENCE
-                  </p>
-                </motion.div>
-              </div>
-            )}
-
-            <div className="absolute inset-x-0 top-0 pointer-events-none" style={{ height: '20%', background: 'linear-gradient(180deg, rgba(0,0,0,0.7) 0%, transparent 100%)' }} />
-            <div className="absolute inset-x-0 bottom-0 pointer-events-none" style={{ height: '30%', background: 'linear-gradient(0deg, rgba(0,0,0,0.8) 0%, transparent 100%)' }} />
-
-            <div className="absolute inset-x-0 bottom-0" style={{ height: '4px', background: 'rgba(255,255,255,0.2)' }}>
-              <motion.div style={{ height: '100%', background: 'linear-gradient(90deg, #69BE28 0%, #7DD33B 100%)', width: `${trailerProgress * 100}%` }} />
-            </div>
-
-            <AnimatePresence>
-              {showSkip && mounted && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="absolute z-20"
-                  style={{ 
-                    bottom: 'calc(env(safe-area-inset-bottom, 0px) + 24px)', 
-                    right: '16px', 
-                    display: 'flex', 
-                    gap: '8px',
-                    alignItems: 'center',
-                  }}
-                >
-                  <motion.button
-                    onClick={handleToggleMute}
-                    whileTap={{ scale: 0.9 }}
-                    className="flex items-center justify-center"
-                    style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'rgba(0,0,0,0.6)', border: '1px solid rgba(255,255,255,0.15)' }}
-                  >
-                    {muted ? <VolumeX size={16} color="white" /> : <Volume2 size={16} color="white" />}
-                  </motion.button>
-                  <motion.button
-                    onClick={handleSkip}
-                    whileTap={{ scale: 0.95 }}
-                    className="flex items-center"
-                    style={{ padding: '8px 14px', borderRadius: '100px', background: 'rgba(0,0,0,0.6)', border: '1px solid rgba(255,255,255,0.15)', color: 'white', fontSize: '11px', fontWeight: 600, letterSpacing: '0.08em', gap: '6px' }}
-                  >
-                    SKIP <SkipForward size={14} />
-                  </motion.button>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            {muted && trailerReady && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 1 }}
-                className="absolute"
-                style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 24px)', left: '16px', padding: '8px 14px', borderRadius: '100px', background: 'rgba(0,0,0,0.6)', border: '1px solid rgba(255,255,255,0.15)' }}
-              >
-                <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '10px', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Tap for sound</p>
-              </motion.div>
-            )}
+              onMuteToggle={handleToggleMute}
+            />
           </motion.div>
         )}
 
