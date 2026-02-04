@@ -364,36 +364,38 @@ function SceneIntro({ time }: { time: number }) {
 }
 
 // ============================================================================
-// SCENE 2: MAP FLIGHT
+// SCENE 2: MAP FLIGHT - Plane flies LEFT to RIGHT (Seattle → San Francisco)
 // ============================================================================
 function SceneMapFlight({ time }: { time: number }) {
   const localTime = time - SCENES.mapFlight.start
   const duration = SCENES.mapFlight.end - SCENES.mapFlight.start
   
   const progress = interpolate(localTime, [0, duration], [0, 1])
-  const planeX = interpolate(progress, [0, 1], [-300, 200])
-  const planeY = interpolate(progress, [0, 1], [100, -50])
-  const planeScale = 0.9 + 0.2 * progress
+  // Plane flies LEFT to RIGHT: start off-screen left, end center-right
+  const planeX = interpolate(progress, [0, 1], [-350, 150])
+  const planeY = interpolate(progress, [0, 1], [50, -30])
+  const planeScale = 0.85 + 0.25 * progress
   const textOpacity = interpolate(localTime, [0.5, 1], [0, 1])
   
   return (
     <AbsoluteFill style={{ backgroundColor: DESIGN.colors.bg }}>
       <AbsoluteFill>
-        <img src={ASSETS.usMap} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'brightness(0.45) contrast(1.1)' }} />
+        <img src={ASSETS.usMap} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'brightness(0.5) contrast(1.1)' }} />
       </AbsoluteFill>
       
-      <SmokeOverlay intensity={0.5} time={time} />
+      <SmokeOverlay intensity={0.4} time={time} />
       
-      {/* Plane */}
+      {/* Plane - flipped to face RIGHT (direction of travel) */}
       <AbsoluteFill style={{ justifyContent: 'center', alignItems: 'center' }}>
         <img
           src={ASSETS.plane}
           alt=""
           style={{
-            width: 'clamp(200px, 60vw, 400px)',
+            width: 'clamp(220px, 55vw, 380px)',
             height: 'auto',
-            transform: `translate(${planeX}px, ${planeY}px) scale(${planeScale}) rotate(-8deg)`,
-            filter: 'drop-shadow(0 60px 100px rgba(0,0,0,0.7))',
+            // scaleX(-1) flips plane to face right, rotate tilts nose up slightly
+            transform: `translate(${planeX}px, ${planeY}px) scaleX(-1) scale(${planeScale}) rotate(5deg)`,
+            filter: `drop-shadow(0 40px 80px rgba(0,0,0,0.6)) drop-shadow(0 0 40px ${DESIGN.colors.green}30)`,
             willChange: 'transform',
           }}
         />
@@ -401,13 +403,27 @@ function SceneMapFlight({ time }: { time: number }) {
       
       <Vignette />
       
-      {/* Text */}
-      <AbsoluteFill style={{ justifyContent: 'flex-end', alignItems: 'center', paddingBottom: '15%', opacity: textOpacity }}>
+      {/* Text - Premium styling, no dark shadows */}
+      <AbsoluteFill style={{ justifyContent: 'flex-end', alignItems: 'center', paddingBottom: '18%', opacity: textOpacity }}>
         <div style={{ textAlign: 'center' }}>
-          <div style={{ fontFamily: DESIGN.fonts.title, fontWeight: 600, fontSize: 'clamp(16px, 5vw, 28px)', letterSpacing: '0.25em', color: DESIGN.colors.inkDim }}>
+          <div style={{ 
+            fontFamily: DESIGN.fonts.title, 
+            fontWeight: 600, 
+            fontSize: 'clamp(14px, 4vw, 22px)', 
+            letterSpacing: '0.2em', 
+            color: 'rgba(255,255,255,0.7)',
+          }}>
             ROAD TO
           </div>
-          <div style={{ fontFamily: DESIGN.fonts.hero, fontWeight: 900, fontSize: 'clamp(36px, 12vw, 60px)', letterSpacing: '0.02em', color: DESIGN.colors.gold, textShadow: `0 0 80px ${DESIGN.colors.gold}`, marginTop: 6 }}>
+          <div style={{ 
+            fontFamily: DESIGN.fonts.hero, 
+            fontWeight: 900, 
+            fontSize: 'clamp(32px, 10vw, 52px)', 
+            letterSpacing: '0.02em', 
+            color: DESIGN.colors.gold, 
+            textShadow: `0 0 60px ${DESIGN.colors.gold}`,
+            marginTop: 4,
+          }}>
             SAN FRANCISCO
           </div>
         </div>
@@ -417,34 +433,48 @@ function SceneMapFlight({ time }: { time: number }) {
 }
 
 // ============================================================================
-// SCENE 3: GAME HUB
+// SCENE 3: GAME HUB - Premium styling, no dark shadows
 // ============================================================================
 function SceneGameHub({ time }: { time: number }) {
   const localTime = time - SCENES.gameHub.start
   const phoneScale = 0.85 + 0.2 * interpolate(localTime, [0, 0.5], [0, 1])
-  const phoneY = 60 - 60 * interpolate(localTime, [0, 0.5], [0, 1])
+  const phoneY = 50 - 50 * interpolate(localTime, [0, 0.5], [0, 1])
   const textOpacity = interpolate(localTime, [0.4, 0.9], [0, 1])
   
   return (
     <AbsoluteFill style={{ backgroundColor: DESIGN.colors.bg }}>
       <AbsoluteFill>
-        <img src={ASSETS.stadium} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'brightness(0.25)' }} />
+        <img src={ASSETS.stadium} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'brightness(0.3)' }} />
       </AbsoluteFill>
       
-      <SmokeOverlay intensity={0.6} time={time} />
+      <SmokeOverlay intensity={0.5} time={time} />
       <Vignette />
       
       <AbsoluteFill style={{ justifyContent: 'center', alignItems: 'center' }}>
         <div style={{ transform: `translateY(${phoneY}px) scale(${phoneScale})`, willChange: 'transform' }}>
-          <PhoneMockup screen={SCREENS.gameHub} scale={1.3} />
+          <PhoneMockup screen={SCREENS.gameHub} scale={1.2} />
         </div>
       </AbsoluteFill>
       
-      <AbsoluteFill style={{ padding: 32, paddingTop: '10%', justifyContent: 'flex-start', opacity: textOpacity }}>
-        <div style={{ fontFamily: DESIGN.fonts.hero, fontWeight: 900, fontSize: 'clamp(36px, 12vw, 56px)', color: DESIGN.colors.green, letterSpacing: '0.02em', textShadow: `0 0 60px ${DESIGN.colors.green}` }}>
+      <AbsoluteFill style={{ padding: 24, paddingTop: '12%', justifyContent: 'flex-start', opacity: textOpacity }}>
+        <div style={{ 
+          fontFamily: DESIGN.fonts.hero, 
+          fontWeight: 900, 
+          fontSize: 'clamp(28px, 9vw, 44px)', 
+          color: DESIGN.colors.green, 
+          letterSpacing: '0.02em', 
+          textShadow: `0 0 50px ${DESIGN.colors.green}`,
+        }}>
           PLAY THE GAME
         </div>
-        <div style={{ marginTop: 10, fontFamily: DESIGN.fonts.title, fontWeight: 600, fontSize: 'clamp(14px, 4vw, 22px)', color: DESIGN.colors.ink, letterSpacing: '0.05em' }}>
+        <div style={{ 
+          marginTop: 8, 
+          fontFamily: DESIGN.fonts.title, 
+          fontWeight: 500, 
+          fontSize: 'clamp(13px, 3.5vw, 18px)', 
+          color: 'rgba(255,255,255,0.8)', 
+          letterSpacing: '0.15em',
+        }}>
           Earn entries from home
         </div>
       </AbsoluteFill>
@@ -453,17 +483,17 @@ function SceneGameHub({ time }: { time: number }) {
 }
 
 // ============================================================================
-// SCENE 4: PICKS
+// SCENE 4: PICKS - Premium styling, glow shadows only
 // ============================================================================
 function ScenePicks({ time }: { time: number }) {
   const localTime = time - SCENES.picks.start
   const phoneScale = 0.9 + 0.15 * interpolate(localTime, [0, 0.4], [0, 1])
-  const phoneY = 40 - 40 * interpolate(localTime, [0, 0.4], [0, 1])
+  const phoneY = 35 - 35 * interpolate(localTime, [0, 0.4], [0, 1])
   
   return (
     <AbsoluteFill style={{ backgroundColor: DESIGN.colors.bg }}>
       <AbsoluteFill>
-        <img src={ASSETS.stadium} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'brightness(0.25)' }} />
+        <img src={ASSETS.stadium} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'brightness(0.3)' }} />
       </AbsoluteFill>
       
       <SmokeOverlay intensity={0.5} time={time} />
@@ -471,16 +501,30 @@ function ScenePicks({ time }: { time: number }) {
       
       <AbsoluteFill style={{ justifyContent: 'center', alignItems: 'center' }}>
         <div style={{ transform: `scale(${phoneScale}) translateY(${phoneY}px)`, willChange: 'transform' }}>
-          <PhoneMockup screen={SCREENS.picksHub} scale={1.3} />
+          <PhoneMockup screen={SCREENS.picksHub} scale={1.2} />
         </div>
       </AbsoluteFill>
       
-      <AbsoluteFill style={{ padding: 32, justifyContent: 'flex-end', paddingBottom: '12%' }}>
+      <AbsoluteFill style={{ padding: 24, justifyContent: 'flex-end', paddingBottom: '14%' }}>
         <div style={{ textAlign: 'center' }}>
-          <div style={{ fontFamily: DESIGN.fonts.hero, fontWeight: 900, fontSize: 'clamp(40px, 14vw, 64px)', color: DESIGN.colors.ink, letterSpacing: '0.01em', textShadow: '0 4px 0 rgba(0,0,0,0.3)' }}>
+          <div style={{ 
+            fontFamily: DESIGN.fonts.hero, 
+            fontWeight: 900, 
+            fontSize: 'clamp(32px, 11vw, 52px)', 
+            color: DESIGN.colors.ink, 
+            letterSpacing: '0.02em', 
+            textShadow: `0 0 50px rgba(255,255,255,0.3)`,
+          }}>
             PROP PICKS
           </div>
-          <div style={{ marginTop: 12, fontFamily: DESIGN.fonts.title, fontWeight: 600, fontSize: 'clamp(14px, 4vw, 22px)', color: DESIGN.colors.green, letterSpacing: '0.08em' }}>
+          <div style={{ 
+            marginTop: 10, 
+            fontFamily: DESIGN.fonts.title, 
+            fontWeight: 500, 
+            fontSize: 'clamp(13px, 3.5vw, 18px)', 
+            color: DESIGN.colors.green, 
+            letterSpacing: '0.15em',
+          }}>
             25 props • Win a signed jersey
           </div>
         </div>
@@ -490,7 +534,7 @@ function ScenePicks({ time }: { time: number }) {
 }
 
 // ============================================================================
-// SCENE 5: LIVE
+// SCENE 5: LIVE - Premium styling, glow shadows only
 // ============================================================================
 function SceneLive({ time }: { time: number }) {
   const localTime = time - SCENES.live.start
@@ -500,46 +544,66 @@ function SceneLive({ time }: { time: number }) {
   return (
     <AbsoluteFill style={{ backgroundColor: DESIGN.colors.bg }}>
       <AbsoluteFill>
-        <img src={ASSETS.stadium} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'brightness(0.25)' }} />
+        <img src={ASSETS.stadium} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'brightness(0.3)' }} />
       </AbsoluteFill>
       
-      <SmokeOverlay intensity={0.6} time={time} />
+      <SmokeOverlay intensity={0.5} time={time} />
       <Vignette />
       
       <AbsoluteFill style={{ justifyContent: 'center', alignItems: 'center' }}>
         <div style={{ transform: `scale(${phoneScale})`, willChange: 'transform' }}>
-          <PhoneMockup screen={SCREENS.live} scale={1.3} glowColor="#FF3333" />
+          <PhoneMockup screen={SCREENS.live} scale={1.2} glowColor="#FF4444" />
         </div>
       </AbsoluteFill>
       
-      {/* LIVE badge */}
-      <AbsoluteFill style={{ padding: 32, justifyContent: 'flex-start', paddingTop: '8%' }}>
+      {/* LIVE badge - compact and premium */}
+      <AbsoluteFill style={{ padding: 24, justifyContent: 'flex-start', paddingTop: '12%' }}>
         <div
           style={{
             display: 'inline-flex',
             alignItems: 'center',
-            gap: 10,
-            padding: '12px 24px',
-            background: 'rgba(255,0,0,0.2)',
+            gap: 8,
+            padding: '10px 20px',
+            background: 'rgba(255,68,68,0.15)',
             borderRadius: 100,
-            border: '2px solid rgba(255,0,0,0.5)',
-            boxShadow: `0 0 ${30 + 20 * pulse}px rgba(255,0,0,0.5)`,
+            border: '1px solid rgba(255,68,68,0.4)',
+            boxShadow: `0 0 ${25 + 15 * pulse}px rgba(255,68,68,0.4)`,
             width: 'fit-content',
           }}
         >
-          <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#FF0000', boxShadow: '0 0 20px #FF0000' }} />
-          <span style={{ fontFamily: DESIGN.fonts.title, fontWeight: 700, fontSize: 'clamp(14px, 4vw, 20px)', color: '#FF4444', letterSpacing: '0.12em' }}>
+          <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#FF4444', boxShadow: '0 0 15px #FF4444' }} />
+          <span style={{ 
+            fontFamily: DESIGN.fonts.title, 
+            fontWeight: 600, 
+            fontSize: 'clamp(12px, 3.5vw, 16px)', 
+            color: '#FF6666', 
+            letterSpacing: '0.15em',
+          }}>
             LIVE GAMEDAY
           </span>
         </div>
       </AbsoluteFill>
       
-      <AbsoluteFill style={{ padding: 32, justifyContent: 'flex-end', paddingBottom: '12%' }}>
+      <AbsoluteFill style={{ padding: 24, justifyContent: 'flex-end', paddingBottom: '14%' }}>
         <div style={{ textAlign: 'center' }}>
-          <div style={{ fontFamily: DESIGN.fonts.hero, fontWeight: 900, fontSize: 'clamp(36px, 12vw, 56px)', color: DESIGN.colors.ink, textShadow: '0 4px 0 rgba(0,0,0,0.3)' }}>
+          <div style={{ 
+            fontFamily: DESIGN.fonts.hero, 
+            fontWeight: 900, 
+            fontSize: 'clamp(28px, 9vw, 44px)', 
+            color: DESIGN.colors.ink, 
+            letterSpacing: '0.02em',
+            textShadow: `0 0 50px rgba(255,255,255,0.3)`,
+          }}>
             PREDICT PLAYS
           </div>
-          <div style={{ marginTop: 10, fontFamily: DESIGN.fonts.title, fontWeight: 600, fontSize: 'clamp(14px, 4vw, 22px)', color: DESIGN.colors.green, letterSpacing: '0.06em' }}>
+          <div style={{ 
+            marginTop: 10, 
+            fontFamily: DESIGN.fonts.title, 
+            fontWeight: 500, 
+            fontSize: 'clamp(13px, 3.5vw, 18px)', 
+            color: DESIGN.colors.green, 
+            letterSpacing: '0.15em',
+          }}>
             Answer fast • Earn bonus entries
           </div>
         </div>
@@ -549,35 +613,49 @@ function SceneLive({ time }: { time: number }) {
 }
 
 // ============================================================================
-// SCENE 6: SCAN & WIN
+// SCENE 6: SCAN & WIN - Premium styling
 // ============================================================================
 function SceneScanWin({ time }: { time: number }) {
   const localTime = time - SCENES.scanWin.start
   const phoneScale = 0.9 + 0.15 * interpolate(localTime, [0, 0.4], [0, 1])
-  const phoneY = 30 - 30 * interpolate(localTime, [0, 0.4], [0, 1])
+  const phoneY = 25 - 25 * interpolate(localTime, [0, 0.4], [0, 1])
   const sparkle = 0.7 + 0.3 * Math.sin(time * 3)
   
   return (
     <AbsoluteFill style={{ backgroundColor: DESIGN.colors.bg }}>
       <AbsoluteFill>
-        <img src={ASSETS.stadium} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'brightness(0.25)' }} />
+        <img src={ASSETS.stadium} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'brightness(0.3)' }} />
       </AbsoluteFill>
       
-      <SmokeOverlay intensity={0.6} time={time} />
+      <SmokeOverlay intensity={0.5} time={time} />
       <Vignette />
       
       <AbsoluteFill style={{ justifyContent: 'center', alignItems: 'center' }}>
         <div style={{ transform: `scale(${phoneScale}) translateY(${phoneY}px)`, willChange: 'transform' }}>
-          <PhoneMockup screen={SCREENS.scratchCard} scale={1.3} glowColor={DESIGN.colors.gold} />
+          <PhoneMockup screen={SCREENS.scratchCard} scale={1.2} glowColor={DESIGN.colors.gold} />
         </div>
       </AbsoluteFill>
       
-      <AbsoluteFill style={{ padding: 32, justifyContent: 'flex-start', paddingTop: '8%' }}>
+      <AbsoluteFill style={{ padding: 24, justifyContent: 'flex-start', paddingTop: '12%' }}>
         <div style={{ textAlign: 'center' }}>
-          <div style={{ fontFamily: DESIGN.fonts.hero, fontWeight: 900, fontSize: 'clamp(40px, 14vw, 64px)', color: DESIGN.colors.gold, textShadow: `0 0 ${60 * sparkle}px ${DESIGN.colors.gold}` }}>
+          <div style={{ 
+            fontFamily: DESIGN.fonts.hero, 
+            fontWeight: 900, 
+            fontSize: 'clamp(32px, 11vw, 52px)', 
+            color: DESIGN.colors.gold, 
+            letterSpacing: '0.02em',
+            textShadow: `0 0 ${50 * sparkle}px ${DESIGN.colors.gold}`,
+          }}>
             SCAN & WIN
           </div>
-          <div style={{ marginTop: 12, fontFamily: DESIGN.fonts.title, fontWeight: 600, fontSize: 'clamp(14px, 4vw, 22px)', color: DESIGN.colors.ink, letterSpacing: '0.06em' }}>
+          <div style={{ 
+            marginTop: 10, 
+            fontFamily: DESIGN.fonts.title, 
+            fontWeight: 500, 
+            fontSize: 'clamp(13px, 3.5vw, 18px)', 
+            color: 'rgba(255,255,255,0.8)', 
+            letterSpacing: '0.15em',
+          }}>
             Daily prizes • Bonus entries
           </div>
         </div>
@@ -587,7 +665,7 @@ function SceneScanWin({ time }: { time: number }) {
 }
 
 // ============================================================================
-// SCENE 7: FEATURES (Leaderboard + Profile)
+// SCENE 7: FEATURES (Leaderboard + Profile) - Premium styling
 // ============================================================================
 function SceneFeatures({ time }: { time: number }) {
   const localTime = time - SCENES.features.start
@@ -597,29 +675,43 @@ function SceneFeatures({ time }: { time: number }) {
   return (
     <AbsoluteFill style={{ backgroundColor: DESIGN.colors.bg }}>
       <AbsoluteFill>
-        <img src={ASSETS.stadium} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'brightness(0.25)' }} />
+        <img src={ASSETS.stadium} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'brightness(0.3)' }} />
       </AbsoluteFill>
       
       <SmokeOverlay intensity={0.5} time={time} />
       <Vignette />
       
       <AbsoluteFill style={{ justifyContent: 'center', alignItems: 'center' }}>
-        <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
-          <div style={{ transform: `translateX(${-40 + 40 * phone1Progress}px) rotate(-5deg)`, opacity: phone1Progress }}>
-            <PhoneMockup screen={SCREENS.leaderboard} scale={0.85} tilt={8} />
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+          <div style={{ transform: `translateX(${-30 + 30 * phone1Progress}px) rotate(-4deg)`, opacity: phone1Progress }}>
+            <PhoneMockup screen={SCREENS.leaderboard} scale={0.8} tilt={6} />
           </div>
-          <div style={{ transform: `translateX(${40 - 40 * phone2Progress}px) rotate(5deg)`, opacity: phone2Progress }}>
-            <PhoneMockup screen={SCREENS.profile} scale={0.85} tilt={-8} />
+          <div style={{ transform: `translateX(${30 - 30 * phone2Progress}px) rotate(4deg)`, opacity: phone2Progress }}>
+            <PhoneMockup screen={SCREENS.profile} scale={0.8} tilt={-6} />
           </div>
         </div>
       </AbsoluteFill>
       
-      <AbsoluteFill style={{ padding: 32, justifyContent: 'flex-end', paddingBottom: '12%' }}>
+      <AbsoluteFill style={{ padding: 24, justifyContent: 'flex-end', paddingBottom: '14%' }}>
         <div style={{ textAlign: 'center' }}>
-          <div style={{ fontFamily: DESIGN.fonts.hero, fontSize: 'clamp(32px, 10vw, 48px)', color: DESIGN.colors.green, textShadow: `0 0 40px ${DESIGN.colors.green}` }}>
+          <div style={{ 
+            fontFamily: DESIGN.fonts.hero, 
+            fontWeight: 900,
+            fontSize: 'clamp(26px, 8vw, 40px)', 
+            color: DESIGN.colors.green, 
+            letterSpacing: '0.02em',
+            textShadow: `0 0 40px ${DESIGN.colors.green}`,
+          }}>
             COMPETE & CLIMB
           </div>
-          <div style={{ fontSize: 'clamp(12px, 3.5vw, 20px)', color: DESIGN.colors.inkDim, marginTop: 10, fontFamily: DESIGN.fonts.title, letterSpacing: '0.05em' }}>
+          <div style={{ 
+            fontSize: 'clamp(12px, 3.5vw, 16px)', 
+            color: 'rgba(255,255,255,0.7)', 
+            marginTop: 10, 
+            fontFamily: DESIGN.fonts.title, 
+            fontWeight: 500,
+            letterSpacing: '0.15em',
+          }}>
             Track your entries • Climb the ranks
           </div>
         </div>
@@ -629,28 +721,35 @@ function SceneFeatures({ time }: { time: number }) {
 }
 
 // ============================================================================
-// SCENE 8: GIVEAWAY
+// SCENE 8: GIVEAWAY - Premium styling
 // ============================================================================
 function SceneGiveaway({ time }: { time: number }) {
   const localTime = time - SCENES.giveaway.start
   const duration = SCENES.giveaway.end - SCENES.giveaway.start
   
-  const zoom = interpolate(localTime, [0, duration], [1.12, 1])
-  const cardScale = 0.9 + 0.12 * interpolate(localTime, [0.5, 1], [0, 1])
-  const sweepX = interpolate(localTime, [0, duration], [-300, 300])
+  const zoom = interpolate(localTime, [0, duration], [1.1, 1])
+  const cardScale = 0.9 + 0.1 * interpolate(localTime, [0.5, 1], [0, 1])
+  const sweepX = interpolate(localTime, [0, duration], [-250, 250])
   
   return (
     <AbsoluteFill style={{ backgroundColor: DESIGN.colors.bg }}>
       <AbsoluteFill>
-        <img src={ASSETS.sanFrancisco} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', transform: `scale(${zoom})`, filter: 'brightness(0.45) contrast(1.1)' }} />
+        <img src={ASSETS.sanFrancisco} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', transform: `scale(${zoom})`, filter: 'brightness(0.5) contrast(1.1)' }} />
       </AbsoluteFill>
       
-      <SmokeOverlay intensity={0.6} time={time} />
+      <SmokeOverlay intensity={0.5} time={time} />
       <Vignette />
       
       <AbsoluteFill style={{ justifyContent: 'center', alignItems: 'center' }}>
         <div style={{ textAlign: 'center', transform: `scale(${cardScale})` }}>
-          <div style={{ fontFamily: DESIGN.fonts.hero, fontWeight: 900, fontSize: 'clamp(60px, 20vw, 110px)', color: DESIGN.colors.ink, textShadow: `0 0 100px ${DESIGN.colors.gold}` }}>
+          <div style={{ 
+            fontFamily: DESIGN.fonts.hero, 
+            fontWeight: 900, 
+            fontSize: 'clamp(50px, 16vw, 90px)', 
+            color: DESIGN.colors.ink, 
+            letterSpacing: '0.02em',
+            textShadow: `0 0 80px ${DESIGN.colors.gold}`,
+          }}>
             WIN
           </div>
           
@@ -658,12 +757,12 @@ function SceneGiveaway({ time }: { time: number }) {
           <div
             style={{
               position: 'relative',
-              width: 'clamp(280px, 80vw, 500px)',
-              padding: '28px 40px',
-              background: `linear-gradient(135deg, ${DESIGN.colors.gold} 0%, #B8860B 100%)`,
-              borderRadius: 24,
-              boxShadow: `0 0 100px ${hexToRgba(DESIGN.colors.gold, 0.5)}`,
-              transform: 'rotate(-2deg)',
+              width: 'clamp(260px, 75vw, 420px)',
+              padding: '24px 32px',
+              background: `linear-gradient(135deg, ${DESIGN.colors.gold} 0%, #C4960E 100%)`,
+              borderRadius: 20,
+              boxShadow: `0 0 80px ${hexToRgba(DESIGN.colors.gold, 0.4)}`,
+              transform: 'rotate(-1.5deg)',
               overflow: 'hidden',
               margin: '0 auto',
             }}
@@ -672,20 +771,40 @@ function SceneGiveaway({ time }: { time: number }) {
             <div
               style={{
                 position: 'absolute',
-                inset: -60,
+                inset: -50,
                 transform: `translateX(${sweepX}px) rotate(15deg)`,
-                background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent)',
+                background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.35), transparent)',
                 willChange: 'transform',
               }}
             />
             <div style={{ position: 'relative', zIndex: 1, textAlign: 'center' }}>
-              <div style={{ fontFamily: DESIGN.fonts.title, fontWeight: 700, fontSize: 'clamp(12px, 3.5vw, 18px)', letterSpacing: '0.18em', color: DESIGN.colors.navy }}>
+              <div style={{ 
+                fontFamily: DESIGN.fonts.title, 
+                fontWeight: 600, 
+                fontSize: 'clamp(11px, 3vw, 15px)', 
+                letterSpacing: '0.15em', 
+                color: DESIGN.colors.navy,
+              }}>
                 THE BIG GAME GIVEAWAY
               </div>
-              <div style={{ fontFamily: DESIGN.fonts.hero, fontWeight: 900, fontSize: 'clamp(36px, 12vw, 56px)', color: DESIGN.colors.navy, lineHeight: 1.1 }}>
+              <div style={{ 
+                fontFamily: DESIGN.fonts.hero, 
+                fontWeight: 900, 
+                fontSize: 'clamp(32px, 10vw, 48px)', 
+                color: DESIGN.colors.navy, 
+                lineHeight: 1.1,
+                letterSpacing: '0.02em',
+              }}>
                 2 TICKETS
               </div>
-              <div style={{ marginTop: 8, fontFamily: DESIGN.fonts.body, fontWeight: 600, fontSize: 'clamp(12px, 3vw, 18px)', color: 'rgba(0,34,68,0.7)' }}>
+              <div style={{ 
+                marginTop: 6, 
+                fontFamily: DESIGN.fonts.body, 
+                fontWeight: 500, 
+                fontSize: 'clamp(11px, 2.5vw, 14px)', 
+                color: 'rgba(0,34,68,0.6)',
+                letterSpacing: '0.1em',
+              }}>
                 Drawing Saturday • San Francisco
               </div>
             </div>
@@ -697,7 +816,7 @@ function SceneGiveaway({ time }: { time: number }) {
 }
 
 // ============================================================================
-// SCENE 9: PLAYERS
+// SCENE 9: PLAYERS - Premium styling, glow only
 // ============================================================================
 function ScenePlayerShowcase({ time }: { time: number }) {
   const localTime = time - SCENES.players.start
@@ -707,18 +826,18 @@ function ScenePlayerShowcase({ time }: { time: number }) {
   const segmentTime = localTime - idx * framesPerPlayer
   
   const player = HERO_PLAYERS[idx]
-  const scale = interpolate(segmentTime, [0, framesPerPlayer], [1, 1.08])
+  const scale = interpolate(segmentTime, [0, framesPerPlayer], [1, 1.06])
   const opacity = interpolate(segmentTime, [0, 0.3], [0, 1]) * interpolate(segmentTime, [framesPerPlayer - 0.4, framesPerPlayer], [1, 0])
-  const playerY = interpolate(segmentTime, [0, 0.5], [60, 0])
+  const playerY = interpolate(segmentTime, [0, 0.5], [50, 0])
   const glowPulse = 0.6 + 0.4 * Math.sin(segmentTime * 2)
   
   return (
     <AbsoluteFill style={{ backgroundColor: DESIGN.colors.bg }}>
       <AbsoluteFill>
-        <img src={ASSETS.stadium} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', transform: `scale(${scale})`, filter: 'brightness(0.2) blur(3px)' }} />
+        <img src={ASSETS.stadium} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', transform: `scale(${scale})`, filter: 'brightness(0.25) blur(2px)' }} />
       </AbsoluteFill>
       
-      <SmokeOverlay intensity={0.8} time={time} />
+      <SmokeOverlay intensity={0.7} time={time} />
       
       {/* Player */}
       <AbsoluteFill style={{ justifyContent: 'flex-end', alignItems: 'center', opacity }}>
@@ -726,46 +845,66 @@ function ScenePlayerShowcase({ time }: { time: number }) {
           src={player.image}
           alt={player.lastName}
           style={{
-            width: '110%',
+            width: '100%',
             height: 'auto',
-            maxHeight: '80%',
+            maxHeight: '75%',
             objectFit: 'contain',
             objectPosition: 'bottom center',
             transform: `translateY(${playerY}px) scale(${scale})`,
-            filter: `drop-shadow(0 0 ${80 * glowPulse}px ${DESIGN.colors.green})`,
+            filter: `drop-shadow(0 0 ${60 * glowPulse}px ${DESIGN.colors.green})`,
             willChange: 'transform, filter',
           }}
         />
       </AbsoluteFill>
       
       {/* Hero glow */}
-      <AbsoluteFill style={{ pointerEvents: 'none', opacity: opacity * glowPulse * 0.5 }}>
+      <AbsoluteFill style={{ pointerEvents: 'none', opacity: opacity * glowPulse * 0.4 }}>
         <div
           style={{
             position: 'absolute',
             bottom: '5%',
             left: '50%',
             transform: 'translateX(-50%)',
-            width: '85%',
-            height: '65%',
-            background: `radial-gradient(ellipse at center bottom, ${DESIGN.colors.green}50 0%, transparent 50%)`,
-            filter: 'blur(120px)',
+            width: '80%',
+            height: '60%',
+            background: `radial-gradient(ellipse at center bottom, ${DESIGN.colors.green}40 0%, transparent 50%)`,
+            filter: 'blur(100px)',
           }}
         />
       </AbsoluteFill>
       
       <Vignette />
       
-      {/* Player name */}
-      <AbsoluteFill style={{ padding: 32, paddingBottom: '12%', justifyContent: 'flex-end', opacity }}>
-        <div style={{ fontFamily: DESIGN.fonts.hero, fontWeight: 900, fontSize: 'clamp(48px, 16vw, 90px)', lineHeight: 0.85, color: DESIGN.colors.ink, textShadow: `0 0 80px ${DESIGN.colors.green}, 0 4px 0 ${DESIGN.colors.green}`, letterSpacing: '-0.02em' }}>
+      {/* Player name - glow only, no drop shadow */}
+      <AbsoluteFill style={{ padding: 24, paddingBottom: '14%', justifyContent: 'flex-end', opacity }}>
+        <div style={{ 
+          fontFamily: DESIGN.fonts.hero, 
+          fontWeight: 900, 
+          fontSize: 'clamp(40px, 14vw, 72px)', 
+          lineHeight: 0.85, 
+          color: DESIGN.colors.ink, 
+          textShadow: `0 0 60px ${DESIGN.colors.green}`,
+          letterSpacing: '0.02em',
+        }}>
           {player.lastName}
         </div>
-        <div style={{ marginTop: 14, display: 'flex', gap: 16, alignItems: 'center' }}>
-          <span style={{ fontFamily: DESIGN.fonts.hero, fontWeight: 900, fontSize: 'clamp(28px, 10vw, 48px)', color: DESIGN.colors.green, textShadow: `0 0 40px ${DESIGN.colors.green}` }}>
+        <div style={{ marginTop: 12, display: 'flex', gap: 14, alignItems: 'center' }}>
+          <span style={{ 
+            fontFamily: DESIGN.fonts.hero, 
+            fontWeight: 900, 
+            fontSize: 'clamp(24px, 8vw, 40px)', 
+            color: DESIGN.colors.green, 
+            textShadow: `0 0 30px ${DESIGN.colors.green}`,
+          }}>
             #{player.jersey}
           </span>
-          <span style={{ fontFamily: DESIGN.fonts.title, fontWeight: 600, fontSize: 'clamp(18px, 6vw, 30px)', color: DESIGN.colors.inkDim, letterSpacing: '0.08em' }}>
+          <span style={{ 
+            fontFamily: DESIGN.fonts.title, 
+            fontWeight: 500, 
+            fontSize: 'clamp(16px, 5vw, 24px)', 
+            color: 'rgba(255,255,255,0.7)', 
+            letterSpacing: '0.15em',
+          }}>
             {player.position}
           </span>
         </div>
@@ -775,36 +914,41 @@ function ScenePlayerShowcase({ time }: { time: number }) {
 }
 
 // ============================================================================
-// SCENE 10: CTA
+// SCENE 10: CTA - Plane descends fully into center
 // ============================================================================
 function SceneCTA({ time }: { time: number }) {
   const localTime = time - SCENES.cta.start
   const duration = SCENES.cta.end - SCENES.cta.start
   
-  const planeY = interpolate(localTime, [0, duration], [-300, 200])
-  const planeScale = interpolate(localTime, [0, duration], [0.4, 1.15])
-  const planeRotate = interpolate(localTime, [0, duration], [-15, 8])
+  // Plane descends from top to center of screen, continuing to animate
+  // Use eased progress for smooth landing
+  const progress = interpolate(localTime, [0, duration], [0, 1])
+  const easedProgress = progress * progress * (3 - 2 * progress) // smoothstep
+  const planeY = -350 + 530 * easedProgress // -350 to 180
+  const planeScale = 0.35 + 0.75 * easedProgress // 0.35 to 1.1
+  const planeRotate = -12 + 18 * easedProgress // -12 to 6
   const textScale = 0.9 + 0.12 * interpolate(localTime, [0.8, 1.5], [0, 1])
   const pulse = 0.6 + 0.4 * Math.sin(time * 2.5)
   
   return (
     <AbsoluteFill style={{ backgroundColor: DESIGN.colors.bg }}>
       <AbsoluteFill>
-        <img src={ASSETS.seattle} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'brightness(0.3)' }} />
+        <img src={ASSETS.seattle} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'brightness(0.35)' }} />
       </AbsoluteFill>
       
-      <SmokeOverlay intensity={0.6} time={time} />
+      <SmokeOverlay intensity={0.5} time={time} />
       
-      {/* Plane */}
+      {/* Plane - descends into center, flipped to face right */}
       <AbsoluteFill style={{ justifyContent: 'flex-start', alignItems: 'center' }}>
         <img
           src={ASSETS.plane}
           alt=""
           style={{
-            width: 'clamp(200px, 50vw, 350px)',
+            width: 'clamp(180px, 45vw, 300px)',
             height: 'auto',
-            transform: `translateY(${planeY}px) scale(${planeScale}) rotate(${planeRotate}deg)`,
-            filter: `drop-shadow(0 50px 100px rgba(0,0,0,0.6)) drop-shadow(0 0 50px ${DESIGN.colors.green}40)`,
+            // Flip plane to face right (landing direction)
+            transform: `translateY(${planeY}px) scaleX(-1) scale(${planeScale}) rotate(${planeRotate}deg)`,
+            filter: `drop-shadow(0 40px 80px rgba(0,0,0,0.5)) drop-shadow(0 0 40px ${DESIGN.colors.green}30)`,
             willChange: 'transform',
           }}
         />
@@ -812,29 +956,49 @@ function SceneCTA({ time }: { time: number }) {
       
       <Vignette />
       
-      {/* CTA */}
-      <AbsoluteFill style={{ justifyContent: 'flex-end', alignItems: 'center', paddingBottom: '15%' }}>
+      {/* CTA - Premium styling */}
+      <AbsoluteFill style={{ justifyContent: 'flex-end', alignItems: 'center', paddingBottom: '16%' }}>
         <div style={{ textAlign: 'center', transform: `scale(${textScale})` }}>
-          <div style={{ fontFamily: DESIGN.fonts.hero, fontWeight: 900, fontSize: 'clamp(48px, 16vw, 100px)', color: DESIGN.colors.ink, textShadow: `0 0 ${80 + 50 * pulse}px ${DESIGN.colors.green}` }}>
+          <div style={{ 
+            fontFamily: DESIGN.fonts.hero, 
+            fontWeight: 900, 
+            fontSize: 'clamp(40px, 14vw, 80px)', 
+            color: DESIGN.colors.ink, 
+            letterSpacing: '0.02em',
+            textShadow: `0 0 ${60 + 40 * pulse}px ${DESIGN.colors.green}`,
+          }}>
             ENTER NOW
           </div>
           
           <div
             style={{
-              marginTop: 24,
+              marginTop: 20,
               display: 'inline-flex',
-              padding: '18px 44px',
+              padding: '16px 36px',
               borderRadius: 100,
-              background: `linear-gradient(135deg, ${DESIGN.colors.green} 0%, #4CAF50 100%)`,
-              boxShadow: `0 0 ${50 + 30 * pulse}px ${DESIGN.colors.green}`,
+              background: `linear-gradient(135deg, ${DESIGN.colors.green} 0%, #5CBF3A 100%)`,
+              boxShadow: `0 0 ${40 + 25 * pulse}px ${DESIGN.colors.green}`,
             }}
           >
-            <span style={{ fontFamily: DESIGN.fonts.hero, fontWeight: 900, fontSize: 'clamp(20px, 6vw, 30px)', color: DESIGN.colors.navy, letterSpacing: '0.03em' }}>
+            <span style={{ 
+              fontFamily: DESIGN.fonts.hero, 
+              fontWeight: 900, 
+              fontSize: 'clamp(18px, 5vw, 26px)', 
+              color: DESIGN.colors.navy, 
+              letterSpacing: '0.03em',
+            }}>
               game.drinksip.com
             </span>
           </div>
           
-          <div style={{ marginTop: 18, fontFamily: DESIGN.fonts.title, fontWeight: 600, fontSize: 'clamp(14px, 4vw, 20px)', color: DESIGN.colors.inkDim, letterSpacing: '0.08em' }}>
+          <div style={{ 
+            marginTop: 14, 
+            fontFamily: DESIGN.fonts.title, 
+            fontWeight: 500, 
+            fontSize: 'clamp(12px, 3.5vw, 16px)', 
+            color: 'rgba(255,255,255,0.6)', 
+            letterSpacing: '0.15em',
+          }}>
             Drawing Saturday • San Francisco
           </div>
         </div>
