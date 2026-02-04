@@ -288,23 +288,47 @@ function SceneIntro({ time }: { time: number }) {
       <SmokeOverlay intensity={0.4} time={time} />
       <Vignette />
       
-      {/* Phase 1: DrinkSip */}
-      <AbsoluteFill style={{ justifyContent: 'center', alignItems: 'center', opacity: logoOpacity }}>
-        <div style={{ textAlign: 'center', transform: `scale(${logoScale})` }}>
+      {/* Phase 1: DrinkSip - Perfectly centered with proper spacing */}
+      <AbsoluteFill 
+        style={{ 
+          justifyContent: 'center', 
+          alignItems: 'center', 
+          opacity: logoOpacity,
+        }}
+      >
+        <div 
+          style={{ 
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            textAlign: 'center', 
+            transform: `scale(${logoScale})`,
+            width: '100%',
+            padding: '0 24px',
+          }}
+        >
           <img
             src={DRINKSIP_LOGO}
             alt="DrinkSip"
-            style={{ height: 100, width: 'auto', filter: 'drop-shadow(0 20px 60px rgba(255,215,0,0.5))' }}
+            style={{ 
+              height: 'clamp(70px, 18vw, 110px)', 
+              width: 'auto', 
+              display: 'block',
+              margin: '0 auto',
+              filter: 'drop-shadow(0 16px 50px rgba(255,215,0,0.5))',
+            }}
           />
           <div
             style={{
-              marginTop: 24,
+              marginTop: 'clamp(16px, 4vw, 28px)',
               fontFamily: DESIGN.fonts.title,
-              fontWeight: 600,
-              fontSize: 'clamp(16px, 5vw, 24px)',
-              letterSpacing: '0.4em',
+              fontWeight: 500,
+              fontSize: 'clamp(14px, 4vw, 20px)',
+              letterSpacing: '0.35em',
               color: DESIGN.colors.gold,
               opacity: presentsOpacity,
+              textAlign: 'center',
             }}
           >
             PRESENTS
@@ -385,16 +409,16 @@ function SceneMapFlight({ time }: { time: number }) {
       
       <SmokeOverlay intensity={0.4} time={time} />
       
-      {/* Plane - flipped to face RIGHT (direction of travel) */}
+      {/* Plane - flies LEFT to RIGHT naturally (no flip - text readable) */}
       <AbsoluteFill style={{ justifyContent: 'center', alignItems: 'center' }}>
         <img
           src={ASSETS.plane}
           alt=""
           style={{
-            width: 'clamp(220px, 55vw, 380px)',
+            width: 'clamp(200px, 50vw, 340px)',
             height: 'auto',
-            // scaleX(-1) flips plane to face right, rotate tilts nose up slightly
-            transform: `translate(${planeX}px, ${planeY}px) scaleX(-1) scale(${planeScale}) rotate(5deg)`,
+            // No flip - plane asset already faces the correct direction for readable text
+            transform: `translate(${planeX}px, ${planeY}px) scale(${planeScale}) rotate(-8deg)`,
             filter: `drop-shadow(0 40px 80px rgba(0,0,0,0.6)) drop-shadow(0 0 40px ${DESIGN.colors.green}30)`,
             willChange: 'transform',
           }}
@@ -920,13 +944,14 @@ function SceneCTA({ time }: { time: number }) {
   const localTime = time - SCENES.cta.start
   const duration = SCENES.cta.end - SCENES.cta.start
   
-  // Plane descends from top to center of screen, continuing to animate
-  // Use eased progress for smooth landing
+  // Plane descends from top to CENTER of mobile screen (where the field is)
+  // Extended flight path for dramatic landing
   const progress = interpolate(localTime, [0, duration], [0, 1])
-  const easedProgress = progress * progress * (3 - 2 * progress) // smoothstep
-  const planeY = -350 + 530 * easedProgress // -350 to 180
-  const planeScale = 0.35 + 0.75 * easedProgress // 0.35 to 1.1
-  const planeRotate = -12 + 18 * easedProgress // -12 to 6
+  const easedProgress = progress * progress * (3 - 2 * progress) // smoothstep for smooth decel
+  // Y goes from -400 (off top) to 380 (center of mobile screen)
+  const planeY = -400 + 780 * easedProgress // -400 to 380
+  const planeScale = 0.3 + 0.8 * easedProgress // 0.3 to 1.1
+  const planeRotate = -15 + 20 * easedProgress // -15 to 5 (nose down to level)
   const textScale = 0.9 + 0.12 * interpolate(localTime, [0.8, 1.5], [0, 1])
   const pulse = 0.6 + 0.4 * Math.sin(time * 2.5)
   
@@ -938,16 +963,16 @@ function SceneCTA({ time }: { time: number }) {
       
       <SmokeOverlay intensity={0.5} time={time} />
       
-      {/* Plane - descends into center, flipped to face right */}
+      {/* Plane - descends into center of screen (no flip - text readable) */}
       <AbsoluteFill style={{ justifyContent: 'flex-start', alignItems: 'center' }}>
         <img
           src={ASSETS.plane}
           alt=""
           style={{
-            width: 'clamp(180px, 45vw, 300px)',
+            width: 'clamp(160px, 40vw, 260px)',
             height: 'auto',
-            // Flip plane to face right (landing direction)
-            transform: `translateY(${planeY}px) scaleX(-1) scale(${planeScale}) rotate(${planeRotate}deg)`,
+            // No flip - plane text stays readable, rotate for descent angle
+            transform: `translateY(${planeY}px) scale(${planeScale}) rotate(${planeRotate}deg)`,
             filter: `drop-shadow(0 40px 80px rgba(0,0,0,0.5)) drop-shadow(0 0 40px ${DESIGN.colors.green}30)`,
             willChange: 'transform',
           }}
