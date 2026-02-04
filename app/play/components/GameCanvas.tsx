@@ -16,6 +16,7 @@ import { AROverlay } from './AROverlay'
 import { useGyroscope } from '../hooks/useGyroscope'
 import { useGameStore, useArMode } from '@/src/store/gameStore'
 import { SoundtrackManager } from '@/src/game/systems/SoundtrackManager'
+import { destroyGame } from '@/src/game/main'
 
 interface GameCanvasProps {
   onChangePlayer?: () => void
@@ -177,11 +178,10 @@ export default function GameCanvas({ onChangePlayer }: GameCanvasProps) {
       // Clean up AR when component unmounts
       setArMode(false)
       if (gameRef.current) {
-        import('../../../src/game/main').then(({ destroyGame }) => {
-          destroyGame()
-          gameRef.current = null
-          gameInitializedRef.current = false
-        })
+        // Synchronous destroy to prevent race conditions
+        destroyGame()
+        gameRef.current = null
+        gameInitializedRef.current = false
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -210,22 +210,14 @@ export default function GameCanvas({ onChangePlayer }: GameCanvasProps) {
         onCameraDisabled={handleCameraDisabled}
       />
 
-      {/* Background layer - shows when camera not ready in AR mode */}
-      <AnimatePresence>
-        {(!isArEnabled || !cameraReady) && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
-            className="fixed inset-0"
-            style={{ 
-              backgroundColor: '#002244',
-              zIndex: 1,
-            }}
-          />
-        )}
-      </AnimatePresence>
+      {/* Background layer - always visible, no animation to avoid render issues */}
+      <div
+        className="fixed inset-0"
+        style={{ 
+          backgroundColor: '#002244',
+          zIndex: 1,
+        }}
+      />
 
       {/* Game Container (z-index: 10) */}
       <motion.div

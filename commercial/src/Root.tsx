@@ -12,6 +12,10 @@ import { CommercialVerticalV7 } from "./VideoVerticalV7";
 import { CommercialVerticalV8 } from "./VideoVerticalV8";
 import { CommercialVerticalV8Audio } from "./VideoVerticalV8Audio";
 import { CommercialVertical } from "./video/CommercialVertical";
+import { SplashTrailer } from "./SplashTrailer";
+import { SplashTrailerV2 } from "./SplashTrailerV2";
+import { SplashTrailerV3 } from "./SplashTrailerV3";
+import { SplashTrailerV4 } from "./SplashTrailerV4";
 
 // Video settings
 const FPS = 30;
@@ -19,6 +23,46 @@ const FPS = 30;
 export const RemotionRoot: React.FC = () => {
   return (
     <>
+      {/* SPLASH TRAILER V4 - PREMIUM with design system, better timing, hype audio */}
+      <Composition
+        id="SplashTrailerV4"
+        component={SplashTrailerV4}
+        durationInFrames={30 * FPS}
+        fps={FPS}
+        width={1080}
+        height={1920}
+      />
+
+      {/* SPLASH TRAILER V3 - 30 second HOLLYWOOD quality with app screens */}
+      <Composition
+        id="SplashTrailerV3"
+        component={SplashTrailerV3}
+        durationInFrames={30 * FPS}
+        fps={FPS}
+        width={1080}
+        height={1920}
+      />
+
+      {/* SPLASH TRAILER V2 - 20 second PREMIUM trailer with Leonardo assets, plane, VO */}
+      <Composition
+        id="SplashTrailerV2"
+        component={SplashTrailerV2}
+        durationInFrames={20 * FPS}
+        fps={FPS}
+        width={1080}
+        height={1920}
+      />
+
+      {/* SPLASH TRAILER - 15 second cinematic intro (legacy) */}
+      <Composition
+        id="SplashTrailer"
+        component={SplashTrailer}
+        durationInFrames={15 * FPS}
+        fps={FPS}
+        width={1080}
+        height={1920}
+      />
+
       {/* DARK SIDE GAME - MASTER VERSION */}
       <Composition
         id="DarkSideGameVertical"

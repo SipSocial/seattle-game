@@ -130,10 +130,19 @@ export default function PlayerSelect({ gameMode, onSelect }: PlayerSelectProps) 
 
   // Handle selection
   const handleSelect = useCallback(async () => {
-    await ensureAudioUnlocked()
-    AudioManager.playPlayerSelect()
+    // Audio is non-blocking - don't let it prevent navigation
+    try {
+      await ensureAudioUnlocked()
+      AudioManager.playPlayerSelect()
+    } catch (e) {
+      console.log('Audio error (non-blocking):', e)
+    }
     
-    if (navigator.vibrate) navigator.vibrate([50, 30, 100])
+    try {
+      if (navigator.vibrate) navigator.vibrate([50, 30, 100])
+    } catch (e) {
+      // Vibration not supported
+    }
     
     const selectedJersey = players[index].jersey
     setIsExiting(true)

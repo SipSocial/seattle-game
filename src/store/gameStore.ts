@@ -119,6 +119,28 @@ export interface CampaignProgress {
   stageProgress: Record<number, StageProgress> // Dual mode progress per stage
   isCampaignComplete: boolean
   superBowlWon: boolean
+  // V5 Entry Tracking
+  totalEntries: number
+  shareBonusUsed: boolean
+}
+
+// V5 Game Session State
+export interface GameSession {
+  isActive: boolean
+  mode: 'qb' | 'defense' | null
+  hideBottomNav: boolean
+  currentStageId: number | null
+  startTime: number | null
+  stats: {
+    tackles?: number
+    sacks?: number
+    interceptions?: number
+    passBreakups?: number
+    yardsAllowed?: number
+    touchdownsAllowed?: number
+    score?: number
+    won?: boolean
+  } | null
 }
 
 interface GameState {
@@ -176,6 +198,9 @@ interface GameState {
     tackleRadius: number
     enemySlowdown: number
   }
+  
+  // V5 Session State
+  session: GameSession
   
   // Actions
   setSelectedDefender: (jersey: number) => void
@@ -252,6 +277,17 @@ interface GameState {
   
   updateStats: (stats: Partial<GameState['stats']>) => void
   
+  // V5 Session actions
+  startGameSession: (mode: 'qb' | 'defense', stageId?: number) => void
+  endGameSession: (stats: GameSession['stats']) => void
+  setHideBottomNav: (hide: boolean) => void
+  
+  // V5 Entry actions
+  addEntries: (amount: number) => void
+  addShareBonusEntry: () => void
+  getEntriesFromScore: (score: number) => number
+  completeStageWithEntries: (stageId: number, mode: 'qb' | 'defense', score: number, stars: 0 | 1 | 2 | 3) => void
+  
   // Reset
   resetGame: () => void
 }
@@ -323,6 +359,18 @@ const INITIAL_CAMPAIGN_STATE: CampaignProgress = {
   stageProgress: {}, // Dual mode progress per stage
   isCampaignComplete: false,
   superBowlWon: false,
+  // V5 Entry Tracking
+  totalEntries: 0,
+  shareBonusUsed: false,
+}
+
+const INITIAL_SESSION_STATE: GameSession = {
+  isActive: false,
+  mode: null,
+  hideBottomNav: false,
+  currentStageId: null,
+  startTime: null,
+  stats: null,
 }
 
 export const useGameStore = create<GameState>()(
@@ -336,6 +384,7 @@ export const useGameStore = create<GameState>()(
       ...INITIAL_GAME_STATE,
       ...INITIAL_MODAL_STATES,
       campaign: INITIAL_CAMPAIGN_STATE,
+      session: INITIAL_SESSION_STATE,
       gameMode: 'campaign' as const,
       leaderboard: [],
       highScore: 0,
@@ -769,9 +818,105 @@ export const useGameStore = create<GameState>()(
           }
         })
       },
+      
+      // V5 Session actions
+      startGameSession: (mode, stageId) => {
+        set({
+          session: {
+            isActive: true,
+            mode,
+            hideBottomNav: true,
+            currentStageId: stageId ?? get().campaign.currentStageId,
+            startTime: Date.now(),
+            stats: null,
+          },
+          playMode: mode, // Sync with existing playMode
+        })
+      },
+      
+      endGameSession: (stats) => {
+        const { session, campaign } = get()
+        
+        // Calculate entries from score
+        const entriesEarned = stats?.score 
+          ? get().getEntriesFromScore(stats.score)
+          : 0
+        
+        // Add entries if won
+        const newEntries = stats?.won && entriesEarned > 0
+          ? campaign.totalEntries + entriesEarned
+          : campaign.totalEntries
+        
+        set({
+          session: {
+            ...session,
+            isActive: false,
+            hideBottomNav: false,
+            stats,
+          },
+          campaign: {
+            ...campaign,
+            totalEntries: newEntries,
+          },
+        })
+      },
+      
+      setHideBottomNav: (hide) => {
+        set((state) => ({
+          session: {
+            ...state.session,
+            hideBottomNav: hide,
+          },
+        }))
+      },
+      
+      // V5 Entry actions
+      addEntries: (amount) => {
+        set((state) => ({
+          campaign: {
+            ...state.campaign,
+            totalEntries: state.campaign.totalEntries + amount,
+          },
+        }))
+      },
+      
+      addShareBonusEntry: () => {
+        const { campaign } = get()
+        if (!campaign.shareBonusUsed) {
+          set({
+            campaign: {
+              ...campaign,
+              totalEntries: campaign.totalEntries + 1,
+              shareBonusUsed: true,
+            },
+          })
+        }
+      },
+      
+      getEntriesFromScore: (score) => {
+        // Calculate entries based on score tiers
+        // Higher scores = more entries
+        if (score >= 10000) return 5 // Gold tier
+        if (score >= 5000) return 3  // Silver tier
+        if (score >= 1000) return 2  // Bronze tier
+        return 1 // Participation
+      },
+      
+      completeStageWithEntries: (stageId, mode, score, stars) => {
+        // Complete stage using existing methods
+        if (mode === 'qb') {
+          get().completeStageQB(stageId, score, stars)
+        } else {
+          get().completeStageDefense(stageId, score, stars)
+        }
+        
+        // Add entries based on score
+        const entriesEarned = get().getEntriesFromScore(score)
+        get().addEntries(entriesEarned)
+      },
 
       // Reset
-      resetGame: () => set({ ...INITIAL_GAME_STATE, ...INITIAL_MODAL_STATES }),
+      resetGame: () => set({ ...INITIAL_GAME_STATE, ...INITIAL_MODAL_STATES, session: INITIAL_SESSION_STATE }),
     }),
     {
       name: 'darkside-defense-storage',
@@ -787,6 +932,22 @@ export const useGameStore = create<GameState>()(
         hasShared: state.hasShared,
         arMode: state.arMode,
       }),
+      // Merge function to handle old persisted data missing new fields
+      merge: (persistedState, currentState) => {
+        const persisted = persistedState as Partial<GameState>
+        return {
+          ...currentState,
+          ...persisted,
+          // Ensure campaign has all required fields with defaults
+          campaign: {
+            ...INITIAL_CAMPAIGN_STATE,
+            ...(persisted.campaign || {}),
+            // V5 fields with defaults
+            totalEntries: persisted.campaign?.totalEntries ?? 0,
+            shareBonusUsed: persisted.campaign?.shareBonusUsed ?? false,
+          },
+        }
+      },
     }
   )
 )
@@ -835,3 +996,12 @@ export const usePlayerStats = () => useGameStore((state) => state.stats)
 // AR Mode selector hooks
 export const useArMode = () => useGameStore((state) => state.arMode)
 export const useIsArEnabled = () => useGameStore((state) => state.arMode.enabled)
+
+// V5 Session selector hooks
+export const useSession = () => useGameStore((state) => state.session)
+export const useHideBottomNav = () => useGameStore((state) => state.session.hideBottomNav)
+export const useIsGameActive = () => useGameStore((state) => state.session.isActive)
+
+// V5 Entry selector hooks
+export const useTotalEntries = () => useGameStore((state) => state.campaign.totalEntries)
+export const useShareBonusUsed = () => useGameStore((state) => state.campaign.shareBonusUsed)

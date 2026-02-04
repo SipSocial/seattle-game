@@ -4,6 +4,10 @@
   "description": "DeMarcus Lawrence x DrinkSip Game Drop Commercial",
   "scripts": {
     "start": "remotion studio",
+    "build:splash": "remotion render SplashTrailerV4 ../public/video/trailer.mp4 --codec h264 --crf 18",
+    "build:splash-v3": "remotion render SplashTrailerV3 ../public/video/trailer-v3.mp4 --codec h264 --crf 18",
+    "build:splash-v2": "remotion render SplashTrailerV2 ../public/video/trailer-v2.mp4 --codec h264 --crf 18",
+    "build:splash-legacy": "remotion render SplashTrailer ../public/video/trailer-legacy.mp4 --codec h264 --crf 18",
     "build:60": "remotion render Commercial out/60sec-16x9.mp4",
     "build:30": "remotion render Commercial30 out/30sec-16x9.mp4",
     "build:30-vertical": "remotion render Commercial30Vertical out/30sec-9x16.mp4",

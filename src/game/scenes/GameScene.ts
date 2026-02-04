@@ -194,6 +194,10 @@ export class GameScene extends Phaser.Scene {
   }
 
   preload(): void {
+    // NOTE: This preload() runs when GameScene is started directly (skipping BootScene)
+    // Future: Add Leonardo AI-generated stadium backgrounds, field textures here
+    // e.g., this.load.image('stadium-generated', '/assets/generated/stadium.png')
+    
     // Load defender sprites for photo-realistic gameplay
     const { selectedDefender } = useGameStore.getState()
     

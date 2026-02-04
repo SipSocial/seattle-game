@@ -1,10 +1,18 @@
 import * as Phaser from 'phaser'
 import { createPhaserConfig } from './config/phaserConfig'
+import { BootScene } from './scenes/BootScene'
+import { GameScene } from './scenes/GameScene'
 import { useGameStore } from '../store/gameStore'
 
 let gameInstance: Phaser.Game | null = null
+let isDestroying = false
 
 export function createGame(): Phaser.Game {
+  // Prevent creation while destroying (race condition guard)
+  if (isDestroying) {
+    console.warn('[Game] Waiting for previous game to destroy...')
+  }
+  
   if (gameInstance) {
     return gameInstance
   }
@@ -15,35 +23,29 @@ export function createGame(): Phaser.Game {
   // Check if we're coming from React player selection
   // If so, read the selected defender and skip to GameScene
   const selectedDefender = localStorage.getItem('selectedDefender')
+  const storedGameMode = localStorage.getItem('gameMode') as 'campaign' | 'endless' | null
   
   if (selectedDefender) {
     // Update the store with the selected defender
     const jersey = parseInt(selectedDefender, 10)
     if (!isNaN(jersey)) {
       useGameStore.getState().setSelectedDefender(jersey)
-      useGameStore.getState().setGameMode('endless') // Set to endless mode
+      // Use stored game mode if provided, otherwise default to endless
+      useGameStore.getState().setGameMode(storedGameMode || 'endless')
     }
     
-    // Clear the flag so next time we show the menu
+    // Clear the flags so next time we show the menu
     localStorage.removeItem('selectedDefender')
+    localStorage.removeItem('gameMode')
     
-    // Create game config that starts at GameScene directly
+    // Create game config with GameScene FIRST so it auto-starts
+    // This avoids the race condition with the 'ready' event
     const quickStartConfig: Phaser.Types.Core.GameConfig = {
       ...config,
-      scene: config.scene, // Keep all scenes registered
+      scene: [GameScene, BootScene], // GameScene first = auto-starts immediately
     }
     
     gameInstance = new Phaser.Game(quickStartConfig)
-    
-    // Start at GameScene directly after a brief moment
-    gameInstance.events.once('ready', () => {
-      const bootScene = gameInstance?.scene.getScene('BootScene')
-      if (bootScene) {
-        // Skip boot and menu, go straight to game
-        gameInstance?.scene.stop('BootScene')
-        gameInstance?.scene.start('GameScene')
-      }
-    })
   } else {
     // Normal game start with boot screen
     gameInstance = new Phaser.Game(config)
@@ -55,8 +57,14 @@ export function createGame(): Phaser.Game {
 
 export function destroyGame(): void {
   if (gameInstance) {
-    gameInstance.destroy(true)
+    isDestroying = true
+    try {
+      gameInstance.destroy(true)
+    } catch (e) {
+      console.error('[Game] Error during destroy:', e)
+    }
     gameInstance = null
+    isDestroying = false
   }
 }
 

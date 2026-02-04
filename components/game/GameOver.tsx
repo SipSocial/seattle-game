@@ -202,12 +202,14 @@ export function GameOver({ isOpen, onPlayAgain, onChangePlayer, onViewLeaderboar
   const confettiColors = ['#69BE28', '#FFD700', '#FF6B6B', '#4ECDC4', '#fff']
 
   return (
-    <AnimatePresence>
+    <AnimatePresence mode="wait">
       <motion.div
+        key="game-over-modal"
         className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden"
-        initial={{ opacity: 0 }}
+        initial={{ opacity: 1 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
+        transition={{ duration: 0.2 }}
       >
         {/* Backdrop with animated gradient */}
         <motion.div
